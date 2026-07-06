@@ -2,7 +2,7 @@
 
 > Real-time CPU monitor for macOS — usage, temperature, clock speed, and per-core breakdown.
 
-**[→ rnitro.netlify.app](https://rnitro.netlify.app/)**
+**[→ getrnitro.netlify.app](https://getrnitro.netlify.app/)**
 
 ---
 
@@ -29,7 +29,7 @@ That's it. The script compiles the app natively on your machine and installs it 
 
 ## Requirements
 
-- macOS 12 Ventura or later
+- macOS 12 Ventura or later (MacOS 16 is advised)
 - Apple Silicon (M1 / M2 / M3)
 - Xcode Command Line Tools (`xcode-select --install`)
 
