@@ -45,13 +45,18 @@ def recommended_zip_block(
     accent: str,
     accent_rgb: str,
     btn_style: str = "",
+    github_url: str | None = None,
 ) -> str:
     size = file_size_label(zip_file)
+    gh_link = ""
+    if github_url:
+        gh_link = f"""        <a href="{github_url}" class="btn btn-secondary btn-recommended" style="margin-top:10px; text-decoration:none; display:inline-block;" rel="noopener" target="_blank">⬇ Same ZIP on GitHub</a>"""
     return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.4);">
         <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.45); background:rgba({accent_rgb},0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:{accent};">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="requestDownload('{zip_file}')">⬇ Download App ZIP{size}</button>
+{gh_link}
       </div>"""
 
 
@@ -157,7 +162,7 @@ def hero_stable_card(data: dict) -> str:
     return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">{s["id"]}</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
-{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136")}
+{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136", github_url=v.github_zip_url(s, latest=True))}
 {other}
     </div>"""
 
@@ -178,7 +183,7 @@ def hero_beta_card(data: dict) -> str:
       <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Beta notice:</strong> Experimental AI features — report issues via Support. You must agree to Terms &amp; Conditions before download.
       </p>
-{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
+{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;", github_url=v.github_zip_url(b))}
 {other}
     </div>"""
 
@@ -240,8 +245,8 @@ def download_card_full(data: dict) -> str:
 
 
 def hero_dl_note(data: dict) -> str:
-    return """    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:560px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers.
+    return f"""    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:560px; margin-top:12px; line-height:1.55;">
+      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above — or grab the same ZIPs from <a href="{v.GITHUB_REPO}/releases" style="color:var(--cyan);">GitHub Releases</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers.
     </p>"""
 
 
@@ -329,7 +334,7 @@ def download_card_stable(data: dict) -> str:
         <button onclick="copyHash('stable')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
       </div>
     </div>
-{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136")}
+{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136", github_url=v.github_zip_url(s, latest=True))}
 {other}
   </div>"""
 
@@ -365,7 +370,7 @@ def download_card_beta(data: dict) -> str:
         <button onclick="copyHash('beta')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
       </div>
     </div>
-{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
+{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;", github_url=v.github_zip_url(b))}
 {other}
   </div>"""
 

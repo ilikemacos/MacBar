@@ -83,6 +83,9 @@ INSTALL (macOS)
 - PKG/DMG: fastest; macOS may warn "can't verify" — click Done, then System Settings → Privacy & Security → Open.
 - .sh installer: compiles from readable source on the user's Mac (~30s). Stable .sh: ${versions?.stable?.sh || "rNitro-v8.2.6-Final-arm64.sh"} — Beta .sh: ${versions?.beta?.sh || "rNitro-v8.2.8-Beta-arm64.sh"}
 - Site: ${SITE_URL}
+- GitHub Releases (same App ZIPs): https://github.com/ilikemacos/rNitro/releases
+  - Stable: https://github.com/ilikemacos/rNitro/releases/latest/download/${versions?.stable?.zip || "rNitro-v8.2.6-Final-arm64.zip"}
+  - Beta: https://github.com/ilikemacos/rNitro/releases/download/${(versions?.beta?.id || "v8.2.8-Beta-arm64").replace(/-arm64$/, "")}/${versions?.beta?.zip || "rNitro-v8.2.8-Beta-arm64.zip"}
 - Requires Apple Silicon (arm64), macOS 12+. Not Intel Macs.
 
 INSTALL (Windows)
