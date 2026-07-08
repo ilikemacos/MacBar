@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rNitro — macOS CPU Monitor</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<style>
+  @font-face {
+    font-family: 'Varela Round';
+    src: url('VarelaRound.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Geist Mono';
+    src: url('GeistMono.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0A0A0F;
+    --bg2:      #0F0F18;
+    --card:     #13131E;
+    --card2:    #1A1A28;
+    --border:   #2A2A40;
+    --cyan:     #00D9FF;
+    --green:    #00FF80;
+    --orange:   #FF8C1A;
+    --red:      #FF4040;
+    --text:     #E8E8F0;
+    --muted:    #6B6B8A;
+    --mono:     'Geist Mono', ui-monospace, Menlo, monospace;
+    --sans:     'Varela Round', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --fw:       400;
+    --fw-label: 450;
+    --fw-title: 500;
+    --text-sm:  11px;
+    --text-base: 13px;
+    --text-lg:  15px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  html, body,
+  button, input, textarea, select, option,
+  code, kbd, pre, a, h1, h2, h3, h4, p, span, label, li, strong, em, small {
+    font-family: var(--sans);
+  }
+
+  .file-protocol-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    background: rgba(10, 10, 15, 0.97);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  html.file-protocol .file-protocol-overlay { display: flex; }
+  .file-protocol-card {
+    max-width: 440px;
+    background: var(--card);
+    border: 1px solid var(--orange);
+    border-radius: 12px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .file-protocol-card h2 {
+    color: var(--orange);
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .file-protocol-card p {
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .file-protocol-card strong { color: var(--text); }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: var(--text-base);
+    font-weight: var(--fw);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grid noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,217,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,217,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-weight: var(--fw-title);
+    font-size: 12px;
+    background: linear-gradient(90deg, var(--cyan), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+  }
+
+  .nav-badge {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 12px 36px;
+    text-align: center;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .hero-title {
+    font-size: clamp(26px, 5.5vw, 40px);
+    font-weight: var(--fw-title);
+    letter-spacing: -4px;
+    line-height: 0.95;
+    margin-bottom: 8px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.35s;
+  }
+
+  .hero-credit {
+    font-size: var(--text-base);
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.42s;
+  }
+
+  .hero-credit strong {
+    color: var(--text);
+    font-weight: var(--fw-title);
+  }
+
+  .hero-title span {
+    background: linear-gradient(135deg, var(--cyan) 0%, var(--green) 60%, var(--cyan) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 4s linear infinite 1s;
+  }
+
+  .hero-sub {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+    max-width: 340px;
+    line-height: 1.45;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.5s;
+  }
+
+  /* ── Terminal block (signature element) ── */
+  .terminal {
+    width: 100%;
+    max-width: 400px;
+    background: #080810;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,217,255,0.08), 0 0 0 1px rgba(0,217,255,0.05);
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.65s;
+    margin-bottom: 22px;
+  }
+
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #0D0D1A;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .dot-r { background: #FF5F57; }
+  .dot-y { background: #FEBC2E; }
+  .dot-g { background: #28C840; }
+
+  .terminal-title {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-left: auto;
+    margin-right: auto;
+    padding-right: 36px;
+  }
+
+  .terminal-body {
+    padding: 12px 14px 14px;
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    line-height: 1.65;
+  }
+
+  .t-prompt { color: var(--green); }
+  .t-cmd    { color: var(--text); }
+  .t-cursor {
+    display: inline-block;
+    width: 8px; height: 16px;
+    background: var(--cyan);
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+  }
+
+  .t-comment { color: var(--muted); font-size: var(--text-sm); }
+
+  /* ── Buttons ── */
+  .btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.8s;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    font-weight: var(--fw-label);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), #0099BB);
+    color: #000;
+    box-shadow: 0 0 30px rgba(0,217,255,0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(0,217,255,0.5);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0,217,255,0.05);
+  }
+
+  .btn-sh {
+    font-weight: var(--fw-title);
+    border-width: 2px;
+    box-shadow: 0 0 24px rgba(0, 217, 255, 0.18);
+  }
+  .btn-sh:hover {
+    transform: translateY(-2px);
+  }
+  .btn-sh-green {
+    background: rgba(0, 255, 128, 0.12);
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 24px rgba(0, 255, 128, 0.22);
+  }
+  .btn-sh-green:hover {
+    background: rgba(0, 255, 128, 0.2);
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 36px rgba(0, 255, 128, 0.35);
+  }
+  .btn-sh-orange {
+    background: rgba(255, 140, 26, 0.14);
+    border-color: var(--orange);
+    color: var(--orange);
+    box-shadow: 0 0 24px rgba(255, 140, 26, 0.22);
+  }
+  .btn-sh-orange:hover {
+    background: rgba(255, 140, 26, 0.22);
+    border-color: var(--orange);
+    color: var(--orange);
+    box-shadow: 0 0 36px rgba(255, 140, 26, 0.35);
+  }
+
+  .sh-trust-note {
+    font-size: var(--text-base);
+    line-height: 1.55;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    background: rgba(0, 217, 255, 0.06);
+    border: 1px solid rgba(0, 217, 255, 0.25);
+    color: var(--muted);
+  }
+  .sh-trust-note strong { color: var(--cyan); }
+
+  /* ── Copy toast ── */
+  .copy-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--card2);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    padding: 10px 20px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .copy-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Features ── */
+  .section {
+    position: relative;
+    z-index: 1;
+    padding: 28px 12px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .feature {
+    background: var(--card);
+    padding: 10px 10px;
+    transition: background 0.2s;
+  }
+  .feature:hover { background: var(--card2); }
+
+  .feature-icon {
+    font-size: 16px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .feature-title {
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .feature-desc {
+    font-size: var(--text-base);
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── Install steps ── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--cyan);
+    background: rgba(0,217,255,0.08);
+    border: 1px solid rgba(0,217,255,0.2);
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: var(--fw-title);
+  }
+
+  .step-content h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--fw-label);
+    margin-bottom: 4px;
+  }
+
+  .step-content p {
+    font-size: var(--text-base);
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .step-content code {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: var(--green);
+  }
+
+  /* ── Download section ── */
+  .download-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dl-recommended {
+    background: var(--card2);
+    border: 1px solid rgba(0, 255, 136, 0.4);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-top: 14px;
+    text-align: left;
+  }
+  .dl-recommended-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 255, 136, 0.45);
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .dl-recommended-title {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .dl-recommended-steps {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0 0 14px;
+  }
+  .btn-recommended {
+    width: 100%;
+    padding: 14px 18px !important;
+    font-size: 17px !important;
+    font-weight: 600 !important;
+  }
+  .dl-other-panel { width: 100%; }
+  .dl-other-panel.is-open .dl-other-body { max-height: 360px; }
+  .dl-other-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .dl-other-note {
+    margin-top: 10px;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.55;
+    text-align: left;
+  }
+  #dl-win.dl-win-wrap {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 640px;
+    gap: 0;
+  }
+
+  .channel-compare {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .channel-compare-scroll { overflow-x: auto; }
+  .channel-compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    min-width: 520px;
+  }
+  .channel-compare-table th,
+  .channel-compare-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .channel-compare-table th {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .channel-compare-table td:first-child {
+    color: var(--text);
+    font-weight: 500;
+    width: 28%;
+  }
+
+  .download-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(0,217,255,0.08), transparent 70%);
+    pointer-events: none;
+  }
+
+  .prev-versions-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+  .prev-versions-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: none;
+    border: none;
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+  }
+  .prev-versions-note {
+    margin: 8px 0 0;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .prev-versions-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+  .prev-versions-panel.is-open .prev-versions-body {
+    max-height: 320px;
+  }
+
+  .whats-new-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+  .whats-new-panel.is-open .whats-new-body {
+    max-height: 520px;
+  }
+  .whats-new-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .whats-new-grid {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  @media (min-width: 700px) {
+    .whats-new-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .whats-new-card {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+  .whats-new-card h3 {
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    margin: 0 0 8px;
+  }
+  .whats-new-card ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .whats-new-card li { margin-bottom: 4px; }
+  .whats-new-card li strong { color: var(--text); font-weight: 600; }
+  .prev-versions-panel.is-open .prev-versions-chevron {
+    transform: rotate(90deg);
+  }
+  .prev-versions-chevron {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    color: var(--muted);
+  }
+  .prev-versions-scroll {
+    margin-top: 14px;
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .prev-versions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .prev-versions-table th,
+  .prev-versions-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+  }
+  .prev-versions-table th {
+    color: var(--muted);
+    font-weight: var(--fw-label);
+    background: var(--card2);
+    position: sticky;
+    top: 0;
+  }
+  .prev-channel {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 11px;
+    font-weight: var(--fw-title);
+  }
+  .prev-dl-link {
+    background: none;
+    border: none;
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+  .prev-hash {
+    color: var(--green);
+    font-size: 12px;
+    word-break: break-all;
+  }
+
+  /* ── Minecraft server (unrelated community section) ── */
+  .mc-section {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 20px 56px;
+  }
+
+  .mc-section .section-label { color: #5DBD4A; }
+  .mc-section .section-label::after { background: rgba(93,189,74,0.25); }
+
+  .mc-card {
+    background: var(--card);
+    border: 1px solid rgba(93,189,74,0.35);
+    border-radius: 16px;
+    padding: 18px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mc-card::before {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -40px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(93,189,74,0.12), transparent 70%);
+    pointer-events: none;
+  }
+
+  .mc-card::after {
+    content: '';
+    position: absolute;
+    top: -60px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(139,90,43,0.1), transparent 70%);
+    pointer-events: none;
+  }
+
+  .mc-card h2 {
+    font-size: 17px;
+    font-weight: var(--fw-title);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .mc-card p {
+    font-size: var(--text-base);
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .mc-ip-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    max-width: 420px;
+    margin: 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(93,189,74,0.4);
+    background: var(--bg2);
+  }
+
+  .mc-ip {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    color: #5DBD4A;
+    padding: 14px 18px;
+    text-align: left;
+    letter-spacing: 0.3px;
+    user-select: all;
+  }
+
+  .mc-copy-btn {
+    background: #5DBD4A;
+    color: #0A1A08;
+    border: none;
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    font-weight: var(--fw-title);
+    padding: 0 20px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .mc-copy-btn:hover { background: #6FD45C; }
+  .mc-copy-btn:active { transform: scale(0.97); }
+
+  .mc-hint {
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
+  .download-meta h2 {
+    font-size: 14px;
+    font-weight: var(--fw-title);
+    margin-bottom: 4px;
+  }
+
+  .download-meta p {
+    font-size: var(--text-base);
+    color: var(--muted);
+  }
+
+  .download-meta .req {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .req-tag {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── Footer ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 20px 16px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    color: var(--muted);
+  }
+
+  footer span {
+    color: var(--cyan);
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  @keyframes typing {
+    from { width: 0; }
+    to   { width: 100%; }
+  }
+
+  /* ── Terms modal ── */
+  .tc-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tc-overlay.open { display: flex; }
+  .tc-modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  }
+  .tc-modal-header {
+    padding: 20px 22px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tc-modal-header h2 {
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    color: var(--green);
+  }
+  .tc-modal-body {
+    padding: 16px 22px;
+    overflow-y: auto;
+    font-size: var(--text-base);
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .tc-modal-body p { margin-bottom: 14px; }
+  .tc-modal-body p:last-child { margin-bottom: 0; }
+  .tc-modal-body h3 {
+    font-size: var(--text-lg);
+    color: var(--cyan);
+    margin: 20px 0 10px;
+    font-weight: var(--fw-title);
+  }
+  .tc-modal-body h3:first-of-type { margin-top: 0; }
+  .tc-modal-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+  .tc-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    font-size: var(--text-base);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .tc-checkbox-row input { margin-top: 3px; accent-color: var(--green); }
+  .tc-modal-actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px 22px 20px;
+    justify-content: flex-end;
+  }
+  .tc-modal-actions .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    nav { padding: 6px 10px; }
+    .hero { padding: 52px 10px 28px; }
+    .download-card { flex-direction: column; text-align: center; }
+    .download-card .req { justify-content: center; }
+    .tc-modal-actions { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="file-protocol-overlay" id="file-protocol-overlay" role="alertdialog" aria-labelledby="file-protocol-title">
+  <div class="file-protocol-card">
+    <h2 id="file-protocol-title">Open the right way</h2>
+    <p>Don't open <strong>index.html</strong> directly — downloads and fonts won't work.</p>
+    <p>Close this tab, then double-click <strong>OPEN-WEBSITE.command</strong> in the unzipped folder.</p>
+    <p id="file-protocol-netlify-note" style="margin-top:14px; font-size:18px; color:var(--muted);">This zip runs locally — double-click OPEN-WEBSITE.command.</p>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-logo">rNitro</div>
+<!-- @sync:nav-badge -->
+  <div class="nav-badge">v8.2.6 Final · v8.2.8 Beta · macOS</div>
+<!-- @end:nav-badge -->
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <p class="hero-eyebrow">macOS CPU Monitor</p>
+  <h1 class="hero-title"><span>rNitro</span></h1>
+  <p class="hero-credit">Made by <strong>chopsticks</strong></p>
+  <p class="hero-sub">Real-time CPU usage, temperature, clock speed, and per-core breakdown. One command to install. Mac and Windows.</p>
+
+  <!-- Animated terminal -->
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <div class="terminal-title">zsh — bash</div>
+    </div>
+    <div class="terminal-body">
+      <div class="t-comment"># 1. Download the installer</div>
+      <div>
+        <span class="t-prompt">~ %</span>
+        <span class="t-cmd" id="typed-dl"></span>
+      </div>
+      <div style="margin-top:8px" id="line2" style="display:none">
+        <span class="t-comment"># 2. Run it</span>
+      </div>
+      <div id="line3">
+        <span class="t-prompt" id="prompt2"></span>
+        <span class="t-cmd" id="typed-run"></span><span class="t-cursor" id="cursor"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Platform tabs -->
+  <div style="display:flex; gap:8px; justify-content:center; margin-bottom:16px;">
+    <button id="tab-mac" onclick="setTab('mac')"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+      🍎 macOS
+    </button>
+    <button id="tab-win" onclick="setTab('win')"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+      🪟 Windows
+    </button>
+  </div>
+
+  <!-- macOS download -->
+  <div id="dl-mac" style="display:flex; flex-direction:column; gap:20px; align-items:center; width:100%; max-width:640px;">
+<!-- @sync:hero-stable -->
+    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">v8.2.6-Final-arm64</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
+      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
+        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
+        <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
+        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+      </div>
+      <div id="hero-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-stable-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.dmg')">DMG disk image · 2.3 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.sh')">Shell installer (.sh) · 260 KB</button>
+            <button class="btn btn-secondary" onclick="copyCmd('stable')">⎘ Copy bash command</button>
+          </div>
+          <div class="dl-other-note"><strong>PKG</strong> needs admin password. <strong>DMG</strong> — drag to Applications. <strong>.sh</strong> compiles from readable source (~30s). PKG may trigger a macOS security prompt — use System Settings → Privacy &amp; Security → Open.</div>
+        </div>
+      </div>
+    </div>
+<!-- @end:hero-stable -->
+<!-- @sync:hero-beta -->
+    <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">v8.2.8-Beta-arm64</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Beta — stable features plus AI chat API: Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes.</div>
+      <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
+        <strong>Beta notice:</strong> Experimental AI features — report issues via Support. You must agree to Terms &amp; Conditions before download.
+      </p>
+      <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
+        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
+        <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
+        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+      </div>
+      <div id="hero-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-beta-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.dmg')">DMG disk image · 2.0 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.sh')">Shell installer (.sh) · 267 KB</button>
+            <button class="btn btn-secondary" onclick="copyCmd('beta')">⎘ Copy bash command</button>
+          </div>
+          <div class="dl-other-note"><strong>Beta notice:</strong> Experimental AI — Terms required. <strong>.sh</strong> = full source compile on your Mac if you don't trust pre-built PKGs.</div>
+        </div>
+      </div>
+    </div>
+<!-- @end:hero-beta -->
+
+<!-- @sync:hero-more -->
+      <div id="hero-more-downloads" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-more-downloads')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-macOS-Apps.zip')">macOS Apps ZIP (Stable + Beta) · 3.6 MB</button>
+            <button type="button" class="btn btn-secondary" data-dl-full-zip style="background:var(--cyan); color:#000;" onclick="requestDownload('rnitro-netlify.zip')">Full Release ZIP · 31.7 MB</button>
+          </div>
+          <div class="dl-other-note"><strong>macOS Apps ZIP</strong> — rNitro-Stable.app (v8.2.6) + rNitro-Beta.app (v8.2.8). <strong>Full Release</strong> — entire website + all builds for developers.</div>
+        </div>
+      </div>
+<!-- @end:hero-more -->
+<!-- @sync:hero-dl-note -->
+    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:560px; margin-top:12px; line-height:1.55;">
+      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers.
+    </p>
+<!-- @end:hero-dl-note -->
+  </div>
+
+  <!-- Windows download -->
+  <div id="dl-win" class="dl-win-wrap" style="display:none;">
+<!-- @sync:hero-windows -->
+    <div style="width:100%; background:var(--card); border:1px solid var(--cyan); border-radius:12px; padding:20px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">v4.2.2-Windows-Final-x86</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Windows 10/11 tray monitor — CPU, temp, RAM, and BTC stats.</div>
+      <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4); margin-top:14px;">
+        <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Recommended Download</div>
+        <div class="dl-recommended-title" style="color:var(--cyan);">Windows EXE</div>
+        <p class="dl-recommended-steps">Double-click to run. Install <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime x64</a> first if Windows prompts you.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="requestDownload('rNitro-v4.2.2-Windows-Final-x86.exe')">⬇ Download EXE · 495 KB</button>
+      </div>
+      <div id="hero-win-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-win-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v4.2.2-Windows-Final-x86.ps1')">PowerShell installer (.ps1) · 45 KB</button>
+            <button class="btn btn-secondary" onclick="copyWinCmd()">⎘ Copy PowerShell command</button>
+          </div>
+          <div class="dl-other-note">The .ps1 compiles from source with built-in csc.exe — no SDK needed.</div>
+        </div>
+      </div>
+    </div>
+<!-- @end:hero-windows -->
+  </div>
+</section>
+
+<!-- Minecraft server — not rNitro-related -->
+<section class="mc-section" style="padding-top:40px;">
+  <div class="section-label">Community</div>
+  <div class="mc-card">
+    <h2>Join our Minecraft server!</h2>
+    <p>Nothing to do with rNitro — just a place to hang out and play. Add the server in Minecraft Java Edition and jump in.</p>
+    <div class="mc-ip-row">
+      <div class="mc-ip" id="mc-ip">macetech.minefort.com</div>
+      <button class="mc-copy-btn" onclick="copyMcIp()" type="button">Copy IP</button>
+    </div>
+    <div class="mc-hint">Click Copy IP, then Multiplayer → Add Server → paste</div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section" style="padding-top:0;">
+  <div class="section-label">What it monitors</div>
+  <div class="features">
+    <div class="feature">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">CPU Usage</div>
+      <div class="feature-desc">Total load with a 60-second live history graph, color-coded by intensity.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🌡️</span>
+      <div class="feature-title">Temperature</div>
+      <div class="feature-desc">Real SMC sensor data in °C with a visual gauge that goes orange and red under load.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-title">Clock Speed</div>
+      <div class="feature-desc">Base and boost MHz tracked live, showing how hard your chip is actually running.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🔲</span>
+      <div class="feature-title">Per-Core Breakdown</div>
+      <div class="feature-desc">Individual usage bars and clock speeds for every logical core on your CPU.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🏁</span>
+      <div class="feature-title">Benchmark</div>
+      <div class="feature-desc">Cinebench-style single-core and multi-core scores from a fixed, repeatable render workload — built right into the popover.</div>
+    </div>
+<!-- @sync:feature-ai-chat -->
+    <div class="feature">
+      <span class="feature-icon">💬</span>
+      <div class="feature-title">AI Chat <span style="color:var(--orange); font-size:16px;">(v8.2.8 Beta)</span></div>
+      <div class="feature-desc">Available in v8.2.8-Beta-arm64 — Chat tab with Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes (Keychain for cloud keys; local providers need no key).</div>
+    </div>
+<!-- @end:feature-ai-chat -->
+  </div>
+</section>
+
+<!-- Install steps -->
+<section class="section" style="padding-top:0">
+  <div class="section-label">How to install</div>
+
+  <div id="steps-mac" class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+<!-- @sync:install-step-pkg -->
+        <h3>Download the PKG, DMG, or App ZIP</h3>
+        <p>Choose <strong>Stable</strong> (green, OpenAI + OpenRouter) or <strong>Beta</strong> (orange, all AI APIs). Agree to the Terms &amp; Conditions, then pick a format:</p>
+        <ul style="margin:10px 0 0 18px; line-height:1.7; color:var(--muted);">
+          <li><strong>PKG</strong> — double-click; installs to Applications (admin password).</li>
+          <li><strong>DMG</strong> — open the disk image and drag <code>rNitro.app</code> to Applications.</li>
+          <li><strong>Apps ZIP</strong> — one file with both Stable and Beta <code>.app</code> bundles.</li>
+        </ul>
+        <div style="margin-top:12px;">
+      <p style="font-size:16px; color:#ffcc66; background:rgba(255,180,40,0.1); border:1px solid rgba(255,180,40,0.45); border-radius:8px; padding:12px 14px; line-height:1.65; text-align:left;">
+        <strong>⚠ macOS security prompt:</strong> When you open the PKG, macOS may say it can't verify the file. That's normal for indie apps. <strong>Don't click Move to Trash.</strong> Click <strong>Done</strong>, then go to <strong>System Settings → Privacy &amp; Security</strong> and press <strong>Open</strong> at the bottom.
+      </p>
+        </div>
+<!-- @end:install-step-pkg -->
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+<!-- @sync:install-step-sh -->
+        <h3>Or use the .sh installer (if you don't trust the PKG)</h3>
+        <p>If you're unsure about a pre-built PKG, download the highlighted <strong>.sh</strong> file instead. It contains the full app source — read it first, then compile locally. Stable:</p>
+<!-- @end:install-step-sh -->
+<!-- @sync:install-sh-commands -->
+        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:16px; color:var(--green);">
+          bash ~/Downloads/rNitro-v8.2.6-Final-arm64.sh
+        </div>
+        <p style="margin-top:8px;">Beta: <code>bash ~/Downloads/rNitro-v8.2.8-Beta-arm64.sh</code>. Installs to <code>~/Applications/rNitro.app</code> — takes ~30 seconds. Self-verifies its SHA-256 checksum before running.</p>
+<!-- @end:install-sh-commands -->
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>First launch</h3>
+        <p>If macOS blocks the app, right-click <code>rNitro.app</code> → <strong>Open</strong> once. No telemetry, no account — runs fully local.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="steps-win" class="steps" style="display:none;">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Download the EXE (easiest)</h3>
+        <p>Switch to the <strong>Windows</strong> tab above and click <strong>Download rNitro-v4.2.1-Windows-Final-x86.exe</strong>. If Windows asks for a runtime, install the <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime (x64)</a> first, then run the EXE again.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Or compile from source</h3>
+        <p>Download <code>rNitro-v4.2.1-Windows-Final-x86.ps1</code>, open <strong>PowerShell</strong>, and run:</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:16px; color:var(--green);">
+          powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\Downloads\rNitro-v4.2.1-Windows-Final-x86.ps1
+        </div>
+        <p style="margin-top:8px;">This compiles with <code>csc.exe</code> (built into Windows 10/11) and installs to <code>%LOCALAPPDATA%\rNitro</code> — takes ~15 seconds. No SDK required.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Use rNitro</h3>
+        <p>rNitro runs in the <strong>system tray</strong> (bottom-right). Click the icon for live CPU%, temperature, RAM, BTC price, and 60-second history graphs. Right-click the tray icon to quit.</p>
+        <p style="margin-top:8px;">For the most accurate CPU temperature readings on Windows, run the installer as <strong>Administrator</strong> once when using the <code>.ps1</code> build path.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Download card -->
+<section class="section" style="padding-top:0; padding-bottom:40px">
+  <div id="cards-mac">
+
+<!-- @sync:stable-beta-compare -->
+  <div class="channel-compare">
+    <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Stable vs Beta — which should I download?</h2>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">New here? Start with the green Recommended Download (App ZIP). Pick Stable for everyday use; Beta if you want every AI provider and experimental features.</p>
+    <div class="channel-compare-scroll">
+      <table class="channel-compare-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th style="color:var(--green);">v8.2.6 Final</th>
+            <th style="color:var(--orange);">v8.2.8 Beta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Best for</td>
+            <td style="color:var(--green);">Daily CPU monitoring</td>
+            <td style="color:var(--orange);">Power users + AI chat</td>
+          </tr>
+          <tr>
+            <td>AI chat</td>
+            <td style="color:var(--green);">OpenAI + OpenRouter only</td>
+            <td style="color:var(--orange);">Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes</td>
+          </tr>
+          <tr>
+            <td>System Advisor</td>
+            <td style="color:var(--green);">Yes</td>
+            <td style="color:var(--orange);">Yes</td>
+          </tr>
+          <tr>
+            <td>Temp notification banners</td>
+            <td style="color:var(--green);">No</td>
+            <td style="color:var(--orange);">Yes (optional)</td>
+          </tr>
+          <tr>
+            <td>AES-256 key storage</td>
+            <td style="color:var(--green);">No</td>
+            <td style="color:var(--orange);">Yes (GCM + Keychain)</td>
+          </tr>
+          <tr>
+            <td>First-launch tips</td>
+            <td style="color:var(--green);">No</td>
+            <td style="color:var(--orange);">Yes</td>
+          </tr>
+          <tr>
+            <td>Low Power Mode badge</td>
+            <td style="color:var(--green);">Yes</td>
+            <td style="color:var(--orange);">Yes</td>
+          </tr>
+          <tr>
+            <td>Risk level</td>
+            <td style="color:var(--green);">Production-ready</td>
+            <td style="color:var(--orange);">Experimental — Terms required</td>
+          </tr>
+          <tr>
+            <td>Recommended file</td>
+            <td style="color:var(--green);">App ZIP (green card)</td>
+            <td style="color:var(--orange);">App ZIP (orange card)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<!-- @end:stable-beta-compare -->
+<!-- @sync:whats-new -->
+  <div id="whats-new-panel" class="whats-new-panel prev-versions-panel is-open">
+    <button type="button" class="prev-versions-toggle" onclick="toggleWhatsNew()" aria-expanded="true">
+      <span>What's new</span>
+      <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+    </button>
+    <p class="prev-versions-note">Latest stable and beta highlights — see the full changelog below for older releases.</p>
+    <div class="whats-new-body prev-versions-body">
+      <div class="whats-new-grid">
+        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
+          <h3 style="color:var(--orange);">v8.2.8 Beta</h3>
+          <ul>
+            <li><strong>AES-256-GCM encryption</strong> — API keys and AI chat history encrypted at rest with CryptoKit (256-bit master key in Keychain). Plaintext data migrates automatically on first launch.</li>
+            <li><strong>Patched major bugs</strong> — website download buttons and file-save flow fixed in v8.2.7.</li>
+            <li><strong>First-launch tips sheet</strong> — quick welcome on first open (menubar icon, Gatekeeper, App ZIP install).</li>
+            <li><strong>Low Power Mode badge</strong> — green LP pill when macOS Energy Mode is on.</li>
+            <li><strong>All AI providers</strong> — Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v8.2.6 Stable</h3>
+          <ul>
+            <li><strong>Patched major bugs</strong> — website download buttons work again; App ZIP, PKG, DMG, and .sh downloads trigger reliably after Terms acceptance.</li>
+            <li><strong>Stable channel</strong> — production-ready CPU monitor, benchmark, and stress test.</li>
+            <li><strong>AI chat (trimmed)</strong> — OpenAI (GPT) and OpenRouter only.</li>
+            <li><strong>System Advisor</strong> — client-side specs assistant with customizable warn/critical thresholds.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- @end:whats-new -->
+
+<!-- @sync:download-stable -->
+  <div class="download-card" style="border-color:var(--green);">
+    <div class="download-meta">
+      <h2>rNitro v8.2.6-Final-arm64</h2>
+      <p>Stable macOS build — monitor, benchmark, and AI chat (OpenAI GPT + OpenRouter only).</p>
+      <div class="req">
+        <span class="req-tag">macOS 12+</span>
+        <span class="req-tag">Apple Silicon</span>
+        <span class="req-tag">Xcode CLT (.sh)</span>
+        <span class="req-tag">Free</span>
+      </div>
+      <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
+        SHA-256 (.sh):
+        <span id="sha-hash-stable" style="color:var(--green); word-break:break-all;">5d9719543faa9f981551c11c71ed15e15499c677d8dc37b6bcb036ade32a1b86</span>
+        <button onclick="copyHash('stable')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
+      </div>
+    </div>
+      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
+        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
+        <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
+        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+      </div>
+      <div id="dl-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-stable-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.dmg')">DMG disk image · 2.3 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.2.6-Final-arm64.sh')">Shell installer (.sh) · 260 KB</button>
+          </div>
+          <div class="dl-other-note"><strong>Don't trust the PKG?</strong> The .sh compiles from readable source on your Mac.</div>
+        </div>
+      </div>
+  </div>
+<!-- @end:download-stable -->
+<!-- @sync:download-beta -->
+  <div class="download-card" style="margin-top:16px; border-color:var(--orange);">
+    <div class="download-meta">
+      <h2>rNitro v8.2.8-Beta-arm64</h2>
+      <p>Beta macOS build — v8.2.6 features plus AI chat API (Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes).</p>
+      <p style="font-family:var(--mono); font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.6;">
+        <strong>Beta notice:</strong> Experimental AI features — Terms &amp; Conditions required before download.
+      </p>
+      <div class="req">
+        <span class="req-tag" style="border-color:var(--orange); color:var(--orange);">Beta</span>
+        <span class="req-tag">macOS 12+</span>
+        <span class="req-tag">Apple Silicon</span>
+        <span class="req-tag">AI Chat API</span>
+        <span class="req-tag">Free</span>
+      </div>
+      <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
+        SHA-256 (.sh):
+        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">c5ace190ea41674f6902cdd63b402e366facc5149535c45c60f2c32b27a250b3</span>
+        <button onclick="copyHash('beta')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
+      </div>
+    </div>
+      <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
+        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
+        <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
+        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+      </div>
+      <div id="dl-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-beta-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.dmg')">DMG disk image · 2.0 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.2.8-Beta-arm64.sh')">Shell installer (.sh) · 267 KB</button>
+          </div>
+          <div class="dl-other-note"><strong>Skeptical of the PKG?</strong> Use the .sh — full-source compile, verified checksum.</div>
+        </div>
+      </div>
+  </div>
+<!-- @end:download-beta -->
+<!-- @sync:download-more -->
+      <div id="dl-more-downloads" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-more-downloads')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-macOS-Apps.zip')">macOS Apps ZIP (Stable + Beta) · 3.6 MB</button>
+            <button type="button" class="btn btn-secondary" data-dl-full-zip style="background:var(--cyan); color:#000;" onclick="requestDownload('rnitro-netlify.zip')">Full Release ZIP · 31.7 MB</button>
+          </div>
+          <div class="dl-other-note">Apps ZIP includes rNitro-Stable.app (v8.2.6-Final-arm64) and rNitro-Beta.app (v8.2.8-Beta-arm64). Full Release has the entire site + all builds.</div>
+        </div>
+      </div>
+<!-- @end:download-more -->
+<!-- @sync:download-previous -->
+  <div id="prev-versions-panel" class="prev-versions-panel" style="margin-top:16px;">
+    <button type="button" class="prev-versions-toggle" onclick="togglePreviousVersions()" aria-expanded="false">
+      <span>Previous versions</span>
+      <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+    </button>
+    <p class="prev-versions-note">Older builds for rollback or compatibility — use if a newer release misbehaves on your Mac.</p>
+    <div class="prev-versions-body">
+      <div class="prev-versions-scroll">
+        <table class="prev-versions-table">
+          <thead>
+            <tr>
+              <th>Version</th><th>Channel</th><th>.sh</th><th>PKG</th><th>DMG</th><th>SHA-256 (.sh)</th>
+            </tr>
+          </thead>
+          <tbody>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.7-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.7-Beta-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.7-Beta-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.7-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="f12519a1a24928eb5b7cc8b4452d61dbaefe481a4f6d68755c7a0dd2e08bd5d9">f12519a1a24928eb…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.6-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.6-Beta-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.6-Beta-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.6-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="abbc05ac594dc2857b7063b1d9376ba84077e879e8f51cc7562eaf2523cda03a">abbc05ac594dc285…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.5-Final-arm64</td>
+        <td><span class="prev-channel" style="color:var(--green); border-color:var(--green);">Stable</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.5-Final-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.5-Final-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.5-Final-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="6b6e3b73ab0c86b811fce69152fa218a9aa33873c8b2f06d381ac1e72259a8e1">6b6e3b73ab0c86b8…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.5-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.5-Beta-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.5-Beta-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.5-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="558d5a2fe78497000be32806b21e55e23f95e51f17abec9ce515eeb3fbddadb4">558d5a2fe7849700…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.4-Final-arm64</td>
+        <td><span class="prev-channel" style="color:var(--green); border-color:var(--green);">Stable</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.4-Final-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.4-Final-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.4-Final-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="ecbdf70e5002267515cb6ce2fe1908714e0ebce69025e85fcbdfe205d3adee63">ecbdf70e50022675…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.4-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.4-Beta-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.4-Beta-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.4-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="8f0010734cf189a485b4e9b7f88f903e6e7e5239e4ebe2f5da01c135f2b6eacd">8f0010734cf189a4…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.3-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.3-Beta-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.3-Beta-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.3-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="2ba0e2a1d26475610f57a8c4fe367d5d28cc496cc07f520b0279b6384a026863">2ba0e2a1d2647561…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.2-Final-arm64</td>
+        <td><span class="prev-channel" style="color:var(--green); border-color:var(--green);">Stable</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.2-Final-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.2-Final-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.2-Final-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="56afbc20b3b98f98791ad5ee0ebd87a323ed724baf7af7a06ac418db5789bf0a">56afbc20b3b98f98…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.2.1-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.1-Beta-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.2.1-Beta-arm64.pkg')">PKG</button></td>
+        <td><span style="color:var(--muted)">—</span></td>
+        <td class="prev-hash" title="62a40794ec7c7017c60d708be47e1e7359fc8e66470eb4f2e459581a0ae2a4ba">62a40794ec7c7017…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v8.1.1-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.1.1-Beta-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.1.1-Beta-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.1.1-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="aac9f10b0523a03d7d3bb3b09444a726529a725575b711c835ccc61019a8831b">aac9f10b0523a03d…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v7.3.2-Final-arm64</td>
+        <td><span class="prev-channel" style="color:var(--green); border-color:var(--green);">Stable</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.3.2-Final-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.3.2-Final-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.3.2-Final-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="104d38155e92a2f9991f6dc73cc3f07a541ac58504a2c33871260adc78298831">104d38155e92a2f9…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v7.0.1a-Final-arm64</td>
+        <td><span class="prev-channel" style="color:var(--green); border-color:var(--green);">Stable</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.0.1a-Final-arm64.sh')">.sh</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.0.1a-Final-arm64.pkg')">PKG</button></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.0.1a-Final-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="292950e466789e870e89f85984e4522a3a8d18d4c9b7227f3d3f0007b617ada3">292950e466789e87…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v7.0.2-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.0.2-Beta-arm64.sh')">.sh</button></td>
+        <td><span style="color:var(--muted)">—</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.0.2-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="c8e0f2f9647fe2d559a396d2989d93053e4401f65fc3de861504ba0858359c04">c8e0f2f9647fe2d5…</td>
+      </tr>
+      <tr>
+        <td style="color:var(--text); font-weight:600;">v7.0.1-Beta-arm64</td>
+        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.0.1-Beta-arm64.sh')">.sh</button></td>
+        <td><span style="color:var(--muted)">—</span></td>
+        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v7.0.1-Beta-arm64.dmg')">DMG</button></td>
+        <td class="prev-hash" title="66804ba8b27115259a032924c7742c2415635d108d3e5e3a48489f0e8ef28bec">66804ba8b2711525…</td>
+      </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+<!-- @end:download-previous -->
+
+  </div>
+
+<!-- @sync:download-windows -->
+  <div id="card-win" class="download-card" style="display:none;">
+    <div class="download-meta">
+      <h2>rNitro v4.2.2-Windows-Final-x86</h2>
+      <p>Pre-built EXE · PowerShell source installer · system tray monitor for Windows 10/11 x64</p>
+      <div class="req">
+        <span class="req-tag">Windows 10/11</span>
+        <span class="req-tag">x86/x64</span>
+        <span class="req-tag">.NET 8 Runtime (EXE)</span>
+        <span class="req-tag">Free</span>
+      </div>
+    </div>
+    <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4);">
+      <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Recommended Download</div>
+      <div class="dl-recommended-title" style="color:var(--cyan);">Windows EXE</div>
+      <p class="dl-recommended-steps">Double-click to run. Needs <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime x64</a> if prompted.</p>
+      <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="requestDownload('rNitro-v4.2.2-Windows-Final-x86.exe')">⬇ Download EXE · 495 KB</button>
+    </div>
+      <div id="dl-win-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-win-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v4.2.2-Windows-Final-x86.ps1')">PowerShell installer (.ps1) · 45 KB</button>
+          </div>
+          <div class="dl-other-note">PS1 compiles locally — no SDK required.</div>
+        </div>
+      </div>
+  </div>
+<!-- @end:download-windows -->
+</section>
+
+<!-- Changelog -->
+<section class="section" style="padding-top:0; padding-bottom:100px">
+  <div class="section-label">Changelog</div>
+<!-- @sync:changelog -->
+  <div class="features" style="grid-template-columns:1fr;">
+    <div class="feature">
+      <div class="feature-title">v8.2.8-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">AES-256-GCM encryption</strong> — cloud API keys and per-provider AI chat history are encrypted at rest using CryptoKit AES-256-GCM. A device-bound 256-bit master key lives in Keychain (<code>app.rnitro.crypto</code>); key blobs use the <code>RNENC1</code> envelope format. Existing plaintext keys and history migrate automatically on first read after upgrade.<br><br>
+        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.7-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Patched major bugs</strong> — fixed broken download buttons on getrnitro.netlify.app (JavaScript parse error in the support-chat knowledge base broke all page scripts), unreliable ZIP/PKG/DMG downloads (now use proper file-save links instead of full-page navigation), and Terms modal confirm edge cases. Version bump + refreshed signed App ZIP downloads.<br><br>
+        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.6-Final-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--green);">Patched major bugs</strong> — same website download fixes as v8.2.7 Beta. Stable channel: CPU monitor, benchmark, stress test, AI chat (OpenAI + OpenRouter), and System Advisor.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v4.2.2-Windows-Final-x86</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--cyan);">Patched major bugs</strong> — version bump aligned with macOS v8.2.6/v8.2.7 website fixes. Windows tray monitor unchanged; download buttons on the site work again.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.6-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">First-launch tips sheet</strong> — welcome dialog on first open with menubar icon, Gatekeeper, and App ZIP install steps.<br><br><strong style="color:var(--orange);">Low Power Mode badge</strong> — green <strong>LP</strong> pill in the popover when macOS Low Power / Energy Mode is on.<br><br><strong style="color:var(--orange);">Varela Round</strong> UI font across the app (bundled in the .app). Optional <strong>critical temperature banners</strong> — macOS notifications when live CPU temp or thermal pressure crosses warn/critical limits you configure in System Advisor. Includes System Advisor, iStats-style popover, all AI providers, and signed App ZIP downloads on the website.<br><br>
+        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.5-Final-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--green);">Stable release</strong> — CPU monitor, benchmark, stress test, and AI chat limited to <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong>. System Advisor tab with client-side specs assistant and customizable temp/CPU/RAM/GPU/battery warnings. iStats-style sectioned menubar popover with Modern/Legacy UI toggle.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.4-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong>System Advisor</strong> tab — client-side specs assistant that reads live hardware stats and warns when temps, CPU, RAM, GPU, or battery cross thresholds you set. No API key; fully on-device. All beta AI providers included.<br><br>
+        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.3-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Refinements on the v8.2.2 popover and provider stack — stability and layout polish ahead of System Advisor.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.2-Final-arm64 / v8.2.2-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong>iStats-style sectioned popover</strong> — cleaner menubar layout with single-line stat values (no stacked CPU/RAM labels). <strong>Modern/Legacy UI toggle</strong> in Extras/Tools for users who prefer the older compact layout.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.2.1-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Full AI provider lineup — Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes. Menu bar light/dark icons, network monitor in popover, and <code>uninstall-rNitro.sh</code> companion script.<br><br>
+        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.1.1-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fully responsive UI — window and menubar popover reflow from narrow to wide; adaptive stat grids, flexible detail popups, and scrollable AI provider tabs. 14px default typography (12px in compact layouts). Fixed battery charging status; battery time remaining beside charge level; toggles to show/hide Stress Test and Benchmark.<br><br>
+        AI Chat in menubar popover (Monitor + Chat tabs); per-provider saved history; connection status indicators (Connected / Needs API Key / Offline / Not Configured). Auth fixes for OpenRouter and LM Studio. Boba Tea Tycoon removed from UI.<br><br>
+        <strong style="color:var(--orange);">Beta notice:</strong> This is a beta version — crashes and code errors are possible. Please report to Support if anything goes wrong.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v7.0.1a-Final-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fully responsive CPU monitor UI — adaptive layouts, flexible stat cards, scalable charts and panels, 14px default font (12px compact). Fixed battery charging status; battery time remaining beside charge level; toggles to show/hide Stress Test and Benchmark. All monitor features with improved resize behavior. No AI chat. Boba Tea Tycoon removed.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v8.1-Beta-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Beta AI chat — Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes. Cloud keys in Keychain; local LM Studio/Ollama/Hermes need no API key. All v6.2.4 monitor features included.<br><br>
+        <strong style="color:var(--orange);">Beta notice:</strong> This is a beta version — crashes and code errors are possible. Please report to Support if anything goes wrong.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v6.2.4-Final-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Stable release — CPU monitor, Boba Tea, benchmark, fixed menu bar popover layout and in-popover stat detail popups. No AI chat.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v6.2.3-Final-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Gemini Chat tab in the main window — bring your own API key (stored in Mac Keychain), chat via gemini-2.0-flash. Menu bar popover unchanged (Monitor + Boba Tea only).
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v6.2.2-Final-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fixed temperature stuck at 50°C — wider load-based estimate, SMC peak reading (not average), and blend when package sensors read low. Minecraft server section on the website.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v6.2.1-Final-arm64</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Final Apple Silicon build — live battery % and charge speed (pmset/ioreg), Boba Tea Tycoon tab, CPU/SSD fixes, stat detail sheets, game bundling, Lazy Dog UI, RAM/SSD stats, and DMG distribution.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v4.2.1-Windows-Final-x86</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Final Windows x86 release — macOS-style tray monitor (BASE/BOOST/TEMP/CORES, battery, CPU graph, RAM/SSD bars, per-core list, stress test, benchmark). Pre-built <code>.exe</code> + PowerShell source installer. Requires .NET 8 Desktop Runtime for the EXE, or built-in .NET Framework for the <code>.ps1</code> compile path.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v6.0.1a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        v6 release — minimal UI redesign, Lazy Dog font, live RAM and SSD stats, improved benchmarking, clickable detail popups, and <code>rNitro-v6.0.1a.dmg</code> on the website.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v5.0.0a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        More accurate benchmarking — 3-second timed phases, dedicated serial single-core queue, warm-up/cool-down between phases, <code>@inline(never)</code> hot loop, and WorkSink accumulator. Clickable BASE/BOOST/TEMP/CORES detail popups. EB Garamond font (later changed to Lazy Dog in v6).
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v5.1.2a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fixed inaccurate benchmark results. The single-core timing could be optimized away entirely since its result was never used, and multi-core rendered slightly different content than single-core, so the two scores weren't truly comparable. Both phases now render identical work, run for a fixed 2-second window each (so they self-scale to any CPU speed), include a short warm-up so clocks are ramped before timing starts, and score real completed work that the compiler can't discard.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v5.1.1a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        More accurate temperatures — rNitro now reads real sensor data straight from the SMC (the same controller iStat Menus, TG Pro, and Macs Fan Control read from), falling back to the old estimate only if the SMC can't be reached. Also bumped the live refresh rate from 900ms to 750ms, so the menu bar, popover stats, and history graph all feel snappier.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v5.0.1a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Added stress test and benchmarking. A new built-in benchmark sits next to the stress test in the popover: it times a fixed, repeatable render workload — first on a single thread, then across every logical core — and turns the throughput into single-core and multi-core scores, Cinebench-style, so you get a comparable number instead of just a live load graph.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v4.2.0</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Added a built-in CPU stress test. Spins up one real busy-loop thread per logical core (like Prime95 or stress-ng) so you can watch usage, temperature, and clock speed respond live under genuine full load, right inside the popover. Always user-initiated, stoppable with one click, and automatically stops if the app quits.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v4.1.2</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fixed the popover getting visually cut off. Dynamic header text (CPU name, core count) could force the app's content to grow past its declared frame, making the popover render wider than it should — now hard-clamped so this can't happen, and widened slightly for more breathing room.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v4.1.1w-21a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Added a support chatbot to the website — a small popup in the bottom-right corner that answers common questions about install, temperature readings, Windows support, BTC price, security, and uninstalling. Fully client-side, rule-based, no backend or API key. Falls back to the email support form for anything it doesn't recognize.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">Beta-v3.27w-23a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fixed minor bugs.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v3.2.2a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fixed a compile error — <code>ptrace()</code> isn't bridged by Swift's Darwin module, so the anti-debugger check now resolves it via <code>dlsym</code> at runtime. Also replaced a deprecated Security-framework API (<code>SecTrustGetCertificateAtIndex</code>) with its modern equivalent (<code>SecTrustCopyCertificateChain</code>) in the pinned TLS session.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v3.2.1b</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Added support for Windows 10 and 11 — a PowerShell installer (<code>install-rNitro-windows.ps1</code>) that compiles rNitro from C# source using <code>csc.exe</code> built into .NET Framework. No SDK download required. Includes a system tray icon, live CPU/RAM/temp popup, 60-second history graphs, and live BTC price — same data sources as the Mac version. Download on the Windows tab above.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v3.1.3</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Refresh rate changed to 900ms. Added a ₿ symbol to the left of the menu bar CPU readout.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v3.1.2b</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Stats now refresh every 500ms instead of every 1 second — the menu bar, popover, and game overlay HUD all feel noticeably snappier. The usage history graph buffer was doubled so it still spans a full 60 seconds at the new refresh rate.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v3.1.2</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Menu bar now shows "CPU: X%  Temp: Y°" instead of just a usage percentage, so both numbers are visible at a glance without opening the popover.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v3.1.1a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Added an automatic update check. On every launch, rNitro checks getrnitro.netlify.app for the latest published version; if a newer one exists, you'll see an alert and your default browser will open to this page so you can grab it.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v2.1.0</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Added an in-game overlay HUD — like MSI Afterburner's on-screen display — showing live CPU%, GPU%, temperature, and RAM. Toggle with ⌥⇧O. It's click-through and stays on top of fullscreen games without stealing input. Also added "Launch App with FPS HUD," which runs a Metal-based game with Apple's own native Metal HUD enabled for real, engine-reported FPS and frame time — we don't fake FPS numbers, since macOS has no public API to hook another process's renderer. GPU usage and RAM usage are now read from real OS sources (IOKit accelerator stats, host VM statistics) too, not estimated.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v2.0.1a</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fixed minor temperature bug — the gauge could appear stuck at one value (e.g. 40°C) while in the Nominal thermal state. It now interpolates within each thermal-state band based on live CPU usage, so it moves smoothly instead of sitting flat. Still grounded in the OS's real Nominal/Fair/Serious/Critical signal, not a synthetic guess.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v2.0.1</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Fixed menu bar bug — the menu bar popover's content was getting clipped/cut off. Version bump also marks the 2.0 line — real thermal-state monitoring and menu bar mode (introduced in 1.2.2) are now the baseline.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.2</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Replaced the synthetic temperature estimate with a value driven by macOS's real thermal state (<code style="font-family:var(--mono); background:var(--card2); border:1px solid var(--border); padding:1px 6px; border-radius:4px; color:var(--green);">ProcessInfo.thermalState</code>) instead of a fake formula based on load — still shown in °C for readability, banded by the OS's actual Nominal/Fair/Serious/Critical signal rather than guessed. Added menu bar mode: a live CPU% readout always visible in the menu bar, with a click-to-open quick view, independent of the main window.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.1</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Patched minor bug. Added a custom app icon, generated programmatically at install time and embedded into the app bundle.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.1.0 — Security Update</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        Hardened the installer end-to-end: refuses to run via <code style="font-family:var(--mono); background:var(--card2); border:1px solid var(--border); padding:1px 6px; border-radius:4px; color:var(--green);">curl | bash</code>,
+        builds in a randomized, permission-locked temp directory instead of a predictable path under Downloads,
+        verifies all required tools exist before use, checks the compiled binary isn't a symlink before installing it,
+        refuses to delete <code style="font-family:var(--mono); background:var(--card2); border:1px solid var(--border); padding:1px 6px; border-radius:4px; color:var(--green);">~/Applications/rNitro.app</code> if it's been swapped for a symlink,
+        tightens file permissions throughout, and ad-hoc code-signs the final app bundle. The self-verifying SHA-256 checksum is now pinned and published above.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.0 — Initial release</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        First public release. Native CPU usage, temperature, clock speed, and per-core monitoring, compiled locally via swiftc.
+      </div>
+    </div>
+  </div>
+<!-- @end:changelog -->
+</section>
+
+<section style="max-width:640px; margin:0 auto; padding:60px 24px 40px; text-align:center;">
+  <div class="section-label">Support</div>
+  <h2 style="margin:8px 0 12px;">Need help or found a bug?</h2>
+  <p style="color:#9999AA; margin-bottom:28px; line-height:1.6;">
+    Send a message and your default mail app will open with the details pre-filled, addressed to our support inbox.
+  </p>
+
+  <form id="support-form" style="text-align:left; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px;" onsubmit="return sendSupportEmail(event)">
+    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Your email (optional)</label>
+    <input id="support-email" type="email" placeholder="you@example.com"
+      style="width:100%; padding:10px 12px; margin-bottom:16px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px;">
+
+    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Subject</label>
+    <input id="support-subject" type="text" placeholder="Bug report / question" required
+      style="width:100%; padding:10px 12px; margin-bottom:16px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px;">
+
+    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Message</label>
+    <textarea id="support-message" rows="5" placeholder="What's going on? Include your macOS version and chip (M1/M2/M3) if it's a bug." required
+      style="width:100%; padding:10px 12px; margin-bottom:20px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px; resize:vertical;"></textarea>
+
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Open in Mail →</button>
+  </form>
+</section>
+
+<footer>
+  Built with <span>SwiftUI</span> · No telemetry · No ads · Runs fully local
+</footer>
+
+<!-- Terms & Conditions modal (required before any download) -->
+<div id="tc-overlay" class="tc-overlay" role="dialog" aria-modal="true" aria-labelledby="tc-title">
+  <div class="tc-modal">
+    <div class="tc-modal-header">
+      <h2 id="tc-title">Terms &amp; Conditions</h2>
+    </div>
+    <div class="tc-modal-body">
+      <p>By downloading, installing, compiling from the official source code, accessing, or using rNitro in any form, including Stable, Beta, Preview, Nightly, Windows, macOS, Linux, and any future releases, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree to these Terms, you must not download, install, or use rNitro.</p>
+
+      <h3>Acceptance of These Terms</h3>
+      <p>These Terms govern your use of rNitro and any associated downloads, updates, documentation, or online services provided by the developer. Your continued use of the software constitutes your acceptance of the most recent version of these Terms.</p>
+
+      <h3>Software Provided "AS IS"</h3>
+      <p>rNitro is provided free of charge on an <strong>"AS IS"</strong> and <strong>"AS AVAILABLE"</strong> basis without warranties, guarantees, or conditions of any kind, whether express, implied, or statutory. To the fullest extent permitted by applicable law, the developer disclaims all warranties, including but not limited to merchantability, fitness for a particular purpose, non-infringement, uninterrupted availability, compatibility, security, reliability, accuracy, or error-free operation.</p>
+      <p>The developer does not guarantee that rNitro will operate without interruptions, bugs, crashes, freezes, security vulnerabilities, data loss, hardware stress, increased resource consumption, overheating, reduced battery life, or other unexpected behavior.</p>
+      <p>You acknowledge and agree that your use of rNitro is entirely at your own risk.</p>
+
+      <h3>Beta and Experimental Features</h3>
+      <p>Beta releases, preview builds, nightly builds, experimental features, benchmarks, stress-testing tools, AI integrations, and third-party services may be incomplete, unstable, or subject to unexpected changes without notice.</p>
+      <p>Such features may experience instability, increased hardware usage, inaccurate results, temporary service interruptions, data corruption, or complete failure to function. You acknowledge these risks and voluntarily assume full responsibility for using any experimental or pre-release functionality.</p>
+
+      <h3>Limitation of Liability</h3>
+      <p>To the fullest extent permitted by applicable law, the developer, contributors, licensors, and any affiliated parties shall not be liable for any direct, indirect, incidental, consequential, special, exemplary, punitive, or other damages arising out of or relating to your installation, use of, inability to use, or reliance upon rNitro.</p>
+      <p>This limitation includes, without limitation, damages relating to data loss, file corruption, hardware or software failures, reduced system performance, overheating, battery drain, business interruption, lost profits, lost revenue, security incidents, service interruptions, or any other loss or damage arising from the use of the software.</p>
+      <p>Where applicable law does not permit certain limitations of liability, such limitations shall apply only to the maximum extent permitted by law.</p>
+
+      <h3>Third-Party Services</h3>
+      <p>rNitro may communicate with or integrate third-party software, application programming interfaces (APIs), artificial intelligence providers, cloud services, or other external platforms.</p>
+      <p>The developer has no control over these services and makes no representations regarding their availability, accuracy, security, reliability, or continued operation. Your use of third-party services is governed solely by the terms and privacy policies of the respective providers.</p>
+      <p>The developer accepts no responsibility for outages, changes, generated content, pricing, functionality, or any loss arising from third-party services.</p>
+
+      <h3>User Responsibilities</h3>
+      <p>You are solely responsible for maintaining backups of your files, protecting your data, ensuring that your device meets the necessary system requirements, and determining whether rNitro is suitable for your intended use.</p>
+      <p>rNitro is not designed, certified, or intended for use in environments where software failure could result in injury, loss of life, significant property damage, or other high-risk situations, including medical, emergency response, aviation, industrial control, financial trading, or similar critical applications.</p>
+
+      <h3>Intellectual Property</h3>
+      <p>Unless otherwise stated, all trademarks, branding, logos, graphical assets, documentation, original source code, and other intellectual property associated with rNitro remain the exclusive property of the developer or their respective owners.</p>
+      <p>Nothing contained within these Terms grants you ownership of any intellectual property rights except where expressly permitted by an applicable license.</p>
+      <p>Any third-party software, libraries, fonts, or components included with rNitro remain subject to their respective licenses.</p>
+
+      <h3>Software Updates</h3>
+      <p>The developer may release updates, modifications, security patches, new features, or revised versions of rNitro at any time.</p>
+      <p>The developer also reserves the right to modify, suspend, discontinue, or permanently remove any feature, service, download, or version of rNitro without prior notice.</p>
+
+      <h3>Availability</h3>
+      <p>The availability of downloads, online services, cloud features, AI functionality, updates, documentation, or websites associated with rNitro is not guaranteed.</p>
+      <p>The developer reserves the right to discontinue any part of the project at any time without liability.</p>
+
+      <h3>Acceptable Use</h3>
+      <p>You agree to use rNitro only in compliance with all applicable laws and regulations.</p>
+      <p>You agree not to misuse, interfere with, abuse, or intentionally disrupt any online services provided through rNitro, nor represent modified or unofficial versions as official releases.</p>
+
+      <h3>Changes to These Terms</h3>
+      <p>The developer reserves the right to revise these Terms and Conditions at any time.</p>
+      <p>Updated versions become effective upon publication unless otherwise stated. Your continued use of rNitro after revised Terms have been published constitutes your acceptance of those changes.</p>
+
+      <h3>Governing Law</h3>
+      <p>These Terms shall be governed and interpreted in accordance with the laws applicable in the jurisdiction in which the developer resides, except where mandatory consumer protection laws provide otherwise.</p>
+      <p>Nothing contained in these Terms is intended to limit or exclude any legal rights that cannot be limited or excluded under applicable law.</p>
+
+      <h3>Entire Agreement</h3>
+      <p>These Terms and Conditions constitute the entire agreement between you and the developer concerning rNitro and supersede any prior agreements, communications, understandings, or representations relating to the software.</p>
+
+      <hr>
+      <p>By downloading, installing, compiling from the official source code, accessing, or using rNitro, you confirm that you have read, understood, and agree to be bound by these Terms and Conditions.</p>
+    </div>
+    <label class="tc-checkbox-row" for="tc-agree">
+      <input type="checkbox" id="tc-agree" onchange="updateTcAgreeButton()">
+      <span>I have read and agree to the Terms and Conditions</span>
+    </label>
+    <div class="tc-modal-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeTcModal()">Cancel</button>
+      <button type="button" id="tc-agree-btn" class="btn btn-primary" disabled onclick="confirmTcAndDownload()">I Agree &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">✓ Copied to clipboard</div>
+
+<!-- ── Support chatbot widget ─────────────────────────────────────────────── -->
+<div id="chat-launcher" onclick="toggleChat()"
+  style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%;
+         background:var(--green); display:flex; align-items:center; justify-content:center;
+         cursor:pointer; box-shadow:0 4px 20px rgba(26,255,128,0.35); z-index:9999; transition:transform .2s;">
+  <span id="chat-launcher-icon" style="font-size:24px;">💬</span>
+</div>
+
+<div id="chat-window"
+  style="position:fixed; bottom:92px; right:24px; width:340px; max-width:calc(100vw - 32px); height:440px;
+         background:var(--card); border:1px solid var(--border); border-radius:14px;
+         box-shadow:0 12px 40px rgba(0,0,0,0.5); display:none; flex-direction:column;
+         overflow:hidden; z-index:9999; font-family:var(--mono);">
+
+  <div style="padding:14px 16px; background:var(--bg2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+    <div>
+      <div style="font-weight:500; font-size:16px; color:var(--text);">rNitro Support</div>
+      <div id="chat-status" style="font-size:16px; color:#66cc88; display:flex; align-items:center; gap:4px; margin-top:2px;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#1aff80; display:inline-block;"></span>
+        <span id="chat-status-text">Instant answers · AI when online</span>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button type="button" id="chat-key-btn" onclick="toggleChatKeyPanel()" title="API key for AI answers"
+        style="background:none; border:1px solid var(--border); border-radius:8px; color:var(--muted); cursor:pointer; padding:4px 8px; font-size:14px;">🔑</button>
+      <span onclick="toggleChat()" style="cursor:pointer; color:#9999AA; font-size:18px; line-height:1;">✕</span>
+    </div>
+  </div>
+
+  <div id="chat-key-panel" style="display:none; padding:10px 12px; background:var(--bg2); border-bottom:1px solid var(--border); font-size:14px;">
+    <div style="color:var(--muted); margin-bottom:8px; line-height:1.45;">Paste your API key for AI answers (saved in this browser only — never on our servers unless you add it in Netlify).</div>
+    <select id="chat-key-provider" style="width:100%; margin-bottom:6px; padding:7px; background:var(--card); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono);">
+      <option value="groq">Groq (recommended — gsk_…)</option>
+      <option value="openrouter">OpenRouter (sk-or-…)</option>
+      <option value="gemini">Google Gemini (AIza…)</option>
+    </select>
+    <input id="chat-key-input" type="password" placeholder="Paste API key here"
+      style="width:100%; padding:7px 10px; background:var(--card); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); box-sizing:border-box;">
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button type="button" onclick="saveChatApiKey()" style="flex:1; padding:7px; background:var(--green); border:none; border-radius:6px; color:#000; font-weight:600; cursor:pointer;">Save key</button>
+      <button type="button" onclick="clearChatApiKey()" style="padding:7px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--muted); cursor:pointer;">Clear</button>
+    </div>
+  </div>
+
+  <div id="chat-messages" style="flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px;"></div>
+
+  <div style="padding:10px 12px; border-top:1px solid var(--border); display:flex; gap:8px;">
+    <input id="chat-input" type="text" placeholder="Ask about install, bugs, features…"
+      onkeydown="if(event.key==='Enter') sendChatMessage()"
+      style="flex:1; padding:9px 12px; background:var(--bg2); border:1px solid var(--border); border-radius:8px;
+             color:var(--text); font-family:var(--mono); font-size:16px;">
+    <button onclick="sendChatMessage()"
+      style="padding:9px 14px; background:var(--green); border:none; border-radius:8px; color:#000;
+             font-weight:500; cursor:pointer; font-size:16px;">→</button>
+  </div>
+</div>
+
+<script>
+  // @sync:js-versions
+  const RNITRO_VERSIONS =   {
+    "stable": {
+      "id": "v8.2.6-Final-arm64",
+      "label": "v8.2.6 Final",
+      "short": "v8.2.6",
+      "sh": "rNitro-v8.2.6-Final-arm64.sh",
+      "pkg": "rNitro-v8.2.6-Final-arm64.pkg",
+      "dmg": "rNitro-v8.2.6-Final-arm64.dmg",
+      "zip": "rNitro-v8.2.6-Final-arm64.zip",
+      "hash": "5d9719543faa9f981551c11c71ed15e15499c677d8dc37b6bcb036ade32a1b86"
+    },
+    "beta": {
+      "id": "v8.2.8-Beta-arm64",
+      "label": "v8.2.8 Beta",
+      "short": "v8.2.8",
+      "sh": "rNitro-v8.2.8-Beta-arm64.sh",
+      "pkg": "rNitro-v8.2.8-Beta-arm64.pkg",
+      "dmg": "rNitro-v8.2.8-Beta-arm64.dmg",
+      "zip": "rNitro-v8.2.8-Beta-arm64.zip",
+      "hash": "c5ace190ea41674f6902cdd63b402e366facc5149535c45c60f2c32b27a250b3"
+    },
+    "windows": {
+      "id": "v4.2.2-Windows-Final-x86",
+      "exe": "rNitro-v4.2.2-Windows-Final-x86.exe",
+      "ps1": "rNitro-v4.2.2-Windows-Final-x86.ps1"
+    },
+    "macos_apps": {
+      "label": "macOS Apps ZIP",
+      "zip": "rNitro-macOS-Apps.zip"
+    },
+    "full": {
+      "label": "Full Release",
+      "zip": "rnitro-netlify.zip"
+    }
+  };
+  // @end:js-versions
+
+  // Populated by build-netlify-deploy.py for local zip (lists files actually in the folder).
+  const RNITRO_FILES = window.RNITRO_FILES || null;
+
+  function togglePreviousVersions() {
+    const panel = document.getElementById('prev-versions-panel');
+    if (!panel) return;
+    const open = panel.classList.toggle('is-open');
+    const btn = panel.querySelector('.prev-versions-toggle');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function toggleWhatsNew() {
+    const panel = document.getElementById('whats-new-panel');
+    if (!panel) return;
+    const open = panel.classList.toggle('is-open');
+    const btn = panel.querySelector('.prev-versions-toggle');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function toggleOtherDownloads(panelId) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const open = panel.classList.toggle('is-open');
+    const btn = panel.querySelector('.prev-versions-toggle');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  // ── Terms-gated downloads ────────────────────────────────────────────────
+  let pendingDownloadUrl = null;
+
+  function downloadBase() {
+    const path = window.location.pathname || '';
+    if (path.includes('/website/')) return '../';
+    if (path.endsWith('/')) return path;
+    if (path.includes('/')) return path.replace(/\/[^/]*$/, '/');
+    return '';
+  }
+
+  function assetUrl(file) {
+    const base = downloadBase();
+    return base + encodeURI(file).replace(/%2F/g, '/');
+  }
+
+  function triggerFileDownload(url) {
+    if (location.protocol === 'file:') {
+      alert('Downloads only work after you double-click OPEN-WEBSITE.command in this folder (not index.html).');
+      return;
+    }
+    if (RNITRO_FILES && !RNITRO_FILES.has(url)) {
+      alert('That file is not included in this zip. Try the .sh installer for older versions.');
+      return;
+    }
+    const href = assetUrl(url);
+    const name = url.split('/').pop();
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = name;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function requestDownload(url) {
+    if (sessionStorage.getItem('rnitro_tc_accepted') === '1') {
+      triggerFileDownload(url);
+      return;
+    }
+    pendingDownloadUrl = url;
+    const agree = document.getElementById('tc-agree');
+    const overlay = document.getElementById('tc-overlay');
+    if (!agree || !overlay) {
+      triggerFileDownload(url);
+      return;
+    }
+    agree.checked = false;
+    updateTcAgreeButton();
+    overlay.classList.add('open');
+  }
+
+  function updateTcAgreeButton() {
+    const agree = document.getElementById('tc-agree');
+    const btn = document.getElementById('tc-agree-btn');
+    if (agree && btn) btn.disabled = !agree.checked;
+  }
+
+  function closeTcModal() {
+    document.getElementById('tc-overlay').classList.remove('open');
+    pendingDownloadUrl = null;
+  }
+
+  function confirmTcAndDownload() {
+    const agree = document.getElementById('tc-agree');
+    if (!agree?.checked || !pendingDownloadUrl) return;
+    sessionStorage.setItem('rnitro_tc_accepted', '1');
+    const url = pendingDownloadUrl;
+    pendingDownloadUrl = null;
+    document.getElementById('tc-overlay')?.classList.remove('open');
+    triggerFileDownload(url);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('tc-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === this) closeTcModal();
+      });
+    }
+    if (location.protocol === 'file:') {
+      document.documentElement.classList.add('file-protocol');
+    } else {
+      applyFileManifest();
+      hideMissingAssets();
+    }
+    startTerminalAnimation();
+  });
+
+  function hideUnavailableDownload(file) {
+    document.querySelectorAll('button[onclick*="requestDownload"]').forEach(btn => {
+      const m = btn.getAttribute('onclick')?.match(/requestDownload\('([^']+)'\)/);
+      if (m && m[1] === file) {
+        const cell = btn.closest('td');
+        if (cell) {
+          cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+        } else {
+          btn.style.display = 'none';
+        }
+      }
+    });
+  }
+
+  function applyFileManifest() {
+    if (!RNITRO_FILES) return;
+    const fullZip = RNITRO_VERSIONS.full?.zip;
+    if (fullZip && !RNITRO_FILES.has(fullZip)) {
+      document.querySelectorAll('[data-dl-full-zip]').forEach(el => { el.style.display = 'none'; });
+    }
+    const missing = new Set();
+    document.querySelectorAll('button[onclick*="requestDownload"]').forEach(btn => {
+      const m = btn.getAttribute('onclick')?.match(/requestDownload\('([^']+)'\)/);
+      if (m && !RNITRO_FILES.has(m[1])) missing.add(m[1]);
+    });
+    missing.forEach(hideUnavailableDownload);
+  }
+
+  function hideMissingAssets() {
+    if (RNITRO_FILES) return;
+    const fullZip = RNITRO_VERSIONS.full?.zip;
+    if (!fullZip) return;
+    fetch(assetUrl(fullZip), { method: 'HEAD' }).then(r => {
+      if (r.ok) return;
+      document.querySelectorAll('[data-dl-full-zip]').forEach(el => {
+        el.style.display = 'none';
+      });
+    }).catch(() => {
+      document.querySelectorAll('[data-dl-full-zip]').forEach(el => {
+        el.style.display = 'none';
+      });
+    });
+  }
+
+  const runCmd = `bash ~/Downloads/${RNITRO_VERSIONS.stable.sh}`;
+  const dlCmd = `# save ${RNITRO_VERSIONS.stable.sh} to ~/Downloads, then:`;
+
+  function typeText(elId, text, speed, done) {
+    const el = document.getElementById(elId);
+    if (!el) { if (done) done(); return; }
+    let i = 0;
+    function tick() {
+      if (i <= text.length) {
+        el.textContent = text.slice(0, i++);
+        setTimeout(tick, speed + Math.random() * 30);
+      } else if (done) done();
+    }
+    tick();
+  }
+
+  function startTerminalAnimation() {
+    setTimeout(() => {
+      typeText('typed-dl', dlCmd, 28, () => {
+        const p2 = document.getElementById('prompt2');
+        if (p2) p2.textContent = '~ % ';
+        typeText('typed-run', runCmd, 55);
+      });
+    }, 600);
+  }
+
+  function copyHash(which) {
+    const hash = RNITRO_VERSIONS[which]?.hash || RNITRO_VERSIONS.stable.hash;
+    navigator.clipboard.writeText(hash).then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ Hash copied to clipboard';
+      toast.classList.add('show');
+      setTimeout(() => { toast.classList.remove('show'); toast.textContent = '✓ Copied to clipboard'; }, 2500);
+    });
+  }
+
+  function setTab(platform) {
+    const isMac = platform === 'mac';
+    document.getElementById('dl-mac').style.display = isMac ? 'flex' : 'none';
+    document.getElementById('dl-win').style.display = isMac ? 'none' : 'flex';
+    document.getElementById('steps-mac').style.display = isMac ? 'block' : 'none';
+    document.getElementById('steps-win').style.display = isMac ? 'none' : 'block';
+    document.getElementById('cards-mac').style.display = isMac ? 'block' : 'none';
+    document.getElementById('card-win').style.display = isMac ? 'none' : 'flex';
+    document.getElementById('tab-mac').style.background    = isMac ? 'var(--green)' : 'transparent';
+    document.getElementById('tab-mac').style.color         = isMac ? '#000' : 'var(--text)';
+    document.getElementById('tab-mac').style.borderColor   = isMac ? 'var(--green)' : 'var(--border)';
+    document.getElementById('tab-win').style.background    = isMac ? 'transparent' : 'var(--green)';
+    document.getElementById('tab-win').style.color         = isMac ? 'var(--text)' : '#000';
+    document.getElementById('tab-win').style.borderColor   = isMac ? 'var(--border)' : 'var(--green)';
+  }
+
+  function copyWinCmd() {
+    navigator.clipboard.writeText(`powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\\Downloads\\${RNITRO_VERSIONS.windows.ps1}`).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  function copyCmd(which) {
+    const rel = which === 'beta' ? RNITRO_VERSIONS.beta : RNITRO_VERSIONS.stable;
+    const cmd = `bash ~/Downloads/${rel.sh}`;
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  function copyMcIp() {
+    navigator.clipboard.writeText('macetech.minefort.com').then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ Server IP copied';
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+        toast.textContent = '✓ Copied to clipboard';
+      }, 2500);
+    });
+  }
+
+  function sendSupportEmail(e) {
+    e.preventDefault();
+    const userEmail = document.getElementById('support-email').value.trim();
+    const subject = document.getElementById('support-subject').value.trim();
+    const message = document.getElementById('support-message').value.trim();
+
+    let body = message;
+    if (userEmail) body += `\n\n— Reply to: ${userEmail}`;
+
+    const mailto = `mailto:mzx@lam.ws?subject=${encodeURIComponent('[rNitro] ' + subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+    return false;
+  }
+
+  // ── Support chatbot ──────────────────────────────────────────────────────
+  // Hybrid: instant keyword KB + Netlify AI function (/.netlify/functions/chat)
+  // when deployed. API keys live in Netlify env vars — never in the browser.
+  let chatOpen = false;
+  let chatStarted = false;
+  let chatHistory = [];
+  let chatAiAvailable = null;
+  let chatByok = false;
+  const CHAT_API_URL = '/.netlify/functions/chat';
+  const CHAT_KEY_STORAGE = 'rnitro_chat_api_key';
+  const CHAT_PROVIDER_STORAGE = 'rnitro_chat_provider';
+
+  function getChatApiCreds() {
+    const apiKey = sessionStorage.getItem(CHAT_KEY_STORAGE) || '';
+    const provider = sessionStorage.getItem(CHAT_PROVIDER_STORAGE) || 'groq';
+    if (!apiKey) return null;
+    return { apiKey, provider };
+  }
+
+  function toggleChatKeyPanel() {
+    const panel = document.getElementById('chat-key-panel');
+    if (!panel) return;
+    const open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    if (!open) {
+      const creds = getChatApiCreds();
+      if (creds) {
+        document.getElementById('chat-key-input').value = creds.apiKey;
+        document.getElementById('chat-key-provider').value = creds.provider;
+      }
+    }
+  }
+
+  function saveChatApiKey() {
+    const apiKey = document.getElementById('chat-key-input').value.trim();
+    const provider = document.getElementById('chat-key-provider').value;
+    if (!apiKey) return;
+    sessionStorage.setItem(CHAT_KEY_STORAGE, apiKey);
+    sessionStorage.setItem(CHAT_PROVIDER_STORAGE, provider);
+    chatAiAvailable = true;
+    chatByok = true;
+    updateChatStatus();
+    toggleChatKeyPanel();
+    addChatMsg('bot', 'API key saved in this browser. Ask me anything about rNitro!');
+  }
+
+  function clearChatApiKey() {
+    sessionStorage.removeItem(CHAT_KEY_STORAGE);
+    sessionStorage.removeItem(CHAT_PROVIDER_STORAGE);
+    document.getElementById('chat-key-input').value = '';
+    chatByok = false;
+    probeChatAi();
+    addChatMsg('bot', 'API key cleared from this browser.');
+  }
+
+  function chatAiEnabled() {
+    return location.protocol !== 'file:' && !location.hostname.startsWith('127.0.0.1') && !location.hostname.startsWith('localhost');
+  }
+
+  function updateChatStatus() {
+    const el = document.getElementById('chat-status-text');
+    if (!el) return;
+    if (!chatAiEnabled()) {
+      el.textContent = 'Instant answers · offline mode';
+      return;
+    }
+    if (chatAiAvailable === true && chatByok) el.textContent = 'AI active (your key) · instant answers';
+    else if (chatAiAvailable === true) el.textContent = 'AI + instant answers · no signup';
+    else if (chatAiAvailable === false) el.textContent = 'Tap 🔑 to add API key · instant answers';
+    else el.textContent = 'Instant answers · AI when online';
+  }
+
+  async function probeChatAi() {
+    if (!chatAiEnabled()) {
+      chatAiAvailable = false;
+      updateChatStatus();
+      return;
+    }
+    try {
+      const res = await fetch(CHAT_API_URL, { method: 'GET' });
+      const data = await res.json().catch(() => ({}));
+      chatByok = !!data.byok;
+      chatAiAvailable = (res.ok && !!data.configured) || !!getChatApiCreds();
+      if (getChatApiCreds()) chatByok = true;
+    } catch {
+      chatAiAvailable = !!getChatApiCreds();
+      chatByok = !!getChatApiCreds();
+    }
+    updateChatStatus();
+  }
+
+  const CHAT_KB = [
+    { label: 'PKG blocked by macOS?', kws: ['gatekeeper', 'not opened', 'malware', 'move to trash', 'cant open', "can't open", 'verified', 'blocked', 'pkg', 'privacy', 'security'],
+      a: "macOS may say it can't verify the PKG — that's normal for indie apps.\n\nDon't click Move to Trash. Click Done, then go to System Settings → Privacy & Security and press Open at the bottom.\n\nOr use the .sh installer to compile from source on your Mac." },
+    { label: 'How do I install it?', kws: ['install', 'how do i download', 'getting started', 'setup', 'dmg', 'zip', 'terms'],
+      a: `macOS stable (green): Download Stable PKG for fastest install, or the highlighted Stable .sh if you don't trust pre-built PKGs — it compiles from readable source on your Mac.\n\nmacOS beta (orange): Download Beta PKG or Beta .sh for AI chat APIs.\n\nRun: bash ~/Downloads/${RNITRO_VERSIONS.stable.sh} (stable) or bash ~/Downloads/${RNITRO_VERSIONS.beta.sh} (beta).\n\nWindows: agree to Terms, then download the EXE or .ps1 installer.` },
+    { label: 'How accurate is the temperature reading?', kws: ['temperature', 'temp', 'hot', 'overheat'],
+      a: "rNitro reads real sensor data straight from your Mac's SMC (the same controller iStat Menus, TG Pro, and Macs Fan Control read from). If the SMC can't be reached or your chip's sensor keys aren't recognized, it falls back to macOS's own thermal-state signal (Nominal/Fair/Serious/Critical), interpolated smoothly using live CPU usage, so the gauge never goes blank." },
+    { label: 'System Advisor in the app?', kws: ['advisor', 'specs', 'my mac', 'warnings', 'alert', 'threshold', 'custom warning'],
+      a: "In rNitro Beta, open the menubar popover → Advisor tab. It's a client-side assistant (no API key) that reads YOUR live CPU, temp, RAM, GPU, battery, and disk stats. Ask \"my specs\" or \"is my temp ok?\" Tap ⚙ to set custom warning thresholds — you'll get proactive alerts in the chat when temps or usage cross your limits." },
+    { label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
+      a: `Yes! rNitro ${RNITRO_VERSIONS.windows.id} supports Windows 10 and 11 (x64). Download the pre-built .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer, which compiles a tray app with built-in csc.exe — no SDK needed. Left-click the tray icon for the full system monitor UI.` },
+    { label: 'How does the Bitcoin price work?', kws: ['bitcoin', 'btc', 'crypto', 'price'],
+      a: "rNitro shows the live BTC/USD price in the menu bar, refreshed every 30 seconds from CoinGecko's public API — no API key required." },
+    { label: 'Does it work on Intel Macs?', kws: ['intel', 'not compatible', 'wont open', "won't open", 'unsupported'],
+      a: "rNitro requires Apple Silicon (M1/M2/M3) on macOS 12+. It is not compatible with Intel Macs, since the CPU/thermal APIs it uses are Apple Silicon–specific." },
+    { label: 'Is it safe to run?', kws: ['safe', 'malware', 'virus', 'trust', 'security'],
+      a: "rNitro compiles from source directly on your machine — nothing prebuilt is ever downloaded. The installer verifies its own SHA-256 checksum before running, and you can read every line before executing it. No telemetry, no third-party dependencies." },
+    { label: "It's crashing / not working", kws: ['crash', 'not working', 'broken', 'bug', 'error', 'issue'],
+      a: "Sorry about that! Please use the Support form below with details (macOS/Windows version, chip, and what happened) — that goes straight to the team." },
+    { label: 'How do I uninstall it?', kws: ['uninstall', 'remove', 'delete'],
+      a: "macOS: quit rNitro, then delete it from /Applications (or wherever you installed it).\nWindows: right-click the tray icon → Exit, then delete the app from %LOCALAPPDATA%\\rNitro. If you enabled startup, also remove the entry via Task Manager → Startup." },
+    { label: 'What is the game overlay / FPS HUD?', kws: ['overlay', 'game', 'fps', 'hud'],
+      a: "The in-game overlay (⌥⇧O) shows CPU%, GPU%, temp, and RAM on top of fullscreen games. For real FPS numbers, use \"Launch App with FPS HUD\" from the right-click menu — it enables Apple's native Metal performance HUD for that game." },
+    { label: 'Is it free?', kws: ['free', 'price', 'cost', 'pay', 'subscription'],
+      a: "rNitro is completely free, with no ads, no telemetry, and no subscription." },
+    { label: 'How do updates work?', kws: ['update', 'new version', 'upgrade'],
+      a: "rNitro checks getrnitro.netlify.app for the latest version on every launch. If a newer one is out, you'll get an alert and your browser will open here automatically." },
+    { label: 'Is the source code visible?', kws: ['source', 'open source', 'code'],
+      a: "The full install script (including the app's source) is right there in the downloaded .sh / .ps1 file — nothing is hidden or obfuscated. You're compiling it yourself." },
+    // @sync:chat-whats-new
+    { label: "What's new in v8.2.8?", kws: ["whats new", "what's new", "v8.2.8", "v8.2.6", "varela", "font", "changelog", "low power"],
+      a: "v8.2.8 Beta highlights:\n• AES-256-GCM encryption — API keys and AI chat history encrypted at rest with CryptoKit (256-bit master key in Keychain). Plaintext data migrates automatically on first launch.\n• Patched major bugs — website download buttons and file-save flow fixed in v8.2.7.\n• First-launch tips sheet — quick welcome on first open (menubar icon, Gatekeeper, App ZIP install).\n• Low Power Mode badge — green LP pill when macOS Energy Mode is on.\n• All AI providers — Gemini, OpenAI, Anthropic, Groq, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes.\n\nv8.2.6 Stable highlights:\n• Patched major bugs — website download buttons work again; App ZIP, PKG, DMG, and .sh downloads trigger reliably after Terms acceptance.\n• Stable channel — production-ready CPU monitor, benchmark, and stress test.\n• AI chat (trimmed) — OpenAI (GPT) and OpenRouter only.\n• System Advisor — client-side specs assistant with customizable warn/critical thresholds." },
+    // @end:chat-whats-new
+    { label: 'App ZIP won\'t open?', kws: ['wont run', "won't run", 'damaged', 'quarantine', 'xattr', '3.6', 'small', 'zip'],
+      a: "If Gatekeeper blocks the App ZIP: right-click rNitro.app → Open → Open (once). Or run in Terminal:\nxattr -cr ~/Applications/rNitro.app\n\nThe .app is ~3.5–3.7 MB (native Swift, not Electron). Download the fresh build from getrnitro.netlify.app — older zips may have been stale." },
+  ];
+
+  // Rotates through a handful of prompts each time, so returning users don't
+  // see the exact same six chips over and over.
+  function pickPrompts(n) {
+    const shuffled = [...CHAT_KB].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, n);
+  }
+
+  function findAnswer(text) {
+    const t = text.toLowerCase();
+    for (const entry of CHAT_KB) {
+      if (entry.kws.some(k => t.includes(k))) return entry.a;
+    }
+    return null;
+  }
+
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    document.getElementById('chat-window').style.display = chatOpen ? 'flex' : 'none';
+    document.getElementById('chat-launcher-icon').textContent = chatOpen ? '✕' : '💬';
+    if (chatOpen && !chatStarted) {
+      chatStarted = true;
+      addChatMsg('bot', "Hey! I'm the rNitro support bot. Tap a quick question, or type your own.\n\nFor AI answers: tap 🔑 and paste your Groq, OpenRouter, or Gemini key (stays in your browser only).");
+      showPrompts(pickPrompts(6));
+      probeChatAi();
+    }
+    if (chatOpen) document.getElementById('chat-input').focus();
+  }
+
+  function addChatMsg(who, text, id) {
+    const container = document.getElementById('chat-messages');
+    const bubble = document.createElement('div');
+    const isBot = who === 'bot';
+    if (id) bubble.id = id;
+    bubble.style.cssText = `
+      max-width:85%; padding:9px 12px; border-radius:10px; font-size:16px; line-height:1.5;
+      white-space:pre-wrap; align-self:${isBot ? 'flex-start' : 'flex-end'};
+      background:${isBot ? 'var(--bg2)' : 'var(--green)'};
+      color:${isBot ? 'var(--text)' : '#000'};
+      border:${isBot ? '1px solid var(--border)' : 'none'};
+    `;
+    bubble.textContent = text;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+    return bubble;
+  }
+
+  async function askChatAi(text) {
+    const creds = getChatApiCreds();
+    const res = await fetch(CHAT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        history: chatHistory,
+        versions: RNITRO_VERSIONS,
+        ...(creds ? { apiKey: creds.apiKey, provider: creds.provider } : {}),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const reply = data.reply || data.error || 'No response from AI.';
+    const needsKey = data.error === 'no_api_key' && !!data.byok;
+    if (res.ok && data.ai) {
+      chatAiAvailable = true;
+      chatByok = !!getChatApiCreds();
+      updateChatStatus();
+    }
+    return { ok: res.ok, reply, ai: !!data.ai, needsKey };
+  }
+
+  // Renders a row of clickable question chips. Clicking one behaves exactly
+  // like typing that question and hitting send.
+  function showPrompts(entries) {
+    const container = document.getElementById('chat-messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-prompts';
+    wrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; align-self:flex-start; max-width:100%;';
+
+    entries.forEach(entry => {
+      const chip = document.createElement('button');
+      chip.textContent = entry.label;
+      chip.style.cssText = `
+        padding:7px 10px; border-radius:14px; border:1px solid var(--border);
+        background:var(--card); color:var(--text); font-family:var(--mono);
+        font-size:16px; cursor:pointer; transition:border-color .15s, color .15s;
+      `;
+      chip.onmouseenter = () => { chip.style.borderColor = 'var(--green)'; chip.style.color = 'var(--green)'; };
+      chip.onmouseleave = () => { chip.style.borderColor = 'var(--border)'; chip.style.color = 'var(--text)'; };
+      chip.onclick = () => {
+        wrap.remove();
+        addChatMsg('user', entry.label);
+        chatHistory.push({ role: 'user', content: entry.label });
+        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+        setTimeout(() => {
+          addChatMsg('bot', entry.a);
+          chatHistory.push({ role: 'assistant', content: entry.a });
+          showPrompts(pickPrompts(3));
+        }, 300);
+      };
+      wrap.appendChild(chip);
+    });
+
+    container.appendChild(wrap);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    addChatMsg('user', text);
+    input.value = '';
+    chatHistory.push({ role: 'user', content: text });
+    if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+
+    const kbAnswer = findAnswer(text);
+    if (kbAnswer) {
+      addChatMsg('bot', kbAnswer);
+      chatHistory.push({ role: 'assistant', content: kbAnswer });
+      showPrompts(pickPrompts(3));
+      return;
+    }
+
+    if (!chatAiEnabled()) {
+      const offline = "I'm in offline mode (local preview) — try a quick-pick question, or use the Support form below.";
+      addChatMsg('bot', offline);
+      chatHistory.push({ role: 'assistant', content: offline });
+      showPrompts(pickPrompts(3));
+      return;
+    }
+
+    const thinkingId = 'chat-thinking-' + Date.now();
+    addChatMsg('bot', 'Thinking…', thinkingId);
+
+    try {
+      const { ok, reply, ai, needsKey } = await askChatAi(text);
+      const bubble = document.getElementById(thinkingId);
+      if (bubble) bubble.textContent = reply;
+      else addChatMsg('bot', reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+      if (!ok && !ai) chatAiAvailable = !!getChatApiCreds();
+      if (needsKey && !getChatApiCreds()) {
+        const panel = document.getElementById('chat-key-panel');
+        if (panel) panel.style.display = 'block';
+      }
+      updateChatStatus();
+    } catch {
+      const err = "Couldn't reach the AI backend — try a suggested question below, or use the Support form.";
+      const bubble = document.getElementById(thinkingId);
+      if (bubble) bubble.textContent = err;
+      else addChatMsg('bot', err);
+      chatHistory.push({ role: 'assistant', content: err });
+    }
+    showPrompts(pickPrompts(3));
+  }
+</script>
+
+</body>
+</html>
