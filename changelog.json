@@ -6,16 +6,16 @@
       "accent": "orange",
       "items": [
         {
-          "strong": "GitHub Releases",
-          "text": " \u2014 download the same App ZIP from github.com/ilikemacos/rNitro/releases (stable or beta)."
+          "strong": "GitHub full bundle",
+          "text": " \u2014 one rnitro-netlify.zip on GitHub with website, stable, beta, Windows, and all installers."
         },
         {
           "strong": "AES-256-GCM encryption",
           "text": " \u2014 API keys and AI chat history encrypted at rest with CryptoKit (256-bit master key in Keychain). Plaintext data migrates automatically on first launch."
         },
         {
-          "strong": "GitHub Releases",
-          "text": " \u2014 Stable and Beta App ZIPs on github.com/ilikemacos/rNitro/releases (mirror of this site)."
+          "strong": "GitHub full bundle",
+          "text": " \u2014 download everything as one ZIP from github.com/ilikemacos/rNitro/releases."
         },
         {
           "strong": "Patched major bugs",

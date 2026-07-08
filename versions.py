@@ -16,12 +16,10 @@ def github_release_tag(rel_id: str) -> str:
     return rel_id.removesuffix("-arm64")
 
 
-def github_zip_url(rel: dict, *, latest: bool = False) -> str:
-    tag = github_release_tag(rel["id"])
-    name = rel["zip"]
-    if latest:
-        return f"{GITHUB_REPO}/releases/latest/download/{name}"
-    return f"{GITHUB_REPO}/releases/download/{tag}/{name}"
+def github_bundle_url(data: dict | None = None) -> str:
+    data = data or load()
+    name = full_release(data)["zip"]
+    return f"{GITHUB_REPO}/releases/latest/download/{name}"
 
 
 def load() -> dict:
