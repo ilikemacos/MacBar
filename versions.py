@@ -9,6 +9,19 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent
 VERSION_FILE = SITE / "version.json"
+GITHUB_REPO = "https://github.com/ilikemacos/rNitro"
+
+
+def github_release_tag(rel_id: str) -> str:
+    return rel_id.removesuffix("-arm64")
+
+
+def github_zip_url(rel: dict, *, latest: bool = False) -> str:
+    tag = github_release_tag(rel["id"])
+    name = rel["zip"]
+    if latest:
+        return f"{GITHUB_REPO}/releases/latest/download/{name}"
+    return f"{GITHUB_REPO}/releases/download/{tag}/{name}"
 
 
 def load() -> dict:
