@@ -75,6 +75,22 @@ def ensure_site_linked() -> bool:
     return True
 
 
+def ensure_bundle_zip(data: dict) -> Path:
+    """Build rnitro-netlify.zip if missing so Full Release download works on Netlify."""
+    bundle = SITE / v.full_release(data)["zip"]
+    if bundle.is_file():
+        return bundle
+    print("Full release ZIP missing — building (quick)...")
+    subprocess.run(
+        [sys.executable, str(SITE / "build-rnitro-zip.py"), "--quick"],
+        cwd=SITE,
+        check=True,
+    )
+    if not bundle.is_file():
+        raise SystemExit(f"Failed to create {bundle.name}")
+    return bundle
+
+
 def verify_deploy(url: str) -> bool:
     import json
     import urllib.request
@@ -106,10 +122,25 @@ def verify_deploy(url: str) -> bool:
                     )
                     return False
                 print(f"VERIFY OK: {stable_zip} → {length / 1_048_576:.1f} MB")
+        full_zip = version_data.get("releases", {}).get("full", {}).get("zip")
+        if full_zip:
+            req = urllib.request.Request(f"{base}/{full_zip}", method="HEAD")
+            with urllib.request.urlopen(req, timeout=30) as zresp:
+                if zresp.status != 200:
+                    print(f"VERIFY FAIL: {full_zip} returned HTTP {zresp.status}")
+                    return False
+                length = int(zresp.headers.get("Content-Length", "0") or 0)
+                if length < 25_000_000:
+                    print(
+                        f"VERIFY FAIL: {full_zip} Content-Length {length} "
+                        "(expected ≥ 25 MB — missing from deploy)"
+                    )
+                    return False
+                print(f"VERIFY OK: {full_zip} → {length / 1_048_576:.1f} MB")
     except Exception as exc:
         print(f"VERIFY FAIL: {exc}")
         return False
-    print(f"VERIFY OK: {base}/, /version.json, /changelog.json, and stable ZIP size")
+    print(f"VERIFY OK: {base}/, /version.json, /changelog.json, stable + full ZIP")
     return True
 
 
@@ -260,8 +291,9 @@ def maybe_setup_chat_api() -> None:
 
 def main() -> None:
     data = v.load()
+    ensure_bundle_zip(data)
     print("Staging Netlify deploy...")
-    bnd.stage(data)
+    bnd.stage(data, include_bundle_zip=True)
     copy_desktop_folder()
     maybe_setup_chat_api()
 
