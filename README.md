@@ -6,35 +6,33 @@
 
 ---
 
-## Download
+## Download (GitHub Releases)
 
-**One ZIP with everything** — website, stable + beta apps, PKG/DMG, `.sh` installers, Windows builds:
+Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
 
-| | |
-|--|--|
-| **Full bundle** | [⬇ rnitro-netlify.zip](https://github.com/ilikemacos/rNitro/releases/latest/download/rnitro-netlify.zip) |
-| **All releases** | [github.com/ilikemacos/rNitro/releases](https://github.com/ilikemacos/rNitro/releases) |
+### Stable — v8.2.6 Final
 
-### After download
+| Format | File |
+|--------|------|
+| **App ZIP** | [rNitro-v8.2.6-Final-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.2.6-Final/rNitro-v8.2.6-Final-arm64.zip) |
+| **PKG** | [rNitro-v8.2.6-Final-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.2.6-Final/rNitro-v8.2.6-Final-arm64.pkg) |
+| **DMG** | [rNitro-v8.2.6-Final-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.2.6-Final/rNitro-v8.2.6-Final-arm64.dmg) |
 
-1. Unzip `rnitro-netlify.zip` anywhere
-2. Double-click **`OPEN-WEBSITE.command`** to open the local download page
-3. Pick **Stable** (v8.2.6) or **Beta** (v8.2.8) App ZIP, or use PKG / DMG / `.sh`
+### Beta — v8.2.8
 
-### Install from App ZIP (inside the bundle)
+| Format | File |
+|--------|------|
+| **App ZIP** | [rNitro-v8.2.8-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.2.8-Beta/rNitro-v8.2.8-Beta-arm64.zip) |
+| **PKG** | [rNitro-v8.2.8-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.2.8-Beta/rNitro-v8.2.8-Beta-arm64.pkg) |
+| **DMG** | [rNitro-v8.2.8-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.2.8-Beta/rNitro-v8.2.8-Beta-arm64.dmg) |
 
-1. Unzip the stable or beta App ZIP
-2. Drag **rNitro.app** into **Applications**
+[All releases →](https://github.com/ilikemacos/rNitro/releases)
+
+### Install from App ZIP
+
+1. Download the `.zip` for Stable or Beta
+2. Unzip → drag **rNitro.app** into **Applications**
 3. First launch: right-click → **Open** → **Open** (once) if Gatekeeper blocks it
-
-### Install from source (.sh)
-
-```bash
-bash rNitro-v8.2.6-Final-arm64.sh   # stable
-bash rNitro-v8.2.8-Beta-arm64.sh    # beta
-```
-
-Compiles natively on your Mac (~30 seconds) → `~/Applications/rNitro.app`
 
 ---
 
@@ -51,13 +49,6 @@ Compiles natively on your Mac (~30 seconds) → `~/Applications/rNitro.app`
 
 - macOS 12 Ventura or later (macOS 16 is advised)
 - Apple Silicon (M1 / M2 / M3)
-- Xcode Command Line Tools (`xcode-select --install`) for `.sh` compile path
-
----
-
-## Notes
-
-Apple Silicon doesn't expose die temperature through public APIs without special entitlements, so rNitro uses a calibrated thermal model (base 35°C + load curve) that closely tracks real-world readings. For exact values, run `sudo powermetrics --samplers cpu_power` in Terminal alongside the app.
 
 ---
 
