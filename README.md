@@ -6,35 +6,35 @@
 
 ---
 
-## Download (macOS App ZIP)
+## Download
 
-Pick **Stable** for everyday use, or **Beta** for all AI providers and experimental features.
+**One ZIP with everything** — website, stable + beta apps, PKG/DMG, `.sh` installers, Windows builds:
 
-| Channel | Version | Download |
-|---------|---------|----------|
-| **Stable (Final)** | v8.2.6 | [⬇ App ZIP](https://github.com/ilikemacos/rNitro/releases/latest/download/rNitro-v8.2.6-Final-arm64.zip) |
-| **Beta** | v8.2.8 | [⬇ App ZIP](https://github.com/ilikemacos/rNitro/releases/download/v8.2.8-Beta/rNitro-v8.2.8-Beta-arm64.zip) |
+| | |
+|--|--|
+| **Full bundle** | [⬇ rnitro-netlify.zip](https://github.com/ilikemacos/rNitro/releases/latest/download/rnitro-netlify.zip) |
+| **All releases** | [github.com/ilikemacos/rNitro/releases](https://github.com/ilikemacos/rNitro/releases) |
 
-All releases: **[github.com/ilikemacos/rNitro/releases](https://github.com/ilikemacos/rNitro/releases)**
+### After download
 
-### Install from App ZIP
+1. Unzip `rnitro-netlify.zip` anywhere
+2. Double-click **`OPEN-WEBSITE.command`** to open the local download page
+3. Pick **Stable** (v8.2.6) or **Beta** (v8.2.8) App ZIP, or use PKG / DMG / `.sh`
 
-1. Download the ZIP for your channel (above)
-2. Double-click to unzip `rNitro.app`
-3. Drag **rNitro.app** into **Applications**
-4. First launch: right-click → **Open** → **Open** (once) if Gatekeeper blocks it
+### Install from App ZIP (inside the bundle)
+
+1. Unzip the stable or beta App ZIP
+2. Drag **rNitro.app** into **Applications**
+3. First launch: right-click → **Open** → **Open** (once) if Gatekeeper blocks it
 
 ### Install from source (.sh)
 
-Download the installer from the [website](https://getrnitro.netlify.app/) or run:
-
 ```bash
-bash ~/Downloads/rNitro-v8.2.6-Final-arm64.sh   # stable
-# or
-bash ~/Downloads/rNitro-v8.2.8-Beta-arm64.sh    # beta
+bash rNitro-v8.2.6-Final-arm64.sh   # stable
+bash rNitro-v8.2.8-Beta-arm64.sh    # beta
 ```
 
-The script compiles natively on your Mac (~30 seconds) and installs to `~/Applications/rNitro.app`.
+Compiles natively on your Mac (~30 seconds) → `~/Applications/rNitro.app`
 
 ---
 
@@ -49,9 +49,9 @@ The script compiles natively on your Mac (~30 seconds) and installs to `~/Applic
 
 ## Requirements
 
-- macOS 12 Ventura or later (MacOS 16 is advised)
+- macOS 12 Ventura or later (macOS 16 is advised)
 - Apple Silicon (M1 / M2 / M3)
-- Xcode Command Line Tools (`xcode-select --install`)
+- Xcode Command Line Tools (`xcode-select --install`) for `.sh` compile path
 
 ---
 
