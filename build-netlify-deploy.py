@@ -47,7 +47,7 @@ def netlify_files(data: dict, *, include_bundle_zip: bool = False, website_zip: 
     return files
 
 
-def stage(data: dict) -> Path:
+def stage(data: dict, *, include_bundle_zip: bool | None = None) -> Path:
     netlify_state = None
     if OUT_DIR.exists():
         state_file = OUT_DIR / ".netlify" / "state.json"
@@ -194,7 +194,9 @@ AI support chat (optional):
         encoding="utf-8",
     )
 
-    for name in netlify_files(data, website_zip=True):
+    if include_bundle_zip is None:
+        include_bundle_zip = (SITE / v.full_release(data)["zip"]).is_file()
+    for name in netlify_files(data, website_zip=True, include_bundle_zip=include_bundle_zip):
         src = SITE / name
         if not src.is_file():
             raise FileNotFoundError(f"Missing deploy file: {src}")

@@ -14,10 +14,6 @@
           "text": " \u2014 API keys and AI chat history encrypted at rest with CryptoKit (256-bit master key in Keychain). Plaintext data migrates automatically on first launch."
         },
         {
-          "strong": "GitHub full bundle",
-          "text": " \u2014 download everything as one ZIP from github.com/ilikemacos/rNitro/releases."
-        },
-        {
           "strong": "Patched major bugs",
           "text": " \u2014 website download buttons and file-save flow fixed in v8.2.7."
         },
