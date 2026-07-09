@@ -13,7 +13,8 @@ PKG_NAME = "rNitro-Full-Release.pkg"
 PKG_OUT = Path.home() / "Downloads" / PKG_NAME
 
 STATIC_FILES = [
-    "README — Full Release.txt",
+    "README.md",
+    "LICENSE",
     "uninstall-rNitro.sh",
     "index.html",
     "googleadfac0eaf77a74e6.html",

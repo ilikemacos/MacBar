@@ -73,7 +73,7 @@ This repository contains the full rNitro source tree:
 | `windows/` | Windows tray app (C# / WinForms) |
 | `homebrew/` | Homebrew formula (also published at [ilikemacos/homebrew-rnitro](https://github.com/ilikemacos/homebrew-rnitro)) |
 | `build-*.py`, `sync-versions.py`, `deploy-netlify.py` | Build, release, and site deploy tooling |
-| `rNitro-v*.sh` | Archived installer scripts (one per release) |
+| `rNitro-v*.sh` | Generated on build (`sync-versions.py`) — older builds on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases) |
 | `index.html`, `boba-game/` | Website and embedded game assets |
 
 Pre-built `.zip`, `.pkg`, and `.dmg` files are published on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases), not committed here.
@@ -91,9 +91,11 @@ Requires Xcode Command Line Tools (`xcode-select --install`). The script compile
 ### Build a release ZIP locally
 
 ```bash
-python3 sync-versions.py
+python3 sync-versions.py          # writes rNitro-v{version}.sh from install-rNitro.sh
 python3 build-app-zip.py --variant beta   # or stable / all
 ```
+
+Older macOS `.sh` installers and all binaries live on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases) — they are not stored in this repo.
 
 ---
 

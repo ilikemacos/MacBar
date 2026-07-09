@@ -21,6 +21,17 @@ publish-win-fd/
 windows/bin/
 windows/obj/
 
+# Generated per-release installers (copied from install-rNitro.sh by sync-versions.py)
+rNitro-v*.sh
+rNitro-v*.ps1
+
+# Legacy / optional assets (not in current app)
+boba-game/
+
+# One-off migration scripts (historical)
+apply-*.py
+release-v6.2.4.sh
+
 # Python
 __pycache__/
 *.py[cod]
