@@ -206,7 +206,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="1b1c3c4881970d39620ef6aced0db09cc0a4effe059ecb5b2da12aa7a80abf70"
+EXPECTED_HASH="1d9cc7011187ef8aab17368809e8cfe54386715f3556c64674edf00e21c0a36c"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -2094,7 +2094,7 @@ class BatteryMonitor: ObservableObject {
     private func poll() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
-            var snap = Self.readPmset() ?? Snapshot()
+            var snap = Self.readIOKitBattery() ?? Self.readPmset() ?? Snapshot()
             if let hw = Self.readIoreg() {
                 if snap.isPresent {
                     snap.isOnAC = hw.isOnAC
@@ -2198,16 +2198,80 @@ class BatteryMonitor: ObservableObject {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: path)
         task.arguments = args
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        task.standardOutput = outPipe
+        task.standardError = errPipe
         do {
             try task.run()
-            task.waitUntilExit()
-            guard task.terminationStatus == 0 else { return nil }
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            return String(data: data, encoding: .utf8)
         } catch { return nil }
+        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+        _ = errPipe.fileHandleForReading.readDataToEndOfFile()
+        task.waitUntilExit()
+        guard !outData.isEmpty, let out = String(data: outData, encoding: .utf8) else { return nil }
+        if task.terminationStatus != 0, !out.contains("InternalBattery"), !out.contains("AppleSmartBattery") { return nil }
+        return out
+    }
+
+    private static func ioPropertyInt(_ service: io_service_t, _ key: String) -> Int? {
+        guard let raw = IORegistryEntryCreateCFProperty(service, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() else { return nil }
+        if let n = raw as? NSNumber { return n.intValue }
+        if let s = raw as? String, let v = Int(s.trimmingCharacters(in: .whitespaces)) { return v }
+        return nil
+    }
+
+    private static func ioPropertyBool(_ service: io_service_t, _ key: String) -> Bool? {
+        guard let raw = IORegistryEntryCreateCFProperty(service, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() else { return nil }
+        if let n = raw as? NSNumber { return n.intValue != 0 }
+        if let s = raw as? String {
+            let lower = s.lowercased()
+            if lower == "yes" || lower == "true" { return true }
+            if lower == "no" || lower == "false" { return false }
+        }
+        return nil
+    }
+
+    /// Direct IORegistry read — works when pmset/ioreg subprocesses fail inside the GUI app.
+    private static func readIOKitBattery() -> Snapshot? {
+        let service = IOServiceGetMatchingService(0, IOServiceMatching("AppleSmartBattery"))
+        guard service != 0 else { return nil }
+        defer { IOObjectRelease(service) }
+
+        var snap = Snapshot()
+        snap.isPresent = true
+
+        if let soc = ioPropertyInt(service, "StateOfCharge") {
+            snap.levelPercent = min(100, max(0, soc))
+        } else if let cur = ioPropertyInt(service, "CurrentCapacity"), cur <= 100 {
+            snap.levelPercent = max(0, cur)
+        } else if let raw = ioPropertyInt(service, "AppleRawCurrentCapacity"),
+                  let maxCap = ioPropertyInt(service, "AppleRawMaxCapacity"), maxCap > 0 {
+            snap.levelPercent = min(100, max(0, Int(Double(raw) / Double(maxCap) * 100.0)))
+        } else if let cur = ioPropertyInt(service, "CurrentCapacity"),
+                  let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 0, cur <= maxCap {
+            snap.levelPercent = min(100, max(0, Int(Double(cur) / Double(maxCap) * 100.0)))
+        }
+
+        let external = ioPropertyBool(service, "ExternalConnected") == true
+            || ioPropertyBool(service, "AppleRawExternalConnected") == true
+        snap.isOnAC = external
+        if let charging = ioPropertyBool(service, "IsCharging") {
+            snap.isCharging = charging
+            if charging { snap.isOnAC = true }
+        }
+        if let tr = ioPropertyInt(service, "TimeRemaining"), tr > 0, tr < 65535 {
+            if snap.isCharging { snap.timeToFullMinutes = tr } else { snap.timeRemainingMinutes = tr }
+        }
+        if let cycles = ioPropertyInt(service, "CycleCount") { snap.cycleCount = cycles }
+        if let temp = ioPropertyInt(service, "Temperature") ?? ioPropertyInt(service, "AppleRawBatteryTemperature") {
+            snap.temperatureCelsius = temp > 200 ? Double(temp) / 100.0 : Double(temp)
+        }
+        if let maxCap = ioPropertyInt(service, "MaxCapacity"),
+           let design = ioPropertyInt(service, "DesignCapacity"), design > 0, maxCap > 0 {
+            snap.healthPercent = min(100, Int(Double(maxCap) / Double(design) * 100.0))
+        }
+        snap.isFullyCharged = snap.levelPercent >= 100 && !snap.isCharging && snap.isOnAC
+        return snap
     }
 
     private static func readPmset() -> Snapshot? {
@@ -2218,6 +2282,9 @@ class BatteryMonitor: ObservableObject {
             if let pctR = line.range(of: #"\)\s*(\d+)%"#, options: .regularExpression) {
                 let pctStr = String(line[pctR]).replacingOccurrences(of: ")", with: "").trimmingCharacters(in: .whitespaces)
                 snap.levelPercent = Int(pctStr.replacingOccurrences(of: "%", with: "")) ?? snap.levelPercent
+            } else if let pctR = line.range(of: #"(\d+)%"#, options: .regularExpression) {
+                let pctStr = String(line[pctR]).replacingOccurrences(of: "%", with: "")
+                snap.levelPercent = Int(pctStr) ?? snap.levelPercent
             }
             let lower = line.lowercased()
             if lower.contains("discharging") {
