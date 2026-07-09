@@ -2,6 +2,7 @@
 #
 # rNitro installer — hardened
 #
+# v8.3.10-Beta-arm64 — lightweight idle: pure AppKit launch, lazy popover/window, slot-aware monitors.
 # v8.3.9-Beta-arm64 — performance: background CPU polling, SMC key cache, debounced menubar, narrower SwiftUI observation.
 # v8.3.0-Beta-arm64 — in-app updater polish, faster App Cleaner, Linux v0.1 companion release.
 # v8.2.7-Beta-arm64 — Patched major website bugs (download buttons, JS parse error).
@@ -206,7 +207,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="732a24df9c8858a200225a4bf6a4cead31bd279d7064b73aded2f8721a68279b"
+EXPECTED_HASH="f94156a25f7eb772396078e72c938e7fbbc0c50479304a7bb10304c8393dc13d"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -364,7 +365,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.3.9-Beta-arm64"
+let CURRENT_VERSION = "v8.3.10-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -1533,7 +1534,7 @@ class CPUMonitor: ObservableObject {
     @Published var baseClock: Double = 0
     @Published var boostClock: Double = 0
     @Published var cores: [CoreInfo] = []
-    @Published var usageHistory: [Double] = Array(repeating: 0, count: 80) // ~60s at 750ms/tick
+    @Published var usageHistory: [Double] = Array(repeating: 0, count: 40)
     @Published var cpuName: String = "Apple CPU"
     @Published var physicalCores: Int = 0
     @Published var logicalCores: Int = 0
@@ -1554,7 +1555,7 @@ class CPUMonitor: ObservableObject {
     @Published var anePowerWatts: Double = 0
     @Published var socPowerWatts: Double = 0
     @Published var packagePowerSource: String = "Load estimate"
-    @Published var powerHistory: [Double] = Array(repeating: 0, count: 80) // ~60s at 750ms/tick
+    @Published var powerHistory: [Double] = Array(repeating: 0, count: 40)
     @Published var loadAverage1: Double = 0
     @Published var loadAverage5: Double = 0
     @Published var loadAverage15: Double = 0
@@ -1563,7 +1564,7 @@ class CPUMonitor: ObservableObject {
     @Published var memoryCompressedGB: Double = 0
     @Published var memorySwapGB: Double = 0
     @Published var memoryPressure: String = "Normal"
-    @Published var memoryHistory: [Double] = Array(repeating: 0, count: 80)
+    @Published var memoryHistory: [Double] = Array(repeating: 0, count: 40)
     @Published var efficiencyCoreCount: Int = 0
     @Published var isLowPowerModeEnabled: Bool = false
 
@@ -1770,16 +1771,16 @@ class CPUMonitor: ObservableObject {
 
     private func update() {
         let cpu = updateCPUUsage()
-        let mem = sampleMemory()
-        let disk = sampleDisk()
-        let sys = sampleSystemStats()
+        let mem = MonitorActivity.needsMemoryStats ? sampleMemory() : nil
+        let disk = MonitorActivity.sampleDiskStats ? sampleDisk() : nil
+        let sys = MonitorActivity.needsSystemStats ? sampleSystemStats() : nil
         let derived = sampleDerived()
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             if let cpu { self.applyCPUUsage(cpu) }
             if let mem { self.applyMemory(mem) }
             if let disk { self.applyDisk(disk) }
-            self.applySystemStats(sys)
+            if let sys { self.applySystemStats(sys) }
             self.applyDerived(derived)
         }
     }
@@ -1823,10 +1824,14 @@ class CPUMonitor: ObservableObject {
             hasSmoothedSamples = true
         }
         totalUsage = min(100, max(0, smoothedUsage))
-        usageHistory.removeFirst()
-        usageHistory.append(totalUsage)
-        for (i, u) in sample.perCore.enumerated() where i < cores.count {
-            cores[i].usage = u
+        if MonitorActivity.maintainHistories {
+            usageHistory.removeFirst()
+            usageHistory.append(totalUsage)
+        }
+        if MonitorActivity.needsPerCoreStats {
+            for (i, u) in sample.perCore.enumerated() where i < cores.count {
+                cores[i].usage = u
+            }
         }
     }
 
@@ -1878,8 +1883,10 @@ class CPUMonitor: ObservableObject {
         memoryCompressedGB = sample.compressedGB
         memorySwapGB = sample.swapUsedGB
         memoryPressure = sample.pressure
-        memoryHistory.removeFirst()
-        memoryHistory.append(sample.usedPct)
+        if MonitorActivity.maintainHistories {
+            memoryHistory.removeFirst()
+            memoryHistory.append(sample.usedPct)
+        }
     }
 
     private func sampleDisk() -> DiskSample? {
@@ -1944,10 +1951,16 @@ class CPUMonitor: ObservableObject {
     }
 
     private func sampleDerived() -> DerivedSample {
-        DerivedSample(
+        let sensorReadings: [Double]
+        if MonitorActivity.needsTemperature {
+            sensorReadings = SMCReader.shared.smcReadings() + IOHIDTempReader.shared.readings()
+        } else {
+            sensorReadings = []
+        }
+        return DerivedSample(
             lpm: Self.readLowPowerModeEnabled(),
             state: ProcessInfo.processInfo.thermalState,
-            sensorReadings: SMCReader.shared.smcReadings() + IOHIDTempReader.shared.readings(),
+            sensorReadings: sensorReadings,
             socSample: MonitorActivity.includePowerSample ? IOReportPowerReader.shared.sample() : nil
         )
     }
@@ -1988,11 +2001,15 @@ class CPUMonitor: ObservableObject {
             socPowerWatts = min(estimate, ceiling)
             packagePowerSource = "Load estimate"
         }
-        powerHistory.removeFirst()
-        powerHistory.append(packagePowerWatts)
-        let maxB = baseClock * 1.28
-        for i in 0..<cores.count {
-            cores[i].clockMHz = baseClock + (maxB - baseClock) * (cores[i].usage / 100.0)
+        if MonitorActivity.maintainHistories {
+            powerHistory.removeFirst()
+            powerHistory.append(packagePowerWatts)
+        }
+        if MonitorActivity.needsPerCoreStats {
+            let maxB = baseClock * 1.28
+            for i in 0..<cores.count {
+                cores[i].clockMHz = baseClock + (maxB - baseClock) * (cores[i].usage / 100.0)
+            }
         }
     }
 }
@@ -2057,6 +2074,7 @@ class BatteryMonitor: ObservableObject {
     private var historyPoints: [(Date, Int)] = []
     private var lastHistorySample: Date?
     private var lastModeKey = ""
+    private var isDesktopMac = false
 
     private struct Snapshot {
         var isPresent = false
@@ -2074,12 +2092,13 @@ class BatteryMonitor: ObservableObject {
         var healthPercent: Int?
     }
 
-    init() {
-        applyActivityInterval()
-    }
+    init() {}
 
     func applyActivityInterval() {
         timer?.invalidate()
+        timer = nil
+        guard MonitorActivity.needsBatteryPolling else { return }
+        if isDesktopMac && !MonitorActivity.needsBatteryDetail { return }
         let t = Timer.scheduledTimer(withTimeInterval: MonitorActivity.batteryInterval, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)
         t.fire()
@@ -2095,7 +2114,9 @@ class BatteryMonitor: ObservableObject {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
             var snap = Self.readPmset() ?? Snapshot()
-            if let hw = Self.readIoreg() {
+            if !snap.isPresent { self.isDesktopMac = true }
+            let readIoreg = MonitorActivity.needsBatteryDetail
+            if readIoreg, let hw = Self.readIoreg() {
                 if snap.isPresent {
                     snap.isOnAC = hw.isOnAC
                     snap.isCharging = hw.hasChargingSignal ? hw.isCharging : snap.isCharging
@@ -2149,12 +2170,16 @@ class BatteryMonitor: ObservableObject {
                 snap.powerSource = "AC / Desktop"
             }
             DispatchQueue.main.async {
+                if !snap.isPresent {
+                    self.isDesktopMac = true
+                    if !MonitorActivity.needsBatteryDetail { self.stopMonitoring() }
+                }
                 let modeKey = "\(snap.isCharging)-\(snap.isOnAC)-\(snap.isFullyCharged)"
                 if modeKey != self.lastModeKey {
                     self.powerStateSince = Date()
                     self.lastModeKey = modeKey
                 }
-                if snap.isPresent {
+                if snap.isPresent && MonitorActivity.maintainHistories {
                     let now = Date()
                     if self.historyPoints.isEmpty || now.timeIntervalSince(self.lastHistorySample ?? .distantPast) >= 300 {
                         self.historyPoints.append((now, snap.levelPercent))
@@ -2814,8 +2839,16 @@ class BTCPriceMonitor: ObservableObject {
     )!
 
     func start() {
+        stop()
+        guard MonitorActivity.needsBTC else { return }
         fetch()
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.fetch() }
+        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.fetch() }
+        RunLoop.main.add(timer!, forMode: .common)
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
     }
 
     private func fetch() {
@@ -2836,36 +2869,63 @@ class BTCPriceMonitor: ObservableObject {
 enum MonitorActivity {
     private(set) static var popoverOpen = false
 
-    static var cpuInterval: TimeInterval { popoverOpen ? 1.0 : 2.0 }
+    static var cpuInterval: TimeInterval { popoverOpen ? 1.0 : 5.0 }
     static var gpuInterval: TimeInterval { 3.0 }
-    static var networkInterval: TimeInterval { popoverOpen ? 1.5 : 3.0 }
-    static var batteryInterval: TimeInterval { popoverOpen ? 2.0 : 5.0 }
-    static var diskInterval: TimeInterval { popoverOpen ? 5.0 : 8.0 }
+    static var networkInterval: TimeInterval { popoverOpen ? 1.5 : 8.0 }
+    static var batteryInterval: TimeInterval { popoverOpen ? 2.0 : (needsBatterySlot ? 12.0 : 0) }
+    static var diskInterval: TimeInterval { 5.0 }
     static var sensorsInterval: TimeInterval { popoverOpen ? 3.0 : 8.0 }
     static var includePowerSample: Bool { popoverOpen }
+    static var maintainHistories: Bool { popoverOpen }
+    static var sampleDiskStats: Bool { popoverOpen }
+    static var needsSystemStats: Bool { popoverOpen }
+    static var needsPerCoreStats: Bool { popoverOpen }
+    static var needsMemoryStats: Bool { popoverOpen || MenuBarConfig.isSlotEnabled(.ram) }
+    static var needsTemperature: Bool { popoverOpen || MenuBarConfig.isSlotEnabled(.temp) }
+    static var needsBatterySlot: Bool { MenuBarConfig.isSlotEnabled(.battery) }
+    static var needsBatteryPolling: Bool { popoverOpen || needsBatterySlot }
+    static var needsBatteryDetail: Bool { popoverOpen }
+    static var needsNetwork: Bool { popoverOpen || MenuBarConfig.isSlotEnabled(.network) }
+    static var needsBTC: Bool { popoverOpen || MenuBarConfig.isSlotEnabled(.btc) }
 
     static func setPopoverOpen(_ open: Bool) {
         guard popoverOpen != open else { return }
         popoverOpen = open
         CPUMonitor.shared.setPollInterval(cpuInterval)
-        NetworkMonitor.shared.applyActivityInterval()
-        BatteryMonitor.shared.applyActivityInterval()
+        applyAuxiliaryMonitors()
         if open {
             GPUMonitor.shared.start()
             DiskActivityMonitor.shared.start()
             SensorsMonitor.shared.start()
+            Task { @MainActor in SystemAdvisorModel.shared.startMonitoring() }
         } else {
             GPUMonitor.shared.stop()
             DiskActivityMonitor.shared.stop()
             SensorsMonitor.shared.stop()
+            Task { @MainActor in SystemAdvisorModel.shared.stopMonitoring() }
         }
+    }
+
+    static func applyAuxiliaryMonitors() {
+        CPUMonitor.shared.setPollInterval(cpuInterval)
+        if needsNetwork {
+            NetworkMonitor.shared.applyActivityInterval()
+        } else {
+            NetworkMonitor.shared.stop()
+        }
+        if needsBTC {
+            BTCPriceMonitor.shared.start()
+        } else {
+            BTCPriceMonitor.shared.stop()
+        }
+        BatteryMonitor.shared.applyActivityInterval()
     }
 }
 
 class GPUMonitor: ObservableObject {
     static let shared = GPUMonitor()
     @Published var usage: Double = 0
-    @Published var usageHistory: [Double] = Array(repeating: 0, count: 80)
+    @Published var usageHistory: [Double] = Array(repeating: 0, count: 40)
 
     private var timer: Timer?
     private let queue = DispatchQueue(label: "rnitro.gpu", qos: .utility)
@@ -6269,6 +6329,8 @@ enum MenuBarConfig {
         if slots.isEmpty { slots = [.cpu] }
         UserDefaults.standard.set(slots.map(\.rawValue), forKey: MonitorPreferences.menuBarSlotsKey)
         NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+        MonitorActivity.applyAuxiliaryMonitors()
+        CPUMonitor.shared.setPollInterval(MonitorActivity.cpuInterval)
     }
 
     static func isSlotEnabled(_ slot: MenuBarSlot) -> Bool {
@@ -8194,6 +8256,56 @@ struct OverlayHUDView: View {
     }
 }
 
+// Main window is created on demand so idle RAM stays low (menu-bar-only by default).
+final class MainWindowController: NSObject, NSWindowDelegate {
+    static let shared = MainWindowController()
+    private var window: NSWindow?
+    private var hosting: NSHostingController<AnyView>?
+
+    func show(userInfo: [AnyHashable: Any]? = nil) {
+        FontRegistrar.registerVarelaRound()
+        if hosting == nil {
+            let root = AnyView(
+                ContentView(tabs: AppTab.windowTabs, layout: .window)
+                    .frame(minWidth: 360, idealWidth: 520, maxWidth: .infinity, minHeight: 480, idealHeight: 700, maxHeight: .infinity)
+            )
+            let host = NSHostingController(rootView: root)
+            host.view.frame = NSRect(x: 0, y: 0, width: 520, height: 700)
+            hosting = host
+        }
+        if window == nil, let host = hosting {
+            let w = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 700),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            w.title = "rNitro"
+            w.contentViewController = host
+            w.center()
+            w.setFrameAutosaveName("rNitroMainWindow")
+            w.delegate = self
+            w.isReleasedWhenClosed = false
+            window = w
+        }
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+        if let userInfo, !userInfo.isEmpty {
+            NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: userInfo)
+        }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        window?.orderOut(nil)
+        window = nil
+        hosting = nil
+        if NSApp.activationPolicy() == .regular {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+}
+
 final class OverlayWindowController {
     static let shared = OverlayWindowController()
     private var panel: NSPanel?
@@ -8317,23 +8429,31 @@ enum FontRegistrar {
 // window is open. Clicking it opens a compact popover with the same
 // real-time data (shares CPUMonitor.shared, so nothing is duplicated).
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        MainWindowController.shared.show()
+        return true
+    }
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var popoverHosting: NSHostingController<AnyView>?
+    private let popoverSize = NSSize(width: 360, height: 580)
     private var subscriptions = Set<AnyCancellable>()
     private let menuBarRefreshTrigger = PassthroughSubject<Void, Never>()
     private var hotkeyMonitor: Any?
     private var modeObserver: NSObjectProtocol?
     private var powerModeObserver: NSObjectProtocol?
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        denyDebugger()
+        verifyBinaryIntegrity()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        FontRegistrar.registerVarelaRound()
-        UpdateChecker.checkOnLaunch()
-        BTCPriceMonitor.shared.start()
-        NetworkMonitor.shared.start()
+        NSApp.setActivationPolicy(.accessory)
         MonitorActivity.setPopoverOpen(false)
+        MonitorActivity.applyAuxiliaryMonitors()
         UNUserNotificationCenter.current().delegate = self
         AdvisorNotificationCenter.configure()
-        SystemAdvisorModel.shared.startMonitoring()
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self
@@ -8344,33 +8464,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         updateStatusTitle()
 
-        menuBarRefreshTrigger
-            .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
-            .sink { [weak self] in self?.updateStatusTitle() }
-            .store(in: &subscriptions)
-        let scheduleRefresh: () -> Void = { [weak self] in self?.menuBarRefreshTrigger.send() }
-        let main = DispatchQueue.main
-        let monitors: [AnyPublisher<Void, Never>] = [
-            CPUMonitor.shared.$totalUsage.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$temperature.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$packagePowerWatts.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$memoryUsedPercent.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$isLowPowerModeEnabled.map { _ in () }.eraseToAnyPublisher(),
-            NetworkMonitor.shared.$downloadMbps.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$levelPercent.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$isCharging.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$isOnAC.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$timeRemainingMinutes.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$timeToFullMinutes.map { _ in () }.eraseToAnyPublisher(),
-            BTCPriceMonitor.shared.$priceUSD.map { _ in () }.eraseToAnyPublisher()
-        ]
-        for publisher in monitors {
-            publisher.receive(on: main).sink { _ in scheduleRefresh() }.store(in: &subscriptions)
-        }
+        wireMenuBarRefresh()
 
         modeObserver = NotificationCenter.default.addObserver(
             forName: .menuBarModeChanged, object: nil, queue: .main
-        ) { [weak self] _ in self?.updateStatusTitle() }
+        ) { [weak self] _ in
+            self?.wireMenuBarRefresh()
+            self?.updateStatusTitle()
+        }
 
         powerModeObserver = NotificationCenter.default.addObserver(
             forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main
@@ -8379,19 +8480,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             CPUMonitor.shared.isLowPowerModeEnabled = lpm
             self?.updateStatusTitle()
         }
-        let popoverSize = NSSize(width: 360, height: 580)
-        let popoverView = ContentView(tabs: AppTab.popoverTabs, layout: .popover)
-            .frame(minWidth: 320, idealWidth: 360, maxWidth: 420, minHeight: 480, idealHeight: 580, maxHeight: 720)
-            .clipped()
-        let hosting = NSHostingController(rootView: popoverView)
-        hosting.view.wantsLayer = true
-        hosting.view.layer?.masksToBounds = true
-        hosting.preferredContentSize = popoverSize
-
         let pop = NSPopover()
         pop.behavior = .transient
         pop.contentSize = popoverSize
-        pop.contentViewController = hosting
         popover = pop
 
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -8403,6 +8494,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 OverlayWindowController.shared.toggle()
             }
         }
+
+        NotificationCenter.default.addObserver(
+            forName: .rNitroOpenMainWindow, object: nil, queue: .main
+        ) { note in
+            MainWindowController.shared.show(userInfo: note.userInfo)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+            UpdateChecker.checkOnLaunch()
+        }
     }
 
     func userNotificationCenter(
@@ -8411,6 +8512,47 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound])
+    }
+
+    private func wireMenuBarRefresh() {
+        subscriptions.removeAll()
+        menuBarRefreshTrigger
+            .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
+            .sink { [weak self] in self?.updateStatusTitle() }
+            .store(in: &subscriptions)
+        let scheduleRefresh: () -> Void = { [weak self] in self?.menuBarRefreshTrigger.send() }
+        let main = DispatchQueue.main
+        var monitors: [AnyPublisher<Void, Never>] = [
+            CPUMonitor.shared.$totalUsage.map { _ in () }.eraseToAnyPublisher(),
+            CPUMonitor.shared.$isLowPowerModeEnabled.map { _ in () }.eraseToAnyPublisher()
+        ]
+        if MenuBarConfig.isSlotEnabled(.temp) {
+            monitors.append(CPUMonitor.shared.$temperature.map { _ in () }.eraseToAnyPublisher())
+        }
+        if MenuBarConfig.isSlotEnabled(.power) {
+            monitors.append(CPUMonitor.shared.$packagePowerWatts.map { _ in () }.eraseToAnyPublisher())
+        }
+        if MenuBarConfig.isSlotEnabled(.ram) {
+            monitors.append(CPUMonitor.shared.$memoryUsedPercent.map { _ in () }.eraseToAnyPublisher())
+        }
+        if MenuBarConfig.isSlotEnabled(.network) {
+            monitors.append(NetworkMonitor.shared.$downloadMbps.map { _ in () }.eraseToAnyPublisher())
+        }
+        if MenuBarConfig.isSlotEnabled(.battery) {
+            monitors.append(contentsOf: [
+                BatteryMonitor.shared.$levelPercent.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$isCharging.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$isOnAC.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$timeRemainingMinutes.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$timeToFullMinutes.map { _ in () }.eraseToAnyPublisher()
+            ])
+        }
+        if MenuBarConfig.isSlotEnabled(.btc) {
+            monitors.append(BTCPriceMonitor.shared.$priceUSD.map { _ in () }.eraseToAnyPublisher())
+        }
+        for publisher in monitors {
+            publisher.receive(on: main).sink { _ in scheduleRefresh() }.store(in: &subscriptions)
+        }
     }
 
     @objc private func togglePopover() {
@@ -8456,11 +8598,37 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         if pop.isShown {
             pop.performClose(nil)
             MonitorActivity.setPopoverOpen(false)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                self?.releasePopoverContent()
+            }
         } else {
+            attachPopoverContentIfNeeded()
             pop.show(relativeTo: .zero, of: button, preferredEdge: .minY)
             pop.contentViewController?.view.window?.makeKey()
             MonitorActivity.setPopoverOpen(true)
         }
+    }
+
+    private func attachPopoverContentIfNeeded() {
+        guard popover?.contentViewController == nil else { return }
+        FontRegistrar.registerVarelaRound()
+        let popoverView = AnyView(
+            ContentView(tabs: AppTab.popoverTabs, layout: .popover)
+                .frame(minWidth: 320, idealWidth: 360, maxWidth: 420, minHeight: 480, idealHeight: 580, maxHeight: 720)
+                .clipped()
+        )
+        let hosting = NSHostingController(rootView: popoverView)
+        hosting.view.wantsLayer = true
+        hosting.view.layer?.masksToBounds = true
+        hosting.preferredContentSize = popoverSize
+        popoverHosting = hosting
+        popover?.contentViewController = hosting
+    }
+
+    private func releasePopoverContent() {
+        guard popover?.isShown != true else { return }
+        popover?.contentViewController = nil
+        popoverHosting = nil
     }
 
     @objc private func toggleOverlay() { OverlayWindowController.shared.toggle() }
@@ -8509,28 +8677,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         CPUMonitor.shared.stopMonitoring()
         BatteryMonitor.shared.stopMonitoring()
         NetworkMonitor.shared.stop()
+        BTCPriceMonitor.shared.stop()
         GPUMonitor.shared.stop()
         DiskActivityMonitor.shared.stop()
         SensorsMonitor.shared.stop()
         StressTester.shared.stop()
+        releasePopoverContent()
         OverlayWindowController.shared.hide()
     }
 }
 
+// Pure AppKit entry — SwiftUI loads only when popover/main window opens.
 @main
-struct rNitroApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    init() {
-        denyDebugger()          // refuse debugger attach
-        verifyBinaryIntegrity() // detect post-install binary tampering
-    }
-    var body: some Scene {
-        WindowGroup {
-            ContentView(tabs: AppTab.windowTabs, layout: .window)
-                .frame(minWidth:360,idealWidth:520,maxWidth:.infinity,minHeight:480,idealHeight:700,maxHeight:.infinity)
-        }
-        .windowStyle(.hiddenTitleBar)
-        .commands { CommandGroup(replacing:.newItem) {} }
+enum AppLauncher {
+    static func main() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.run()
     }
 }
 SWIFTEOF
@@ -8591,8 +8756,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>8.3.4-Beta-arm64</string>
-    <key>CFBundleShortVersionString</key><string>8.3.4-Beta-arm64</string>
+    <key>CFBundleVersion</key><string>8.3.10-Beta-arm64</string>
+    <key>CFBundleShortVersionString</key><string>8.3.10-Beta-arm64</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
