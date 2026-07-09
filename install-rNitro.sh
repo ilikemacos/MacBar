@@ -206,7 +206,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="fde54d0157227601f6b22b61471c3eab1e09f5fa5123bc35e43a287a688ea73d"
+EXPECTED_HASH="732a24df9c8858a200225a4bf6a4cead31bd279d7064b73aded2f8721a68279b"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -1779,8 +1779,8 @@ class CPUMonitor: ObservableObject {
             if let cpu { self.applyCPUUsage(cpu) }
             if let mem { self.applyMemory(mem) }
             if let disk { self.applyDisk(disk) }
-            if let sys { self.applySystemStats(sys) }
-            if let derived { self.applyDerived(derived) }
+            self.applySystemStats(sys)
+            self.applyDerived(derived)
         }
     }
 
