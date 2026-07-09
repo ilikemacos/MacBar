@@ -53,10 +53,6 @@ def render_formula(rel: dict, sha: str) -> str:
     (bin/"rnitro").write <<~EOS
       #!/bin/bash
       set -euo pipefail
-      cli="#{{app_dest}}/Contents/Resources/cli/rnitro"
-      if [[ -f "$cli" ]]; then
-        exec /usr/bin/env python3 "$cli" "$@"
-      fi
       exec /usr/bin/open -a "#{{app_dest}}" "$@"
     EOS
     (bin/"rnitro").chmod 0755

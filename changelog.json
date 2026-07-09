@@ -8,10 +8,6 @@
         {
           "strong": "Crash fix",
           "text": " — opening the main window from the popover no longer loops notifications and crash with “quit unexpectedly” (stack overflow)."
-        },
-        {
-          "strong": "Integrity fix",
-          "text": " — CLI is embedded before codesign so launch no longer fails with “app signature is invalid” after install."
         }
       ]
     },
@@ -53,7 +49,7 @@
         },
         {
           "strong": "Homebrew",
-          "text": " — brew tap ilikemacos/rnitro && brew install rnitro (formula + rnitro CLI)."
+          "text": " — brew tap ilikemacos/rnitro && brew install rnitro."
         }
       ]
     },
@@ -443,7 +439,7 @@
   "releases": [
     {
       "title": "v8.3.11-Beta-arm64",
-      "body_html": "<strong style=\"color:var(--orange);\">Crash fix</strong> \u2014 opening the main window from the menubar popover no longer re-triggers the open-window observer in a loop (fixed stack overflow / unexpected quit).<br><br><strong style=\"color:var(--orange);\">Integrity fix</strong> \u2014 CLI is embedded before codesign so install no longer fails launch with \u201capp signature is invalid\u201d.<br><br><strong style=\"color:var(--orange);\">Beta notice:</strong> Experimental features \u2014 report issues via Support."
+      "body_html": "<strong style=\"color:var(--orange);\">Crash fix</strong> \u2014 opening the main window from the menubar popover no longer re-triggers the open-window observer in a loop (fixed stack overflow / unexpected quit).<br><br><strong style=\"color:var(--orange);\">Beta notice:</strong> Experimental features \u2014 report issues via Support."
     },
     {
       "title": "v8.3.10-Beta-arm64",

@@ -529,7 +529,7 @@ def install_sh_commands(data: dict) -> str:
         <div style="margin-top:6px; background:var(--card2); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--orange); word-break:break-all; text-align:left;">
           {beta_curl}
         </div>
-        <p style="margin-top:8px;">Installs to <code>~/Applications/rNitro.app</code> in ~30 seconds and adds <code>rnitro</code> to <code>~/.local/bin</code>. Self-verifies its SHA-256 checksum before running.</p>"""
+        <p style="margin-top:8px;">Installs to <code>~/Applications/rNitro.app</code> in ~30 seconds. Self-verifies its SHA-256 checksum before running.</p>"""
 
 
 def hero_curl_install(data: dict) -> str:
