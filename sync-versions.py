@@ -114,6 +114,7 @@ def js_versions_object(data: dict) -> str:
             "dmg": stable["dmg"],
             "zip": stable["zip"],
             "hash": data["hashes"]["stable_sh"],
+            "curlInstall": curl_install_cmd(stable["sh"]),
         },
         "beta": {
             "id": beta["id"],
@@ -124,6 +125,7 @@ def js_versions_object(data: dict) -> str:
             "dmg": beta["dmg"],
             "zip": beta["zip"],
             "hash": data["hashes"]["beta_sh"],
+            "curlInstall": curl_install_cmd(beta["sh"]),
         },
         "windows": {
             "id": win["id"],
@@ -166,6 +168,7 @@ def hero_stable_card(data: dict) -> str:
         f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{s["pkg"]}')">{sized_label("PKG installer", s["pkg"])}</button>
             <button type="button" class="btn btn-secondary" onclick="requestDownload('{s["dmg"]}')">{sized_label("DMG disk image", s["dmg"])}</button>
             <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('{s["sh"]}')">{sized_label("Shell installer (.sh)", s["sh"])}</button>
+            <button class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('stable')">⎘ Copy bash command</button>""",
         note="<strong>PKG</strong> needs admin password. <strong>DMG</strong> — drag to Applications. <strong>.sh</strong> compiles from readable source (~30s). PKG may trigger a macOS security prompt — use System Settings → Privacy &amp; Security → Open.",
     )
@@ -184,8 +187,9 @@ def hero_beta_card(data: dict) -> str:
         f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{b["pkg"]}')">{sized_label("PKG installer", b["pkg"])}</button>
             <button type="button" class="btn btn-secondary" onclick="requestDownload('{b["dmg"]}')">{sized_label("DMG disk image", b["dmg"])}</button>
             <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('{b["sh"]}')">{sized_label("Shell installer (.sh)", b["sh"])}</button>
+            <button class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('beta')">⎘ Copy bash command</button>""",
-        note="<strong>Beta notice:</strong> Experimental AI — Terms required. <strong>.sh</strong> = full source compile on your Mac if you don't trust pre-built PKGs.",
+        note="<strong>Beta notice:</strong> Experimental AI — Terms required. <strong>curl</strong> or <strong>.sh</strong> compiles full source on your Mac if you don't trust pre-built PKGs.",
     )
     return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">{b["id"]}</div>
@@ -255,6 +259,11 @@ def download_card_full(data: dict) -> str:
 
 
 SITE_URL = "https://getrnitro.netlify.app"
+
+
+def curl_install_cmd(sh_name: str) -> str:
+    """One-liner: download .sh to disk then run (installer blocks curl|bash)."""
+    return f"curl -fsSL {SITE_URL}/{sh_name} -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
 
 
 def hero_head(data: dict) -> str:
@@ -404,8 +413,8 @@ def install_step_pkg(data: dict) -> str:
 
 
 def install_step_sh(data: dict) -> str:
-    return """        <h3>Or use the .sh installer (if you don't trust the PKG)</h3>
-        <p>If you're unsure about a pre-built PKG, download the highlighted <strong>.sh</strong> file instead. It contains the full app source — read it first, then compile locally. Stable:</p>"""
+    return """        <h3>Or install from Terminal with curl</h3>
+        <p>No browser download needed — paste a one-liner in Terminal. It fetches the <strong>.sh</strong> installer (readable source), saves it to <code>/tmp</code>, then runs it. Stable:</p>"""
 
 
 def hero_linux_buttons(data: dict) -> str:
@@ -510,10 +519,42 @@ def feature_ai_chat(data: dict) -> str:
 def install_sh_commands(data: dict) -> str:
     s = v.stable_release(data)
     b = v.beta_release(data)
-    return f"""        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:16px; color:var(--green);">
-          bash ~/Downloads/{s["sh"]}
+    stable_curl = curl_install_cmd(s["sh"])
+    beta_curl = curl_install_cmd(b["sh"])
+    return f"""        <p style="margin-top:8px; color:var(--muted); line-height:1.6;">Paste in <strong>Terminal</strong> (Apple Silicon Mac, Xcode CLT required). The script is saved to disk first — <code>curl | bash</code> is blocked on purpose.</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--green); word-break:break-all; text-align:left;">
+          {stable_curl}
         </div>
-        <p style="margin-top:8px;">Beta: <code>bash ~/Downloads/{b["sh"]}</code>. Installs to <code>~/Applications/rNitro.app</code> — takes ~30 seconds. Self-verifies its SHA-256 checksum before running.</p>"""
+        <p style="margin-top:10px; color:var(--muted);">Beta ({b["short"]}):</p>
+        <div style="margin-top:6px; background:var(--card2); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--orange); word-break:break-all; text-align:left;">
+          {beta_curl}
+        </div>
+        <p style="margin-top:8px;">Installs to <code>~/Applications/rNitro.app</code> in ~30 seconds and adds <code>rnitro</code> to <code>~/.local/bin</code>. Self-verifies its SHA-256 checksum before running.</p>"""
+
+
+def hero_curl_install(data: dict) -> str:
+    s = v.stable_release(data)
+    b = v.beta_release(data)
+    stable_curl = curl_install_cmd(s["sh"])
+    beta_curl = curl_install_cmd(b["sh"])
+    return f"""  <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
+    <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
+    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable ({s["short"]})</div>
+    <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
+      {stable_curl}
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy stable curl</button>
+    </div>
+    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta ({b["short"]}) — all AI providers</div>
+    <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--orange); word-break:break-all; line-height:1.45;">
+      {beta_curl}
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy beta curl</button>
+    </div>
+  </div>"""
 
 
 def download_card_stable(data: dict) -> str:
@@ -1036,6 +1077,7 @@ def sync_index(data: dict) -> None:
         "hero-head": hero_head(data),
         "nav-badge": nav_badge(data),
         "hero-copy": hero_copy(data),
+        "hero-curl-install": hero_curl_install(data),
         "platform-tabs": platform_tabs(),
         "hero-stable": hero_stable_card(data),
         "hero-beta": hero_beta_card(data),

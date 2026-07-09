@@ -207,7 +207,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="f94156a25f7eb772396078e72c938e7fbbc0c50479304a7bb10304c8393dc13d"
+EXPECTED_HASH="bf8ffe03c13e722ec1155dfc6cc97e5f717ccf1af8ee204664192c811a429ecd"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
