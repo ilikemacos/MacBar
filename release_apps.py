@@ -12,6 +12,17 @@ import versions as v
 
 SITE = v.SITE
 APP_PATH = Path.home() / "Applications/rNitro.app"
+CLI_SRC = SITE / "cli" / "rnitro"
+
+
+def embed_cli(app: Path) -> None:
+    """Bundle the Python CLI inside rNitro.app for brew/zip/pkg installs."""
+    if not CLI_SRC.is_file():
+        return
+    dest = app / "Contents/Resources/cli/rnitro"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(CLI_SRC, dest)
+    dest.chmod(0o755)
 
 
 def validate_app(app: Path) -> None:

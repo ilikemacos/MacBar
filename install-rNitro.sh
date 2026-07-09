@@ -8997,6 +8997,38 @@ xattr -cr "$APP_DEST" 2>/dev/null || true
 BINARY_HASH="$(shasum -a 256 "$APP_DEST/Contents/MacOS/rNitro" | awk '{print $1}')"
 echo "🔒 Binary SHA-256 (reference): $BINARY_HASH"
 
+# ── Install rnitro CLI (terminal stats + app control) ─────────────────────────
+install_rnitro_cli() {
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  CLI_SRC="$SCRIPT_DIR/cli/rnitro"
+  CLI_DEST="$APP_DEST/Contents/Resources/cli/rnitro"
+  mkdir -p "$APP_DEST/Contents/Resources/cli"
+  if [[ -f "$CLI_SRC" ]]; then
+    cp "$CLI_SRC" "$CLI_DEST"
+  elif [[ ! -f "$CLI_DEST" ]]; then
+    echo "⚠️  CLI source missing (cli/rnitro); menubar app installed without CLI."
+    return 0
+  fi
+  chmod 755 "$CLI_DEST"
+  BIN_DIR="$HOME/.local/bin"
+  mkdir -p "$BIN_DIR"
+  cat > "$BIN_DIR/rnitro" <<'RNITROCLI'
+#!/bin/bash
+set -euo pipefail
+for base in "$HOME/Applications/rNitro.app" "/Applications/rNitro.app"; do
+  cli="$base/Contents/Resources/cli/rnitro"
+  if [[ -f "$cli" ]]; then
+    exec /usr/bin/env python3 "$cli" "$@"
+  fi
+done
+echo "rNitro.app not found. Install from https://getrnitro.netlify.app/" >&2
+exit 1
+RNITROCLI
+  chmod 755 "$BIN_DIR/rnitro"
+  echo "✅ CLI installed → $BIN_DIR/rnitro  (try: rnitro stats)"
+}
+install_rnitro_cli
+
 echo ""
 echo "✅ rNitro installed to $APP_DEST"
 echo "🚀 Launching..."

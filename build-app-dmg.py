@@ -75,6 +75,7 @@ def create_dmg(
             quick=quick,
         )
         shutil.move(str(app_stage), str(stage / "rNitro.app"))
+        apps.embed_cli(stage / "rNitro.app")
         sign_app_bundle(stage / "rNitro.app")
         subprocess.run(
             ["codesign", "--verify", "--deep", "--strict", str(stage / "rNitro.app")],
