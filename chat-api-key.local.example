@@ -1,0 +1,2 @@
+# Copy to chat-api-key.local and paste your key (never commit chat-api-key.local)
+GROQ_API_KEY=gsk_your_key_here
