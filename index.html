@@ -1123,22 +1123,35 @@
       <div class="terminal-title">zsh — bash</div>
     </div>
     <div class="terminal-body">
-      <div class="t-comment"># 1. Download the installer</div>
+      <div class="t-comment"># Paste in Terminal (Stable) — download + install</div>
       <div>
         <span class="t-prompt">~ %</span>
-        <span class="t-cmd" id="typed-dl"></span>
-      </div>
-      <div style="margin-top:8px" id="line2" style="display:none">
-        <span class="t-comment"># 2. Run it</span>
-      </div>
-      <div id="line3">
-        <span class="t-prompt" id="prompt2"></span>
         <span class="t-cmd" id="typed-run"></span><span class="t-cursor" id="cursor"></span>
       </div>
     </div>
   </div>
 
-  <!-- Platform tabs -->
+<!-- @sync:hero-curl-install -->
+  <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
+    <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
+    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable (v8.3.5)</div>
+    <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
+      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.5-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy stable curl</button>
+    </div>
+    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta (v8.3.10) — all AI providers</div>
+    <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--orange); word-break:break-all; line-height:1.45;">
+      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.10-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy beta curl</button>
+    </div>
+  </div>
+<!-- @end:hero-curl-install -->
+
 <!-- @sync:platform-tabs -->
   <div role="tablist" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; margin-bottom:16px;">
     <button id="tab-mac" role="tab" aria-selected="true" aria-controls="dl-mac" onclick="setTab('mac')"
@@ -1177,7 +1190,8 @@
           <div class="dl-other-grid">
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.pkg')">PKG installer · 2.1 MB</button>
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.dmg')">DMG disk image · 2.4 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.sh')">Shell installer (.sh) · 376 KB</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.sh')">Shell installer (.sh) · 377 KB</button>
+            <button class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('stable')">⎘ Copy bash command</button>
           </div>
           <div class="dl-other-note"><strong>PKG</strong> needs admin password. <strong>DMG</strong> — drag to Applications. <strong>.sh</strong> compiles from readable source (~30s). PKG may trigger a macOS security prompt — use System Settings → Privacy &amp; Security → Open.</div>
@@ -1207,10 +1221,11 @@
           <div class="dl-other-grid">
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.pkg')">PKG installer · 2.1 MB</button>
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.dmg')">DMG disk image · 2.3 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.sh')">Shell installer (.sh) · 384 KB</button>
+            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.sh')">Shell installer (.sh) · 385 KB</button>
+            <button class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('beta')">⎘ Copy bash command</button>
           </div>
-          <div class="dl-other-note"><strong>Beta notice:</strong> Experimental AI — Terms required. <strong>.sh</strong> = full source compile on your Mac if you don't trust pre-built PKGs.</div>
+          <div class="dl-other-note"><strong>Beta notice:</strong> Experimental AI — Terms required. <strong>curl</strong> or <strong>.sh</strong> compiles full source on your Mac if you don't trust pre-built PKGs.</div>
         </div>
       </div>
     </div>
@@ -1457,14 +1472,19 @@
       <div class="step-num">2</div>
       <div class="step-content">
 <!-- @sync:install-step-sh -->
-        <h3>Or use the .sh installer (if you don't trust the PKG)</h3>
-        <p>If you're unsure about a pre-built PKG, download the highlighted <strong>.sh</strong> file instead. It contains the full app source — read it first, then compile locally. Stable:</p>
+        <h3>Or install from Terminal with curl</h3>
+        <p>No browser download needed — paste a one-liner in Terminal. It fetches the <strong>.sh</strong> installer (readable source), saves it to <code>/tmp</code>, then runs it. Stable:</p>
 <!-- @end:install-step-sh -->
 <!-- @sync:install-sh-commands -->
-        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:16px; color:var(--green);">
-          bash ~/Downloads/rNitro-v8.3.5-Final-arm64.sh
+        <p style="margin-top:8px; color:var(--muted); line-height:1.6;">Paste in <strong>Terminal</strong> (Apple Silicon Mac, Xcode CLT required). The script is saved to disk first — <code>curl | bash</code> is blocked on purpose.</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--green); word-break:break-all; text-align:left;">
+          curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.5-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
-        <p style="margin-top:8px;">Beta: <code>bash ~/Downloads/rNitro-v8.3.10-Beta-arm64.sh</code>. Installs to <code>~/Applications/rNitro.app</code> — takes ~30 seconds. Self-verifies its SHA-256 checksum before running.</p>
+        <p style="margin-top:10px; color:var(--muted);">Beta (v8.3.10):</p>
+        <div style="margin-top:6px; background:var(--card2); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--orange); word-break:break-all; text-align:left;">
+          curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.10-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+        </div>
+        <p style="margin-top:8px;">Installs to <code>~/Applications/rNitro.app</code> in ~30 seconds and adds <code>rnitro</code> to <code>~/.local/bin</code>. Self-verifies its SHA-256 checksum before running.</p>
 <!-- @end:install-sh-commands -->
       </div>
     </div>
@@ -1794,7 +1814,7 @@
       </div>
       <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
         SHA-256 (.sh):
-        <span id="sha-hash-stable" style="color:var(--green); word-break:break-all;">a1b5134214e539eba15ed99800d744da15e21ab945203ed00378adc21a82834f</span>
+        <span id="sha-hash-stable" style="color:var(--green); word-break:break-all;">ea1cab2ee5f6b1650af2f46c94ebbbe971b566eaee7af7acb9de16544731e275</span>
         <button onclick="copyHash('stable')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
       </div>
     </div>
@@ -1813,7 +1833,7 @@
           <div class="dl-other-grid">
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.pkg')">PKG installer · 2.1 MB</button>
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.dmg')">DMG disk image · 2.4 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.sh')">Shell installer (.sh) · 376 KB</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.sh')">Shell installer (.sh) · 377 KB</button>
           </div>
           <div class="dl-other-note"><strong>Don't trust the PKG?</strong> The .sh compiles from readable source on your Mac.</div>
         </div>
@@ -1837,7 +1857,7 @@
       </div>
       <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
         SHA-256 (.sh):
-        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">fbe37b0d439df2d84b18a8059822575911b507ac52ae5c0dccd289ad98d5176f</span>
+        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">c2f666e5b42c0f2b0b969ac8168207bcf011a82ec610073a4bdde9e9b607b573</span>
         <button onclick="copyHash('beta')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
       </div>
     </div>
@@ -1856,7 +1876,7 @@
           <div class="dl-other-grid">
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.pkg')">PKG installer · 2.1 MB</button>
             <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.dmg')">DMG disk image · 2.3 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.sh')">Shell installer (.sh) · 384 KB</button>
+            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.sh')">Shell installer (.sh) · 385 KB</button>
           </div>
           <div class="dl-other-note"><strong>Skeptical of the PKG?</strong> Use the .sh — full-source compile, verified checksum.</div>
         </div>
@@ -2672,7 +2692,8 @@
       "pkg": "rNitro-v8.3.5-Final-arm64.pkg",
       "dmg": "rNitro-v8.3.5-Final-arm64.dmg",
       "zip": "rNitro-v8.3.5-Final-arm64.zip",
-      "hash": "a1b5134214e539eba15ed99800d744da15e21ab945203ed00378adc21a82834f"
+      "hash": "ea1cab2ee5f6b1650af2f46c94ebbbe971b566eaee7af7acb9de16544731e275",
+      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.5-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
     },
     "beta": {
       "id": "v8.3.10-Beta-arm64",
@@ -2682,7 +2703,8 @@
       "pkg": "rNitro-v8.3.10-Beta-arm64.pkg",
       "dmg": "rNitro-v8.3.10-Beta-arm64.dmg",
       "zip": "rNitro-v8.3.10-Beta-arm64.zip",
-      "hash": "fbe37b0d439df2d84b18a8059822575911b507ac52ae5c0dccd289ad98d5176f"
+      "hash": "c2f666e5b42c0f2b0b969ac8168207bcf011a82ec610073a4bdde9e9b607b573",
+      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.10-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
     },
     "windows": {
       "id": "v4.2.4-Windows-Final-x86",
@@ -2916,9 +2938,6 @@
     });
   }
 
-  const runCmd = `bash ~/Downloads/${RNITRO_VERSIONS.stable.sh}`;
-  const dlCmd = `# save ${RNITRO_VERSIONS.stable.sh} to ~/Downloads, then:`;
-
   function typeText(elId, text, speed, done) {
     const el = document.getElementById(elId);
     if (!el) { if (done) done(); return; }
@@ -2933,13 +2952,21 @@
   }
 
   function startTerminalAnimation() {
+    const curlCmd = RNITRO_VERSIONS.stable?.curlInstall || '';
     setTimeout(() => {
-      typeText('typed-dl', dlCmd, 28, () => {
-        const p2 = document.getElementById('prompt2');
-        if (p2) p2.textContent = '~ % ';
-        typeText('typed-run', runCmd, 55);
-      });
+      typeText('typed-run', curlCmd, 22);
     }, 600);
+  }
+
+  function copyCurlCmd(which) {
+    const rel = which === 'beta' ? RNITRO_VERSIONS.beta : RNITRO_VERSIONS.stable;
+    const cmd = rel?.curlInstall || '';
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ curl command copied';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
   }
 
   function copyHash(which) {
