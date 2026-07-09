@@ -2,6 +2,21 @@
   "whats_new": [
     {
       "channel": "beta",
+      "title": "v8.3.11 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Crash fix",
+          "text": " — opening the main window from the popover no longer loops notifications and crash with “quit unexpectedly” (stack overflow)."
+        },
+        {
+          "strong": "Integrity fix",
+          "text": " — CLI is embedded before codesign so launch no longer fails with “app signature is invalid” after install."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.3.10 Beta",
       "accent": "orange",
       "items": [
@@ -426,6 +441,10 @@
     ]
   },
   "releases": [
+    {
+      "title": "v8.3.11-Beta-arm64",
+      "body_html": "<strong style=\"color:var(--orange);\">Crash fix</strong> \u2014 opening the main window from the menubar popover no longer re-triggers the open-window observer in a loop (fixed stack overflow / unexpected quit).<br><br><strong style=\"color:var(--orange);\">Integrity fix</strong> \u2014 CLI is embedded before codesign so install no longer fails launch with \u201capp signature is invalid\u201d.<br><br><strong style=\"color:var(--orange);\">Beta notice:</strong> Experimental features \u2014 report issues via Support."
+    },
     {
       "title": "v8.3.10-Beta-arm64",
       "body_html": "<strong style=\"color:var(--orange);\">Lightweight idle</strong> \u2014 pure AppKit at launch; SwiftUI loads only when you open the popover or main window. Physical footprint ~12 MB in Activity Monitor with the popover closed (down from ~111 MB).<br><br><strong style=\"color:var(--orange);\">Lazy UI</strong> \u2014 popover SwiftUI tree created on first menubar click and released after close; main window created on demand.<br><br><strong style=\"color:var(--orange);\">Slot-aware monitors</strong> \u2014 network, BTC, battery, temp, and power polling follow menubar slot settings; 5s CPU poll when idle; histories, disk stats, and SMC reads only when the popover is open.<br><br><strong style=\"color:var(--orange);\">Beta notice:</strong> Experimental features \u2014 report issues via Support."

@@ -2,7 +2,7 @@
 #
 # rNitro installer — hardened
 #
-# v8.3.10-Beta-arm64 — lightweight idle: pure AppKit launch, lazy popover/window, slot-aware monitors.
+# v8.3.11-Beta-arm64 — fix main-window open recursion crash; lightweight idle launch.
 # v8.3.9-Beta-arm64 — performance: background CPU polling, SMC key cache, debounced menubar, narrower SwiftUI observation.
 # v8.3.0-Beta-arm64 — in-app updater polish, faster App Cleaner, Linux v0.1 companion release.
 # v8.2.7-Beta-arm64 — Patched major website bugs (download buttons, JS parse error).
@@ -207,7 +207,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="bf8ffe03c13e722ec1155dfc6cc97e5f717ccf1af8ee204664192c811a429ecd"
+EXPECTED_HASH="5dc8e50301e2bb5778ba1c4055377e4a4329d9ed6a16d4b90d09dbc0b88c8965"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -365,7 +365,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.3.10-Beta-arm64"
+let CURRENT_VERSION = "v8.3.11-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -8292,7 +8292,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
         if let userInfo, !userInfo.isEmpty {
-            NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: userInfo)
+            // Defer + tag with self so AppDelegate's open-window observer does not recurse.
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: Self.shared, userInfo: userInfo)
+            }
         }
     }
 
@@ -8498,6 +8501,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         NotificationCenter.default.addObserver(
             forName: .rNitroOpenMainWindow, object: nil, queue: .main
         ) { note in
+            guard note.object == nil else { return }
             MainWindowController.shared.show(userInfo: note.userInfo)
         }
 
@@ -8756,8 +8760,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>8.3.10-Beta-arm64</string>
-    <key>CFBundleShortVersionString</key><string>8.3.10-Beta-arm64</string>
+    <key>CFBundleVersion</key><string>8.3.11-Beta-arm64</string>
+    <key>CFBundleShortVersionString</key><string>8.3.11-Beta-arm64</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
@@ -8980,6 +8984,21 @@ else
   echo "⚠️  Menu bar icon rendering failed (non-fatal); text-only menu bar will be used."
 fi
 
+# ── Bundle rnitro CLI before codesign (adding files after sign breaks integrity) ─
+embed_rnitro_cli_bundle() {
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+  CLI_SRC="$SCRIPT_DIR/cli/rnitro"
+  CLI_DEST="$APP_DEST/Contents/Resources/cli/rnitro"
+  mkdir -p "$APP_DEST/Contents/Resources/cli"
+  if [[ -f "$CLI_SRC" ]]; then
+    cp "$CLI_SRC" "$CLI_DEST"
+    chmod 755 "$CLI_DEST"
+  else
+    echo "⚠️  CLI source missing (cli/rnitro); menubar app will ship without bundled CLI."
+  fi
+}
+embed_rnitro_cli_bundle
+
 # ── Security: sign only after the bundle is fully assembled. Never edit
 #    Info.plist after codesign — that invalidates the signature and Gatekeeper
 #    reports the app as "damaged and can't be opened".
@@ -8997,19 +9016,8 @@ xattr -cr "$APP_DEST" 2>/dev/null || true
 BINARY_HASH="$(shasum -a 256 "$APP_DEST/Contents/MacOS/rNitro" | awk '{print $1}')"
 echo "🔒 Binary SHA-256 (reference): $BINARY_HASH"
 
-# ── Install rnitro CLI (terminal stats + app control) ─────────────────────────
-install_rnitro_cli() {
-  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-  CLI_SRC="$SCRIPT_DIR/cli/rnitro"
-  CLI_DEST="$APP_DEST/Contents/Resources/cli/rnitro"
-  mkdir -p "$APP_DEST/Contents/Resources/cli"
-  if [[ -f "$CLI_SRC" ]]; then
-    cp "$CLI_SRC" "$CLI_DEST"
-  elif [[ ! -f "$CLI_DEST" ]]; then
-    echo "⚠️  CLI source missing (cli/rnitro); menubar app installed without CLI."
-    return 0
-  fi
-  chmod 755 "$CLI_DEST"
+# ── Install rnitro CLI shim (~/.local/bin — does not touch the signed bundle) ─
+install_rnitro_cli_shim() {
   BIN_DIR="$HOME/.local/bin"
   mkdir -p "$BIN_DIR"
   cat > "$BIN_DIR/rnitro" <<'RNITROCLI'
@@ -9027,7 +9035,7 @@ RNITROCLI
   chmod 755 "$BIN_DIR/rnitro"
   echo "✅ CLI installed → $BIN_DIR/rnitro  (try: rnitro stats)"
 }
-install_rnitro_cli
+install_rnitro_cli_shim
 
 echo ""
 echo "✅ rNitro installed to $APP_DEST"
