@@ -1131,26 +1131,6 @@
     </div>
   </div>
 
-<!-- @sync:hero-curl-install -->
-  <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
-    <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
-    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
-    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable (v8.3.5)</div>
-    <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
-      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.5-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy stable curl</button>
-    </div>
-    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta (v8.3.10) — all AI providers</div>
-    <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--orange); word-break:break-all; line-height:1.45;">
-      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.10-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy beta curl</button>
-    </div>
-  </div>
-<!-- @end:hero-curl-install -->
 
 <!-- @sync:platform-tabs -->
   <div role="tablist" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; margin-bottom:16px;">
@@ -1230,6 +1210,28 @@
       </div>
     </div>
 <!-- @end:hero-beta -->
+
+<!-- @sync:hero-curl-install -->
+  <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
+    <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
+    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable (v8.3.5)</div>
+    <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
+      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.5-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy stable curl</button>
+    </div>
+    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta (v8.3.10) — all AI providers</div>
+    <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--orange); word-break:break-all; line-height:1.45;">
+      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.10-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy beta curl</button>
+    </div>
+  </div>
+<!-- @end:hero-curl-install -->
+
 
 <!-- @sync:hero-more -->
       <div id="hero-more-downloads" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
