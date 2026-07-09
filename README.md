@@ -86,24 +86,7 @@ cd rNitro
 bash install-rNitro.sh
 ```
 
-Requires Xcode Command Line Tools (`xcode-select --install`). The script compiles with `swiftc`, installs `rNitro.app` to `~/Applications`, and adds a `rnitro` CLI to `~/.local/bin`.
-
-### CLI
-
-After install, `rnitro` is on your PATH (via `~/.local/bin`):
-
-```bash
-rnitro              # open the menubar app (default)
-rnitro stats        # CPU, temp, RAM, battery snapshot
-rnitro watch        # live stats (Ctrl+C to stop)
-rnitro watch -i 1   # refresh every second
-rnitro memory       # RSS of the running app
-rnitro version      # installed build from Info.plist
-rnitro quit         # quit the menubar app
-rnitro stats --json # machine-readable output
-```
-
-The CLI is also bundled at `rNitro.app/Contents/Resources/cli/rnitro` (Python 3, stdlib only).
+Requires Xcode Command Line Tools (`xcode-select --install`). The script compiles with `swiftc` and installs `rNitro.app` to `~/Applications`.
 
 ### Build a release ZIP locally
 
