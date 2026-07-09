@@ -2,40 +2,6 @@
   "whats_new": [
     {
       "channel": "beta",
-      "title": "v8.3.11 Beta",
-      "accent": "orange",
-      "items": [
-        {
-          "strong": "Crash fix",
-          "text": " — opening the main window from the popover no longer loops notifications and crash with “quit unexpectedly” (stack overflow)."
-        }
-      ]
-    },
-    {
-      "channel": "beta",
-      "title": "v8.3.10 Beta",
-      "accent": "orange",
-      "items": [
-        {
-          "strong": "~12 MB idle memory",
-          "text": " — menu-bar-only mode uses ~12 MB physical footprint in Activity Monitor (down from ~111 MB); SwiftUI loads only when you open the popover or main window."
-        },
-        {
-          "strong": "Pure AppKit launch",
-          "text": " — no SwiftUI window at startup; lazy popover and on-demand main window; CPU polls every 5s when the popover is closed."
-        },
-        {
-          "strong": "Slot-aware monitors",
-          "text": " — network, BTC, battery, temp, and power readers run only when the popover is open or their menubar slot is enabled; histories and disk/SMC reads skipped when idle."
-        },
-        {
-          "strong": "Desktop Macs",
-          "text": " — battery polling stops on machines with no battery unless the Battery menubar slot is on."
-        }
-      ]
-    },
-    {
-      "channel": "beta",
       "title": "v8.3.9 Beta",
       "accent": "orange",
       "items": [
@@ -382,7 +348,7 @@
   ],
   "compare": {
     "title": "Stable vs Beta \u2014 which should I download?",
-    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v8.3.5 Final is production-ready; v8.3.10 Beta adds lightweight idle mode (~12 MB footprint) plus every AI provider. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.",
+    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v8.3.2 Final is production-ready with Settings subtabs; v8.3.4 Beta adds every AI provider and experimental features. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.",
     "rows": [
       {
         "feature": "Best for",
@@ -437,26 +403,6 @@
     ]
   },
   "releases": [
-    {
-      "title": "v8.3.11-Beta-arm64",
-      "body_html": "<strong style=\"color:var(--orange);\">Crash fix</strong> \u2014 opening the main window from the menubar popover no longer re-triggers the open-window observer in a loop (fixed stack overflow / unexpected quit).<br><br><strong style=\"color:var(--orange);\">Beta notice:</strong> Experimental features \u2014 report issues via Support."
-    },
-    {
-      "title": "v8.3.10-Beta-arm64",
-      "body_html": "<strong style=\"color:var(--orange);\">Lightweight idle</strong> \u2014 pure AppKit at launch; SwiftUI loads only when you open the popover or main window. Physical footprint ~12 MB in Activity Monitor with the popover closed (down from ~111 MB).<br><br><strong style=\"color:var(--orange);\">Lazy UI</strong> \u2014 popover SwiftUI tree created on first menubar click and released after close; main window created on demand.<br><br><strong style=\"color:var(--orange);\">Slot-aware monitors</strong> \u2014 network, BTC, battery, temp, and power polling follow menubar slot settings; 5s CPU poll when idle; histories, disk stats, and SMC reads only when the popover is open.<br><br><strong style=\"color:var(--orange);\">Beta notice:</strong> Experimental features \u2014 report issues via Support."
-    },
-    {
-      "title": "v8.3.9-Beta-arm64",
-      "body_html": "<strong style=\"color:var(--orange);\">Performance</strong> \u2014 CPU monitoring on a background queue with batched UI updates; SMC key cache; debounced menubar refresh; narrower SwiftUI observation in the monitor tab.<br><br><strong style=\"color:var(--orange);\">Open source</strong> \u2014 full source on GitHub (install-rNitro.sh, build scripts, Linux/Windows companions); slim repo with binaries on Releases only.<br><br><strong style=\"color:var(--orange);\">Homebrew</strong> \u2014 <code>brew tap ilikemacos/rnitro && brew install rnitro</code>."
-    },
-    {
-      "title": "v8.3.8-Beta-arm64",
-      "body_html": "<strong style=\"color:var(--orange);\">Updater reliability</strong> \u2014 post-quit helper writes update-result.txt; failed updates alert on next launch. <code>/System/Volumes/Data/Applications</code> normalized to admin replace.<br><br><strong style=\"color:var(--orange);\">Update UX</strong> \u2014 download progress bar, success dialog before restart, beta-first install button, Launch at Login re-registration after update.<br><br><strong style=\"color:var(--orange);\">How it works flowcharts</strong> \u2014 three visual diagrams: getting started, in-app updater, and live monitor loop."
-    },
-    {
-      "title": "v8.3.5-Final-arm64",
-      "body_html": "<strong style=\"color:var(--green);\">Updater reliability</strong> \u2014 post-quit failure reporting, system Applications path fix, and manual Check for Updates in Settings \u2192 General.<br><br><strong style=\"color:var(--green);\">Promoted fixes</strong> \u2014 all v8.3.4 updater improvements plus silent-failure diagnostics and install-location label."
-    },
     {
       "title": "v8.3.2-Final-arm64",
       "body_html": "<strong style=\"color:var(--green);\">Updater fixes</strong> \u2014 in-app updates detect missing ZIPs (HTTP 404/HTML), validate the download is a real ZIP, and ask for your Mac password when updating a PKG install in /Applications."
