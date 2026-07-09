@@ -1,6 +1,17 @@
 {
   "whats_new": [
     {
+      "channel": "stable",
+      "title": "v8.3.6 Final",
+      "accent": "green",
+      "items": [
+        {
+          "strong": "Battery fix",
+          "text": " — MacBooks show live charge % via direct IOKit reads (backport from v8.3.12 Beta; fixes — % / desktop on laptops)."
+        }
+      ]
+    },
+    {
       "channel": "beta",
       "title": "v8.3.12 Beta",
       "accent": "orange",
