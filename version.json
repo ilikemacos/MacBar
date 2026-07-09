@@ -1,6 +1,6 @@
 {
   "latest": "v8.3.5-Final-arm64",
-  "beta": "v8.3.8-Beta-arm64",
+  "beta": "v8.3.9-Beta-arm64",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
   "releases": {
@@ -13,13 +13,13 @@
       "zip": "rNitro-v8.3.5-Final-arm64.zip"
     },
     "beta": {
-      "label": "v8.3.8 Beta",
-      "short": "v8.3.8",
-      "sh": "rNitro-v8.3.8-Beta-arm64.sh",
+      "label": "v8.3.9 Beta",
+      "short": "v8.3.9",
+      "sh": "rNitro-v8.3.9-Beta-arm64.sh",
       "source_sh": "install-rNitro.sh",
-      "pkg": "rNitro-v8.3.8-Beta-arm64.pkg",
-      "dmg": "rNitro-v8.3.8-Beta-arm64.dmg",
-      "zip": "rNitro-v8.3.8-Beta-arm64.zip"
+      "pkg": "rNitro-v8.3.9-Beta-arm64.pkg",
+      "dmg": "rNitro-v8.3.9-Beta-arm64.dmg",
+      "zip": "rNitro-v8.3.9-Beta-arm64.zip"
     },
     "linux": {
       "label": "v0.1 Linux Beta Pre-release",
@@ -41,10 +41,19 @@
     }
   },
   "hashes": {
-    "stable_sh": "4b88a39736aac6351dfad0f2efe8b817f0492bb516b6a2b7cc09eebca93d289e",
-    "beta_sh": "943afa977b16f00854381eaa43a8454c40e68ccf195868bcbab32f23b6f95ec2"
+    "stable_sh": "1867994440576203fd17b73eed0f62230e5c6f87d54219202595699535a81649",
+    "beta_sh": "c74ada2bbd82cf421756f8e33bad1c786065a312719c3e59b1440da0440b47d1"
   },
   "archive": [
+    {
+      "id": "v8.3.8-Beta-arm64",
+      "channel": "beta",
+      "sh": "rNitro-v8.3.8-Beta-arm64.sh",
+      "pkg": "rNitro-v8.3.8-Beta-arm64.pkg",
+      "dmg": "rNitro-v8.3.8-Beta-arm64.dmg",
+      "zip": "rNitro-v8.3.8-Beta-arm64.zip",
+      "sh_hash": "943afa977b16f00854381eaa43a8454c40e68ccf195868bcbab32f23b6f95ec2"
+    },
     {
       "id": "v8.3.7-Beta-arm64",
       "channel": "beta",

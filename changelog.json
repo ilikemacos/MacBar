@@ -2,6 +2,25 @@
   "whats_new": [
     {
       "channel": "beta",
+      "title": "v8.3.9 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Performance",
+          "text": " — CPU monitoring on a background queue with batched UI updates; SMC key cache; debounced menubar refresh; narrower SwiftUI observation in the monitor tab."
+        },
+        {
+          "strong": "Open source",
+          "text": " — full source on GitHub (install-rNitro.sh, build scripts, Linux/Windows companions); slim repo with binaries on Releases only."
+        },
+        {
+          "strong": "Homebrew",
+          "text": " — brew tap ilikemacos/rnitro && brew install rnitro (formula + rnitro CLI)."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.3.8 Beta",
       "accent": "orange",
       "items": [

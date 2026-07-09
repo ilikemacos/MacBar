@@ -27,13 +27,13 @@ Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
 | **PKG** | [rNitro-v8.3.5-Final-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.5-Final/rNitro-v8.3.5-Final-arm64.pkg) |
 | **DMG** | [rNitro-v8.3.5-Final-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.5-Final/rNitro-v8.3.5-Final-arm64.dmg) |
 
-### Beta — v8.3.8
+### Beta — v8.3.9
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v8.3.8-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.3.8-Beta/rNitro-v8.3.8-Beta-arm64.zip) |
-| **PKG** | [rNitro-v8.3.8-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.8-Beta/rNitro-v8.3.8-Beta-arm64.pkg) |
-| **DMG** | [rNitro-v8.3.8-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.8-Beta/rNitro-v8.3.8-Beta-arm64.dmg) |
+| **App ZIP** | [rNitro-v8.3.9-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.3.9-Beta/rNitro-v8.3.9-Beta-arm64.zip) |
+| **PKG** | [rNitro-v8.3.9-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.9-Beta/rNitro-v8.3.9-Beta-arm64.pkg) |
+| **DMG** | [rNitro-v8.3.9-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.9-Beta/rNitro-v8.3.9-Beta-arm64.dmg) |
 
 [All releases →](https://github.com/ilikemacos/rNitro/releases)
 
@@ -74,7 +74,7 @@ This repository contains the full rNitro source tree:
 | `homebrew/` | Homebrew formula (also published at [ilikemacos/homebrew-rnitro](https://github.com/ilikemacos/homebrew-rnitro)) |
 | `build-*.py`, `sync-versions.py`, `deploy-netlify.py` | Build, release, and site deploy tooling |
 | `rNitro-v*.sh` | Generated on build (`sync-versions.py`) — older builds on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases) |
-| `index.html`, `boba-game/` | Website and embedded game assets |
+| `index.html` | Download website |
 
 Pre-built `.zip`, `.pkg`, and `.dmg` files are published on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases), not committed here.
 
