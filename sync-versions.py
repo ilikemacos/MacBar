@@ -15,6 +15,7 @@ import versions as v
 
 SITE = v.SITE
 INDEX = SITE / "index.html"
+README = SITE / "README.md"
 MAKE_STABLE = SITE / "make-v6-nochat.sh.py"
 
 
@@ -1111,6 +1112,62 @@ def sync_index(data: dict) -> None:
     print(f"Updated {INDEX.name}")
 
 
+def readme_release_table(rel: dict) -> str:
+    tag = v.github_release_tag(rel["id"])
+    rows = []
+    for label, key in (("App ZIP", "zip"), ("PKG", "pkg"), ("DMG", "dmg")):
+        name = rel[key]
+        url = v.github_asset_url(rel["id"], name)
+        rows.append(f"| **{label}** | [{name}]({url}) |")
+    return "\n".join(rows)
+
+
+def readme_downloads(data: dict) -> str:
+    stable = v.stable_release(data)
+    beta = v.beta_release(data)
+    return f"""### Stable — {stable["label"]}
+
+| Format | File |
+|--------|------|
+{readme_release_table(stable)}
+
+### Beta — {beta["label"]}
+
+| Format | File |
+|--------|------|
+{readme_release_table(beta)}"""
+
+
+def readme_curl(data: dict) -> str:
+    stable = v.stable_release(data)
+    beta = v.beta_release(data)
+    stable_curl = curl_install_cmd(stable["sh"])
+    beta_curl = curl_install_cmd(beta["sh"])
+    return f"""**Stable ({stable["label"]}):**
+```bash
+{stable_curl}
+```
+
+**Beta ({beta["label"]}):**
+```bash
+{beta_curl}
+```"""
+
+
+def sync_readme(data: dict) -> None:
+    if not README.is_file():
+        print(f"Skipping {README.name} (not found)")
+        return
+    text = README.read_text(encoding="utf-8")
+    for name, content in (
+        ("readme-curl", readme_curl(data)),
+        ("readme-downloads", readme_downloads(data)),
+    ):
+        text = sync_region(text, name, content)
+    README.write_text(text, encoding="utf-8")
+    print(f"Updated {README.name}")
+
+
 def refresh_hashes(data: dict) -> dict:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
@@ -1160,6 +1217,7 @@ def main() -> None:
 
     print("Syncing index.html...")
     sync_index(data)
+    sync_readme(data)
 
     print("\nDone. version.json:")
     print(f"  latest: {data['latest']}")
