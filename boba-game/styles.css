@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+:root {
+  --color-background-primary:   #0f0f17;
+  --color-background-secondary: #1a1a27;
+  --color-text-primary:         #e2e2f0;
+  --color-text-secondary:       #7a7a9a;
+  --color-text-success:         #22cc66;
+  --color-text-warning:         #ffbb33;
+  --color-text-danger:          #ff4455;
+  --color-border-primary:       #c86ab0;
+  --color-border-secondary:     #2e2e46;
+  --color-border-tertiary:      #1e1e30;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+html, body {
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+}
+.G{font-family:'VT323','Courier New',monospace;font-size:18px;line-height:1.3;color:var(--color-text-primary);padding:4px;height:100vh;display:flex!important;flex-direction:column;gap:6px}
+.hdr{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--color-border-secondary);padding:6px 12px;background:var(--color-background-secondary);flex-shrink:0}
+.mainArea{position:relative;flex:1;min-height:0}
+.sidePnl{position:absolute;top:0;bottom:0;width:190px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;padding:6px;z-index:2;background:linear-gradient(90deg, rgba(15,15,23,.92), rgba(15,15,23,.78));pointer-events:auto}
+.sideLeft{left:0}
+.sideRight{right:0;background:linear-gradient(270deg, rgba(15,15,23,.92), rgba(15,15,23,.78))}
+.canvasWrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--color-border-secondary);background:var(--color-background-primary);padding:0 190px;box-sizing:border-box}
+.pnl{border:1px solid var(--color-border-secondary);background:rgba(26,26,39,.9);padding:8px;backdrop-filter:blur(3px);box-shadow:0 0 14px rgba(0,0,0,.5)}
+.pt{font-size:13px;letter-spacing:2px;color:var(--color-text-secondary);border-bottom:1px solid var(--color-border-tertiary);padding-bottom:4px;margin-bottom:8px}
+.bb{width:100%;text-align:left;background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);padding:5px 8px;font-family:'VT323',monospace;font-size:16px;color:var(--color-text-primary);cursor:pointer;margin-bottom:3px;display:block}
+.bb:hover:not([disabled]){border-color:var(--color-border-primary)}
+.bb[disabled]{opacity:.4;cursor:not-allowed}
+.bb.cooking{border-color:var(--color-text-warning);color:var(--color-text-warning)}
+.ub{width:100%;text-align:left;background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);padding:6px 8px;font-family:'VT323',monospace;font-size:16px;color:var(--color-text-primary);cursor:pointer;margin-bottom:4px;display:block}
+.ub:hover:not([disabled]):not(.bgt){border-color:var(--color-border-primary)}
+.ub[disabled]:not(.bgt){opacity:.4;cursor:not-allowed}
+.ub.bgt{opacity:.6;cursor:default;border-style:dashed}
+.trow{padding:5px 8px;border-left:3px solid var(--color-border-secondary);background:var(--color-background-primary);margin-bottom:4px}
+.trow.tr-empty{opacity:.35}
+.trow.tr-waiting{border-left-color:var(--color-text-secondary)}
+.trow.tr-urgent{border-left-color:var(--color-text-danger)}
+.trow.tr-ready{border-left-color:var(--color-text-warning)}
+.trow.tr-eating{border-left-color:var(--color-text-success)}
+.trow.tr-target{border-left-color:var(--color-text-warning);outline:1px solid var(--color-text-warning)}
+.la{overflow-y:auto;max-height:100px;font-size:14px}
+.ls{color:var(--color-text-success)}.lm{color:var(--color-text-danger)}.li{color:var(--color-text-warning)}.lu{color:var(--color-text-secondary)}
+.sbb{height:4px;background:var(--color-border-tertiary);margin:2px 0 4px}
+.sbf{height:4px}
+.sf{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.sideRight .sf{grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;flex:1;min-height:140px}
+.sf.has-admin{grid-template-columns:repeat(5,1fr)}
+.sideRight .sf.has-admin{grid-template-columns:repeat(2,1fr)}
+.sxAdmin{border-color:var(--color-text-warning)}
+.sxAdmin:hover{background:var(--color-background-primary)}
+.sx{border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);padding:5px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.sl{font-size:12px;color:var(--color-text-secondary);letter-spacing:1px}
+.sv2{font-size:22px}
+.bl{animation:bk 1.2s step-end infinite}
+@keyframes bk{50%{opacity:0}}
+.spb{padding:2px 10px;border:1px solid var(--color-border-tertiary);background:var(--color-background-primary);font-family:'VT323',monospace;font-size:16px;color:var(--color-text-secondary);cursor:pointer}
+.spb.on{border-color:var(--color-border-primary);color:var(--color-text-primary)}
+.musicPlayer{display:flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--color-border-secondary);background:var(--color-background-primary)}
+.musicBtn{padding:2px 10px;letter-spacing:1px;transition:color .2s,border-color .2s}
+.musicBtn.on{border-color:#c86ab0;color:#f4b8e8;text-shadow:0 0 8px #c86ab0aa}
+.musicCtrl{padding:2px 7px}
+.musicLabel{font-size:14px;letter-spacing:1px;color:var(--color-text-secondary);min-width:108px;text-align:center;transition:color .4s}
+.musicLabel.playing{color:#c8a6ff;animation:musicPulse 2.5s ease-in-out infinite}
+@keyframes musicPulse{0%,100%{opacity:1}50%{opacity:.55}}
+.gm{color:var(--color-text-success)}.lw{color:var(--color-text-warning)}.er{color:var(--color-text-danger)}
+.ost{color:var(--color-text-success);border:1px solid var(--color-text-success);padding:1px 8px;font-size:16px;letter-spacing:2px}
+.cst{color:var(--color-text-danger);border:1px solid var(--color-text-danger);padding:1px 8px;font-size:16px;letter-spacing:2px}
+.nst{color:#aa88ff;border:1px solid #aa88ff;padding:1px 8px;font-size:16px;letter-spacing:2px}
+.qchip{display:inline-block;border:1px solid var(--color-border-tertiary);background:var(--color-background-primary);padding:2px 8px;font-size:16px;color:var(--color-text-primary);cursor:pointer;margin:2px}
+.qchip:hover{border-color:var(--color-border-primary)}
+.qchip.held{border-color:var(--color-text-warning);color:var(--color-text-warning)}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:min(100%,1400px);height:auto;max-height:92%;aspect-ratio:660/500;margin:auto}
+.cookSlot{border:1px solid var(--color-border-tertiary);background:var(--color-background-primary);padding:6px 8px;margin-bottom:6px;font-size:16px}
+.logoutLink{font-size:12px;color:var(--color-text-secondary);text-decoration:underline;cursor:pointer;margin-left:4px}
+.logoutLink:hover{color:var(--color-text-primary)}
+.rushBtn{margin-top:4px;width:100%;background:var(--color-background-secondary);border:1px solid var(--color-text-warning);color:var(--color-text-warning);font-family:'VT323',monospace;font-size:14px;padding:4px;cursor:pointer}
+.rushBtn:hover{background:var(--color-text-warning);color:var(--color-background-primary)}
+
+/* ===== Login / profile screen ===== */
+.loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'VT323','Courier New',monospace;color:var(--color-text-primary)}
+.loginBox{width:340px;border:1px solid var(--color-border-secondary);background:var(--color-background-secondary);padding:22px}
+.loginTitle{font-size:26px;letter-spacing:3px;text-align:center;margin-bottom:4px}
+.loginSub{font-size:14px;color:var(--color-text-secondary);text-align:center;margin-bottom:18px}
+.loginField{margin-bottom:12px}
+.loginField label{display:block;font-size:13px;letter-spacing:1px;color:var(--color-text-secondary);margin-bottom:3px}
+.loginField input{width:100%;background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);color:var(--color-text-primary);font-family:'VT323',monospace;font-size:18px;padding:6px 8px}
+.loginField input:focus{outline:none;border-color:var(--color-border-primary)}
+.loginBtn{width:100%;margin-top:6px;background:var(--color-background-primary);border:1px solid var(--color-border-primary);color:var(--color-text-primary);font-family:'VT323',monospace;font-size:18px;letter-spacing:2px;padding:8px;cursor:pointer}
+.loginBtn:hover{background:var(--color-border-primary)}
+.loginErr{color:var(--color-text-danger);font-size:14px;min-height:18px;text-align:center;margin-top:8px}
+.loginHint{font-size:13px;color:var(--color-text-secondary);text-align:center;margin-top:14px;border-top:1px solid var(--color-border-tertiary);padding-top:10px}
+.profChip{display:block;width:100%;text-align:left;background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);color:var(--color-text-primary);font-family:'VT323',monospace;font-size:17px;padding:7px 10px;margin-bottom:6px;cursor:pointer}
+.profChip:hover{border-color:var(--color-border-primary)}
+.profChip .tag{float:right;font-size:13px;color:var(--color-text-warning)}
+.newProfLink{display:block;text-align:center;font-size:14px;color:var(--color-text-secondary);margin-top:10px;cursor:pointer;text-decoration:underline}
+
+/* ===== Admin panel ===== */
+.adminBadge{color:var(--color-text-warning);border:1px solid var(--color-text-warning);padding:1px 8px;font-size:14px;letter-spacing:1px;margin-left:8px;cursor:pointer}
+.adminOverlay{position:fixed;inset:0;background:rgba(5,5,10,.75);display:flex;align-items:center;justify-content:center;z-index:50;font-family:'VT323',monospace}
+.adminBox{width:420px;max-height:80vh;overflow-y:auto;border:1px solid var(--color-text-warning);background:var(--color-background-secondary);padding:18px}
+.adminTitle{font-size:22px;letter-spacing:2px;color:var(--color-text-warning);margin-bottom:12px}
+.adminRow{border:1px solid var(--color-border-tertiary);background:var(--color-background-primary);padding:8px;margin-bottom:8px}
+.adminRow .nm{font-size:18px}
+.adminRow .bal{color:var(--color-text-success);float:right}
+.adminCtrls{display:flex;gap:6px;margin-top:6px}
+.adminCtrls input{width:80px;background:var(--color-background-primary);border:1px solid var(--color-border-tertiary);color:var(--color-text-primary);font-family:'VT323',monospace;font-size:15px;padding:4px 6px}
+.adminCtrls button{font-family:'VT323',monospace;font-size:14px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);padding:4px 8px;cursor:pointer}
+.adminCtrls button:hover{border-color:var(--color-border-primary)}
+.adminClose{margin-top:10px;width:100%}
+@keyframes evolvePulse{from{box-shadow:0 0 6px #f7c800;opacity:0.85;}to{box-shadow:0 0 18px #ff8c00,0 0 30px #f7c800;opacity:1;}}
+
+/* ===== Responsive: stack on narrow screens ===== */
+@media (max-width: 900px) {
+  .G{height:auto;min-height:100vh}
+  .mainArea{display:flex;flex-direction:column;position:static}
+  .canvasWrap{position:static;order:-1;aspect-ratio:660/500;border:1px solid var(--color-border-secondary);flex:none;padding:0}
+  .canvasWrap canvas{width:100%;height:auto;max-height:none}
+  .sidePnl{position:static;width:100%;height:auto;flex-direction:row;flex-wrap:wrap;overflow-y:visible;background:none}
+  .sidePnl > .pnl{flex:1 1 260px;background:var(--color-background-secondary)}
+  .sideRight .sf{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-width: 560px) {
+  .sidePnl > .pnl{flex:1 1 100%}
+  .sideRight .sf{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ===== Hotel Mode — modern boutique hotel theme =====
+   Slate/sage/warm-white — calm, minimal, contemporary. */
+body.hotelTheme {
+  --color-background-primary:   #1e2826;
+  --color-background-secondary: #253230;
+  --color-text-primary:         #e8ece8;
+  --color-text-secondary:       #8ab5a0;
+  --color-text-success:         #50c878;
+  --color-text-warning:         #f0a030;
+  --color-text-danger:          #e06050;
+  --color-border-primary:       #8ab5a0;
+  --color-border-secondary:     #3a5048;
+  --color-border-tertiary:      #2a3a34;
+}
+body.hotelTheme .sidePnl{background:linear-gradient(90deg,rgba(30,40,38,.96),rgba(30,40,38,.82))}
+body.hotelTheme .sideRight{background:linear-gradient(270deg,rgba(30,40,38,.96),rgba(30,40,38,.82))}
+body.hotelTheme .canvasWrap{background:#1e2826}
+body.hotelTheme .hdr{border-color:var(--color-border-primary)}
+body.hotelTheme .sideRight>.pnl{display:none}

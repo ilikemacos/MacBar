@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boba Bliss Tycoon</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" href="favicon.png">
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="loginScreen" class="loginWrap">
+  <div class="loginBox">
+    <div class="loginTitle">🧋 BOBA BLISS 🧋</div>
+    <div class="loginSub">who's brewing?</div>
+
+    <div id="profileList"></div>
+    <span class="newProfLink" id="showNewProf">+ new player</span>
+
+    <div id="newProfForm" style="display:none;margin-top:14px">
+      <div class="loginField">
+        <label>NAME</label>
+        <input id="newProfName" maxlength="12" autocomplete="off">
+      </div>
+      <div class="loginField">
+        <label>PASSWORD (optional)</label>
+        <input id="newProfPass" type="password" autocomplete="off">
+      </div>
+      <button class="loginBtn" id="createProfBtn">CREATE & PLAY</button>
+    </div>
+
+    <div id="passPrompt" style="display:none;margin-top:14px">
+      <div class="loginField">
+        <label>PASSWORD FOR <span id="passPromptName"></span></label>
+        <input id="passInput" type="password" autocomplete="off">
+      </div>
+      <button class="loginBtn" id="passSubmitBtn">ENTER</button>
+    </div>
+
+    <div class="loginErr" id="loginErr"></div>
+  </div>
+</div>
+
+<div class="G" id="gameScreen" style="display:none">
+  <div class="hdr">
+    <span id="worldTitle" style="font-size:22px;letter-spacing:3px">🧋 PIXEL BOBA STAND 🧋</span>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="whoAmI" style="color:var(--color-text-secondary)"></span>
+      <span id="ck" style="color:var(--color-text-secondary)">☀ Day 1 · 08:00AM</span>
+      <span id="st" class="ost bl">OPEN</span>
+      <span id="mn" class="gm" style="font-size:22px">$50.00</span>
+      <button id="evolveBtn" onclick="openEvolveChoice()" style="display:none;font-size:13px;font-family:inherit;font-weight:700;letter-spacing:1px;padding:6px 14px;background:linear-gradient(135deg,#f7c800,#ff8c00);color:#000;border:none;cursor:pointer;border-radius:4px;animation:evolvePulse 1s ease-in-out infinite alternate;">⬆ EVOLVE</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="musicPlayer">
+        <span style="font-size:13px;color:var(--color-text-secondary);letter-spacing:1px">♫</span>
+        <button class="spb musicCtrl" onclick="lofiPrev()" title="Previous track">&#9664;</button>
+        <button id="musicBtn" class="spb musicBtn" onclick="toggleLofiMusic()" title="Play lofi music">&#9654;</button>
+        <button class="spb musicCtrl" onclick="lofiNext()" title="Next track">&#9654;&#9654;</button>
+        <span id="musicTrackLabel" class="musicLabel">&#8212; OFF &#8212;</span>
+      </div>
+      <span style="font-size:13px;color:var(--color-text-secondary)">SPD</span>
+      <button class="spb on" onclick="setS(1)">1x</button>
+      <button class="spb" onclick="setS(2)">2x</button>
+      <button class="spb" onclick="setS(3)">3x</button>
+    </div>
+  </div>
+
+  <div class="mainArea">
+    <div class="sidePnl sideLeft">
+      <div class="pnl">
+        <div class="pt" id="kitchenLabel">KITCHEN</div>
+        <div id="kv"></div>
+        <div class="pt" style="margin-top:10px" id="readyLabel">READY TO SERVE</div>
+        <div id="qv" style="min-height:28px"></div>
+      </div>
+      <div class="pnl" style="display:flex;flex-direction:column;flex:1;min-height:0">
+        <div class="pt" id="diningLabel">DINING ROOM</div>
+        <div id="tv"></div>
+        <div id="lv" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="canvasWrap">
+      <canvas id="cv" height="180"></canvas>
+    </div>
+
+    <div class="sidePnl sideRight">
+      <div class="pnl">
+        <div class="pt">UPGRADES</div>
+        <div id="uv"></div>
+        <div class="pt" style="margin-top:10px">STAFF</div>
+        <div id="sv"></div>
+        <div class="pt" style="margin-top:10px">REGULARS</div>
+        <div id="regv" style="font-size:13px;color:var(--color-text-secondary);line-height:1.7"></div>
+      </div>
+      <div class="sf" id="statsRow">
+        <div class="sx"><div class="sl">TODAY SALES</div><div class="sv2 gm" id="dS">$0.00</div></div>
+        <div class="sx"><div class="sl">CUSTOMERS</div><div class="sv2" id="dC">0</div></div>
+        <div class="sx"><div class="sl">SEATS FILLED</div><div class="sv2" id="dM">0</div></div>
+        <div class="sx"><div class="sl" id="dRLabel">VIBE</div><div class="sv2 lw" id="dR">★★★☆☆</div></div>
+        <div class="sx" id="evolveTile" style="display:none;cursor:pointer;background:linear-gradient(135deg,#f7c800,#ff8c00);animation:evolvePulse 1s ease-in-out infinite alternate;" onclick="openEvolveChoice()">
+          <div class="sl" style="color:#000">READY TO EVOLVE</div>
+          <div class="sv2" style="color:#000">⬆ EVOLVE</div>
+        </div>
+        <div class="sx sxAdmin" id="adminTile" style="display:none;cursor:pointer" onclick="openAdmin()">
+          <div class="sl">ADMIN</div>
+          <div class="sv2 lw">⚙ PANEL</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN PANEL (mzx only) ===== -->
+<div id="adminOverlay" class="adminOverlay" style="display:none">
+  <div class="adminBox">
+    <div class="adminTitle">★ ADMIN PANEL ★</div>
+    <div id="adminList"></div>
+    <button class="loginBtn adminClose" id="adminCloseBtn">CLOSE</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
