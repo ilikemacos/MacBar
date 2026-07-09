@@ -102,6 +102,7 @@ def terms_text() -> str:
 
 
 def prepare_app_bundle(app: Path) -> None:
+    apps.embed_cli(app)
     sig.sign_app_bundle(app)
     sig.strip_quarantine(app)
 

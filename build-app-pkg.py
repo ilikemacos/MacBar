@@ -56,6 +56,7 @@ def stage_app(app_src: Path, stage: Path) -> None:
     if stage.exists():
         shutil.rmtree(stage)
     shutil.copytree(app_src, stage / "rNitro.app")
+    apps.embed_cli(stage / "rNitro.app")
     sig.sign_app_bundle(stage / "rNitro.app")
 
 
