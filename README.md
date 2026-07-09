@@ -1,8 +1,22 @@
 # rNitro
 
-> Real-time CPU monitor for macOS — usage, temperature, clock speed, and per-core breakdown.
+> Free menubar system monitor for Apple Silicon Macs — CPU, temperature, battery, GPU, RAM, and per-core stats. Open source, no account, no telemetry.
 
 **[→ getrnitro.netlify.app](https://getrnitro.netlify.app/)**
+
+### Quick install (Terminal)
+
+<!-- @sync:readme-curl -->
+**Stable (v8.3.6 Final):**
+```bash
+curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.6-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+```
+
+**Beta (v8.3.12 Beta):**
+```bash
+curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.12-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+```
+<!-- @end:readme-curl -->
 
 ### Homebrew
 
@@ -19,21 +33,23 @@ If Homebrew reports permission errors on `/opt/homebrew`, run `sudo chown -R "$(
 
 Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
 
-### Stable — v8.3.5 Final
+<!-- @sync:readme-downloads -->
+### Stable — v8.3.6 Final
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v8.3.5-Final-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.3.5-Final/rNitro-v8.3.5-Final-arm64.zip) |
-| **PKG** | [rNitro-v8.3.5-Final-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.5-Final/rNitro-v8.3.5-Final-arm64.pkg) |
-| **DMG** | [rNitro-v8.3.5-Final-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.5-Final/rNitro-v8.3.5-Final-arm64.dmg) |
+| **App ZIP** | [rNitro-v8.3.6-Final-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.zip) |
+| **PKG** | [rNitro-v8.3.6-Final-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.pkg) |
+| **DMG** | [rNitro-v8.3.6-Final-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.dmg) |
 
-### Beta — v8.3.9
+### Beta — v8.3.12 Beta
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v8.3.9-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.3.9-Beta/rNitro-v8.3.9-Beta-arm64.zip) |
-| **PKG** | [rNitro-v8.3.9-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.9-Beta/rNitro-v8.3.9-Beta-arm64.pkg) |
-| **DMG** | [rNitro-v8.3.9-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.9-Beta/rNitro-v8.3.9-Beta-arm64.dmg) |
+| **App ZIP** | [rNitro-v8.3.12-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.3.12-Beta/rNitro-v8.3.12-Beta-arm64.zip) |
+| **PKG** | [rNitro-v8.3.12-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.12-Beta/rNitro-v8.3.12-Beta-arm64.pkg) |
+| **DMG** | [rNitro-v8.3.12-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.12-Beta/rNitro-v8.3.12-Beta-arm64.dmg) |
+<!-- @end:readme-downloads -->
 
 [All releases →](https://github.com/ilikemacos/rNitro/releases)
 
@@ -47,17 +63,21 @@ Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
 
 ## What it shows
 
-- **CPU Usage** — total load with a 60-second live history graph
-- **Temperature** — die temperature in °C, color-coded by intensity
-- **Clock Speed** — base and boost MHz tracked in real time
-- **Per-Core Breakdown** — usage bar and clock speed for every logical core
+- **CPU** — total usage, load average, per-core bars, base/boost MHz, package power (watts)
+- **Temperature** — die temperature via SMC / IOHID sensors
+- **Battery** — charge %, time remaining, charging state (MacBooks; direct IOKit read in v8.3.6+)
+- **GPU & RAM** — usage, memory pressure, swap
+- **Network** — live upload/download speeds on the active interface
+- **Menubar** — configurable slots (CPU, temp, RAM, power, battery, BTC, and more)
+- **System Advisor** — threshold warnings for temp, CPU, RAM, GPU, and battery (no API key)
+- **Extras** — stress test, benchmark, app cleaner, optional AI chat (beta: 9 providers; stable: OpenAI + OpenRouter)
 
 ---
 
 ## Requirements
 
-- macOS 12 Ventura or later (macOS 16 is advised)
-- Apple Silicon (M1 / M2 / M3)
+- macOS 12 Ventura or later
+- Apple Silicon (M1 / M2 / M3 / M4)
 
 ---
 
