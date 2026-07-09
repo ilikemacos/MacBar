@@ -7,6 +7,8 @@ import versions as v
 SITE = v.SITE
 
 ARCHIVE_SPECS: list[dict[str, str]] = [
+    {"id": "v8.3.11-Beta-arm64", "channel": "beta"},
+    {"id": "v8.3.10-Beta-arm64", "channel": "beta"},
     {"id": "v8.3.9-Beta-arm64", "channel": "beta"},
     {"id": "v8.3.8-Beta-arm64", "channel": "beta"},
     {"id": "v8.3.7-Beta-arm64", "channel": "beta"},
