@@ -156,11 +156,14 @@ def js_versions_object(data: dict) -> str:
     return f"  const RNITRO_VERSIONS = {indented};"
 
 
-def nav_badge(data: dict) -> str:
+def nav_right(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
     linux = v.linux_release(data)
-    return f'  <div class="nav-badge">{stable["label"]} · {beta["label"]} · Linux {linux["short"]}</div>'
+    return f"""  <div class="nav-right">
+    <a class="nav-link" href="/archives">Archives</a>
+    <div class="nav-badge">{stable["label"]} · {beta["label"]} · Linux {linux["short"]}</div>
+  </div>"""
 
 
 def hero_stable_card(data: dict) -> str:
@@ -403,7 +406,7 @@ def hero_dl_note(data: dict) -> str:
     gh = v.github_releases_url()
     linux_gh = v.github_release_page_url(linux["id"])
     return f"""    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> — {stable["short"]} Final and {beta["short"]} Beta (ZIP, PKG, DMG). Linux {linux["short"]} pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="{linux_gh}" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers. Older DMG builds: <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a>.
+      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> — {stable["short"]} Final and {beta["short"]} Beta (ZIP, PKG, DMG). Linux {linux["short"]} pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="{linux_gh}" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers. Older DMG builds: <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>.
     </p>"""
 
 
@@ -645,7 +648,7 @@ def download_previous_section(data: dict) -> str:
     <p style="color:var(--muted); font-size:14px; font-family:var(--mono); line-height:1.6;">
       Need an older build? Shell installers for v8.3.9–v8.3.11 are in <strong style="color:var(--text);">Other download options</strong> above.
       All hosted <strong style="color:var(--text);">DMG</strong> disk images (current + archive) are on
-      <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a> — {stable["short"]} Final, {beta["short"]} Beta, and older releases.
+      <a href="/archives" style="color:var(--cyan);">rNitro Archives</a> — {stable["short"]} Final, {beta["short"]} Beta, and older releases.
     </p>
   </div>"""
 
@@ -1053,7 +1056,7 @@ def sync_index(data: dict) -> None:
     html = INDEX.read_text(encoding="utf-8")
     regions = {
         "hero-head": hero_head(data),
-        "nav-badge": nav_badge(data),
+        "nav-right": nav_right(data),
         "hero-copy": hero_copy(data),
         "hero-curl-install": hero_curl_install(data),
         "platform-tabs": platform_tabs(),
