@@ -148,6 +148,28 @@
     letter-spacing: -0.5px;
   }
 
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-link {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--cyan);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover {
+    border-color: var(--cyan);
+    background: rgba(0,217,255,0.08);
+  }
+
   .nav-badge {
     font-family: var(--mono);
     font-size: var(--text-sm);
@@ -1104,9 +1126,12 @@
 
 <nav>
   <div class="nav-logo">rNitro</div>
-<!-- @sync:nav-badge -->
-  <div class="nav-badge">v8.3.6 Final · v8.3.12 Beta · Linux v0.1</div>
-<!-- @end:nav-badge -->
+<!-- @sync:nav-right -->
+  <div class="nav-right">
+    <a class="nav-link" href="/archives">Archives</a>
+    <div class="nav-badge">v8.3.6 Final · v8.3.12 Beta · Linux v0.1</div>
+  </div>
+<!-- @end:nav-right -->
 </nav>
 
 <!-- Hero -->
@@ -1254,7 +1279,7 @@
 <!-- @end:hero-more -->
 <!-- @sync:hero-dl-note -->
     <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a> — v8.3.6 Final and v8.3.12 Beta (ZIP, PKG, DMG). Linux v0.1 pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers. Older DMG builds: <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a>.
+      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a> — v8.3.6 Final and v8.3.12 Beta (ZIP, PKG, DMG). Linux v0.1 pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers. Older DMG builds: <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>.
     </p>
 <!-- @end:hero-dl-note -->
   </div>
@@ -1773,7 +1798,7 @@
     <p style="color:var(--muted); font-size:14px; font-family:var(--mono); line-height:1.6;">
       Need an older build? Shell installers for v8.3.9–v8.3.11 are in <strong style="color:var(--text);">Other download options</strong> above.
       All hosted <strong style="color:var(--text);">DMG</strong> disk images (current + archive) are on
-      <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a> — v8.3.6 Final, v8.3.12 Beta, and older releases.
+      <a href="/archives" style="color:var(--cyan);">rNitro Archives</a> — v8.3.6 Final, v8.3.12 Beta, and older releases.
     </p>
   </div>
 <!-- @end:download-previous -->

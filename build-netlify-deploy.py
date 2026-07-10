@@ -111,7 +111,7 @@ def stage(data: dict, *, include_bundle_zip: bool | None = None) -> Path:
     )
 
     _redirects = OUT_DIR / "_redirects"
-    _redirects.write_text("", encoding="utf-8")
+    _redirects.write_text("/archives    /archives.html    200\n", encoding="utf-8")
 
     stable = v.stable_release(data)
     beta = v.beta_release(data)
