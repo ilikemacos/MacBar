@@ -13,6 +13,40 @@
     },
     {
       "channel": "beta",
+      "title": "v8.3.15 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Deeper RAM efficiency",
+          "text": " \u2014 tiered idle sampling (minimal / slot-aware / full), RingBuffer graph histories, coalesced @Published updates, decoupled memory polling, and lazy 12h battery history."
+        },
+        {
+          "strong": "Idle profile",
+          "text": " \u2014 Settings \u2192 General: Balanced (snappy menubar) or Aggressive (slowest polls, lowest RAM while closed)."
+        },
+        {
+          "strong": "SwiftUI",
+          "text": " \u2014 monitor tab split into isolated section views so only the visible section re-renders on each tick."
+        },
+        {
+          "strong": "How it works",
+          "text": " \u2014 new Beta 8.3.15 flowchart documents the efficiency model."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
+      "title": "v8.3.14 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Charge wattage restored",
+          "text": " \u2014 MacBooks show live charging speed again (e.g. 67 W) via IOKit ChargerData; ioreg fallback when wattage is missing. CHARGE panel and menu bar battery slot display watts + time-to-full."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.3.13 Beta",
       "accent": "orange",
       "items": [

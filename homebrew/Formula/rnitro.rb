@@ -3,7 +3,7 @@ class Rnitro < Formula
   homepage "https://getrnitro.netlify.app/"
   url "https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.zip"
   version "8.3.6"
-  sha256 "0cbda46b537adf349c38c6dc3f5d080d866d601eb2a75009b61346c67a03002a"
+  sha256 "0053e440d64567d20d43878ac6cae47e2bd3c42fa678dc7e3e23319bc47399d6"
   license "MIT"
 
   depends_on macos: ">= :monterey"

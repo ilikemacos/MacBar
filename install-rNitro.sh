@@ -2,7 +2,7 @@
 #
 # rNitro installer — hardened
 #
-# v8.3.13-Beta-arm64 — performance: lower idle CPU/RAM; lazy monitors; IOKit battery fast path; SMC TTL cache.
+# v8.3.15-Beta-arm64 — tiered idle sampling, RingBuffer histories, lazy battery graph, idle profile setting.
 # v8.3.12-Beta-arm64 — battery: direct IOKit AppleSmartBattery read (fixes — % / desktop on MacBooks).
 # v8.3.9-Beta-arm64 — performance: background CPU polling, SMC key cache, debounced menubar, narrower SwiftUI observation.
 # v8.3.0-Beta-arm64 — in-app updater polish, faster App Cleaner, Linux v0.1 companion release.
@@ -208,7 +208,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="09ed067da0c59bab731960bfe2453cbd69d364c9d9698fef5f461565f5f29339"
+EXPECTED_HASH="bc93d6dcae55ad059584e32efd21c414ddc16e4dc98ea51ad6ce804ec2dea5f2"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -366,7 +366,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.3.13-Beta-arm64"
+let CURRENT_VERSION = "v8.3.15-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -1543,6 +1543,77 @@ struct CoreInfo: Identifiable {
     var clockMHz: Double
 }
 
+/// Fixed-capacity circular buffer — no removeFirst reallocations.
+struct RingBuffer<Element> {
+    private var storage: [Element]
+    private var head = 0
+    private(set) var count = 0
+    private(set) var capacity: Int
+
+    init(capacity: Int, fill: Element) {
+        let cap = max(0, capacity)
+        self.capacity = cap
+        self.storage = cap > 0 ? Array(repeating: fill, count: cap) : []
+    }
+
+    mutating func resize(capacity newCap: Int, fill: Element) {
+        let cap = max(0, newCap)
+        if cap == capacity { return }
+        capacity = cap
+        head = 0
+        count = 0
+        storage = cap > 0 ? Array(repeating: fill, count: cap) : []
+    }
+
+    mutating func append(_ value: Element) {
+        guard capacity > 0 else { return }
+        storage[head] = value
+        head = (head + 1) % capacity
+        count = min(count + 1, capacity)
+    }
+
+    var asArray: [Element] {
+        guard capacity > 0, count > 0 else { return [] }
+        if count < capacity { return Array(storage.prefix(count)) }
+        return Array(storage[head..<capacity]) + Array(storage[0..<head])
+    }
+}
+
+enum IdleProfile: String, CaseIterable, Identifiable {
+    case balanced, aggressive
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .balanced: return "Balanced"
+        case .aggressive: return "Aggressive (lowest RAM)"
+        }
+    }
+}
+
+enum SamplingTier {
+    case minimal, slotAware, full
+}
+
+enum PublishCoalesce {
+    static func set(_ current: inout Double, to value: Double, epsilon: Double = 0.08) -> Bool {
+        if abs(current - value) < epsilon { return false }
+        current = value
+        return true
+    }
+
+    static func set(_ current: inout Int, to value: Int) -> Bool {
+        if current == value { return false }
+        current = value
+        return true
+    }
+
+    static func set(_ current: inout String, to value: String) -> Bool {
+        if current == value { return false }
+        current = value
+        return true
+    }
+}
+
 class CPUMonitor: ObservableObject {
     static let shared = CPUMonitor()
 
@@ -1552,7 +1623,7 @@ class CPUMonitor: ObservableObject {
     @Published var baseClock: Double = 0
     @Published var boostClock: Double = 0
     @Published var cores: [CoreInfo] = []
-    @Published var usageHistory: [Double] = Array(repeating: 0, count: 80) // ~60s at 750ms/tick
+    @Published var usageHistory: [Double] = []
     @Published var cpuName: String = "Apple CPU"
     @Published var physicalCores: Int = 0
     @Published var logicalCores: Int = 0
@@ -1573,7 +1644,7 @@ class CPUMonitor: ObservableObject {
     @Published var anePowerWatts: Double = 0
     @Published var socPowerWatts: Double = 0
     @Published var packagePowerSource: String = "Load estimate"
-    @Published var powerHistory: [Double] = Array(repeating: 0, count: 80) // ~60s at 750ms/tick
+    @Published var powerHistory: [Double] = []
     @Published var loadAverage1: Double = 0
     @Published var loadAverage5: Double = 0
     @Published var loadAverage15: Double = 0
@@ -1582,9 +1653,14 @@ class CPUMonitor: ObservableObject {
     @Published var memoryCompressedGB: Double = 0
     @Published var memorySwapGB: Double = 0
     @Published var memoryPressure: String = "Normal"
-    @Published var memoryHistory: [Double] = Array(repeating: 0, count: 80)
+    @Published var memoryHistory: [Double] = []
     @Published var efficiencyCoreCount: Int = 0
     @Published var isLowPowerModeEnabled: Bool = false
+
+    private var usageRing = RingBuffer<Double>(capacity: 0, fill: 0)
+    private var powerRing = RingBuffer<Double>(capacity: 0, fill: 0)
+    private var memoryRing = RingBuffer<Double>(capacity: 0, fill: 0)
+    private var lastMemorySampleTime = Date.distantPast
 
     private var smoothedUsage: Double = 0
     private var smoothedTemperature: Double = 0
@@ -1775,6 +1851,7 @@ class CPUMonitor: ObservableObject {
 
     func startMonitoring() {
         stopMonitoring()
+        syncHistoryBuffers()
         pollInterval = MonitorActivity.cpuInterval
         let source = DispatchSource.makeTimerSource(queue: workQueue)
         source.schedule(deadline: .now(), repeating: pollInterval)
@@ -1794,23 +1871,59 @@ class CPUMonitor: ObservableObject {
         pollSource = nil
     }
 
+    func syncHistoryBuffers() {
+        let cap = MonitorActivity.historyCapacity
+        usageRing.resize(capacity: cap, fill: 0)
+        powerRing.resize(capacity: cap, fill: 0)
+        memoryRing.resize(capacity: cap, fill: 0)
+        if cap > 0 {
+            usageHistory = usageRing.asArray
+            powerHistory = powerRing.asArray
+            memoryHistory = memoryRing.asArray
+        }
+    }
+
+    private func cheapCPUUsageFromLoad() -> Double {
+        var load = loadavg()
+        var loadSize = MemoryLayout<loadavg>.size
+        guard sysctlbyname("vm.loadavg", &load, &loadSize, nil, 0) == 0, load.fscale > 0 else {
+            return totalUsage
+        }
+        let l1 = Double(load.ldavg.0) / Double(load.fscale)
+        let est = l1 / Double(max(logicalCores, 1)) * 100.0
+        return min(100, max(0, est))
+    }
+
     private func update() {
-        let cpu = updateCPUUsage()
-        let mem = sampleMemory()
+        let tier = MonitorActivity.tier
         let now = Date()
+        let cpu: (avg: Double, perCore: [Double])?
+        switch tier {
+        case .minimal:
+            cpu = (cheapCPUUsageFromLoad(), [])
+        case .slotAware, .full:
+            cpu = updateCPUUsage()
+        }
+        var mem: MemorySample? = nil
+        if MonitorActivity.samplesMemory,
+           now.timeIntervalSince(lastMemorySampleTime) >= MonitorActivity.memoryInterval {
+            mem = sampleMemory()
+            lastMemorySampleTime = now
+        }
         var disk: DiskSample? = nil
-        if now.timeIntervalSince(lastDiskSampleTime) >= MonitorActivity.diskInterval {
+        if tier == .full, now.timeIntervalSince(lastDiskSampleTime) >= MonitorActivity.diskInterval {
             disk = sampleDisk()
             lastDiskSampleTime = now
         }
-        let sys = sampleSystemStats()
+        let sys = tier == .minimal ? nil : sampleSystemStats()
         let derived = sampleDerived()
+        let includePerCore = MonitorActivity.includePerCoreSampling
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            if let cpu { self.applyCPUUsage(cpu) }
+            if let cpu { self.applyCPUUsage(cpu, includePerCore: includePerCore) }
             if let mem { self.applyMemory(mem) }
             if let disk { self.applyDisk(disk) }
-            self.applySystemStats(sys)
+            if let sys { self.applySystemStats(sys) }
             self.applyDerived(derived)
         }
     }
@@ -1845,7 +1958,7 @@ class CPUMonitor: ObservableObject {
         return String(format: "%dm", m)
     }
 
-    private func applyCPUUsage(_ sample: (avg: Double, perCore: [Double])) {
+    private func applyCPUUsage(_ sample: (avg: Double, perCore: [Double]), includePerCore: Bool) {
         let alpha = 0.35
         if hasSmoothedSamples {
             smoothedUsage = smoothedUsage * (1 - alpha) + sample.avg * alpha
@@ -1853,11 +1966,16 @@ class CPUMonitor: ObservableObject {
             smoothedUsage = sample.avg
             hasSmoothedSamples = true
         }
-        totalUsage = min(100, max(0, smoothedUsage))
-        usageHistory.removeFirst()
-        usageHistory.append(totalUsage)
-        for (i, u) in sample.perCore.enumerated() where i < cores.count {
-            cores[i].usage = u
+        let nextUsage = min(100, max(0, smoothedUsage))
+        _ = PublishCoalesce.set(&totalUsage, to: nextUsage, epsilon: 0.15)
+        if MonitorActivity.recordsHistory {
+            usageRing.append(nextUsage)
+            usageHistory = usageRing.asArray
+        }
+        if includePerCore {
+            for (i, u) in sample.perCore.enumerated() where i < cores.count {
+                cores[i].usage = u
+            }
         }
     }
 
@@ -1899,16 +2017,18 @@ class CPUMonitor: ObservableObject {
     }
 
     private func applyMemory(_ sample: MemorySample) {
-        memoryTotalGB = sample.totalGB
-        memoryUsedGB = sample.usedGB
-        memoryFreeGB = sample.freeGB
-        memoryUsedPercent = sample.usedPct
-        memoryWiredGB = sample.wiredGB
-        memoryCompressedGB = sample.compressedGB
-        memorySwapGB = sample.swapUsedGB
-        memoryPressure = sample.pressure
-        memoryHistory.removeFirst()
-        memoryHistory.append(sample.usedPct)
+        _ = PublishCoalesce.set(&memoryTotalGB, to: sample.totalGB, epsilon: 0.02)
+        _ = PublishCoalesce.set(&memoryUsedGB, to: sample.usedGB, epsilon: 0.02)
+        _ = PublishCoalesce.set(&memoryFreeGB, to: sample.freeGB, epsilon: 0.02)
+        _ = PublishCoalesce.set(&memoryUsedPercent, to: sample.usedPct, epsilon: 0.2)
+        _ = PublishCoalesce.set(&memoryWiredGB, to: sample.wiredGB, epsilon: 0.02)
+        _ = PublishCoalesce.set(&memoryCompressedGB, to: sample.compressedGB, epsilon: 0.02)
+        _ = PublishCoalesce.set(&memorySwapGB, to: sample.swapUsedGB, epsilon: 0.02)
+        _ = PublishCoalesce.set(&memoryPressure, to: sample.pressure)
+        if MonitorActivity.recordsHistory {
+            memoryRing.append(sample.usedPct)
+            memoryHistory = memoryRing.asArray
+        }
     }
 
     private func sampleDisk() -> DiskSample? {
@@ -2020,11 +2140,15 @@ class CPUMonitor: ObservableObject {
             socPowerWatts = min(estimate, ceiling)
             packagePowerSource = "Load estimate"
         }
-        powerHistory.removeFirst()
-        powerHistory.append(packagePowerWatts)
-        let maxB = baseClock * 1.28
-        for i in 0..<cores.count {
-            cores[i].clockMHz = baseClock + (maxB - baseClock) * (cores[i].usage / 100.0)
+        if MonitorActivity.recordsHistory {
+            powerRing.append(packagePowerWatts)
+            powerHistory = powerRing.asArray
+        }
+        if MonitorActivity.includePerCoreSampling {
+            let maxB = baseClock * 1.28
+            for i in 0..<cores.count {
+                cores[i].clockMHz = baseClock + (maxB - baseClock) * (cores[i].usage / 100.0)
+            }
         }
     }
 }
@@ -2149,7 +2273,7 @@ class BatteryMonitor: ObservableObject {
             powerStateSince = Date()
             lastModeKey = modeKey
         }
-        if snap.isPresent {
+        if snap.isPresent, MonitorActivity.tracksBatteryHistory {
             let now = Date()
             if historyPoints.isEmpty || now.timeIntervalSince(lastHistorySample ?? .distantPast) >= 300 {
                 historyPoints.append((now, snap.levelPercent))
@@ -2164,6 +2288,8 @@ class BatteryMonitor: ObservableObject {
             } else {
                 history12h = historyPoints.map { Double($0.1) }
             }
+        } else if snap.isPresent {
+            history12h = [Double(snap.levelPercent)]
         }
         isPresent = snap.isPresent
         levelPercent = snap.levelPercent
@@ -2181,7 +2307,14 @@ class BatteryMonitor: ObservableObject {
     }
 
     private static func iokitSnapshotComplete(_ snap: Snapshot) -> Bool {
-        snap.isPresent && snap.levelPercent > 0
+        guard snap.isPresent && snap.levelPercent > 0 else { return false }
+        // Keep ioreg/pmset fallback when charging but wattage (or ETA) is still missing.
+        if snap.isCharging {
+            if snap.chargeWatts > 0 { return true }
+            if let eta = snap.timeToFullMinutes, eta > 0, eta < 65535 { return true }
+            return false
+        }
+        return true
     }
 
     private static func collectSnapshot(prevLevel: Int?, prevSampleTime: Date?) -> Snapshot {
@@ -2204,7 +2337,11 @@ class BatteryMonitor: ObservableObject {
         }
         snap.powerSource = snap.isOnAC ? "AC Power" : "Battery Power"
         if snap.isCharging && snap.chargeWatts > 0 {
-            snap.chargeRateText = String(format: "%.0f W", snap.chargeWatts)
+            if let eta = snap.timeToFullMinutes, eta > 0, eta < 65535 {
+                snap.chargeRateText = String(format: "%.0f W · %d min", snap.chargeWatts, eta)
+            } else {
+                snap.chargeRateText = String(format: "%.0f W", snap.chargeWatts)
+            }
         } else if snap.isCharging, let eta = snap.timeToFullMinutes, eta > 0, eta < 65535 {
             snap.chargeRateText = String(format: "%d min", eta)
         } else if snap.isCharging {
@@ -2321,6 +2458,55 @@ class BatteryMonitor: ObservableObject {
         cfBool(ioProperty(service, key))
     }
 
+    private static func ioDictInt(_ value: CFTypeRef?, _ key: String) -> Int? {
+        guard let value else { return nil }
+        let entry: Any?
+        if let d = value as? [String: Any] { entry = d[key] }
+        else if let d = value as? NSDictionary { entry = d[key] }
+        else { return nil }
+        guard let entry else { return nil }
+        if let n = entry as? NSNumber { return n.intValue }
+        return cfInt(entry as? CFTypeRef)
+    }
+
+    /// IOPM stores signed milliamps in an unsigned registry field (two's complement).
+    private static func ioRegistrySigned(_ raw: Int) -> Int {
+        Int(Int32(bitPattern: UInt32(truncatingIfNeeded: UInt64(bitPattern: Int64(raw)))))
+    }
+
+    /// Charge wattage from IOKit (ChargerData / Amperage × voltage) — no pmset/ioreg subprocess.
+    private static func applyIOKitChargePower(_ service: io_service_t, to snap: inout Snapshot) {
+        var voltageMv = ioPropertyInt(service, "AppleRawBatteryVoltage")
+            ?? ioPropertyInt(service, "Voltage")
+        if voltageMv == nil || voltageMv == 0, let batteryData = ioProperty(service, "BatteryData") {
+            voltageMv = ioDictInt(batteryData, "Voltage")
+                ?? ioDictInt(batteryData, "AppleRawBatteryVoltage")
+        }
+        let voltage = voltageMv ?? 0
+
+        var chargeMa = 0
+        if let chargerData = ioProperty(service, "ChargerData"),
+           let cc = ioDictInt(chargerData, "ChargingCurrent"), cc > 0 {
+            chargeMa = cc
+        } else if let amp = ioPropertyInt(service, "InstantAmperage") ?? ioPropertyInt(service, "Amperage") {
+            let signed = ioRegistrySigned(amp)
+            if signed > 0 { chargeMa = signed }
+        }
+
+        if chargeMa > 0, voltage > 0 {
+            snap.chargeWatts = Double(chargeMa) / 1000.0 * Double(voltage) / 1000.0
+        }
+
+        if let adapter = ioProperty(service, "AdapterDetails"),
+           let adapterW = ioDictInt(adapter, "Watts"), adapterW > 0 {
+            if snap.isCharging, snap.chargeWatts <= 0 {
+                snap.chargeWatts = Double(adapterW)
+            } else if !snap.isCharging {
+                snap.chargeWatts = Double(adapterW)
+            }
+        }
+    }
+
     private static func smartBatteryService() -> io_service_t? {
         var service = IOServiceGetMatchingService(0, IOServiceMatching("AppleSmartBattery"))
         if service != 0 { return service }
@@ -2391,6 +2577,7 @@ class BatteryMonitor: ObservableObject {
             snap.healthPercent = min(100, Int(Double(maxCap) / Double(design) * 100.0))
         }
         snap.isFullyCharged = snap.levelPercent >= 100 && !snap.isCharging && snap.isOnAC
+        applyIOKitChargePower(service, to: &snap)
         return snap
     }
 
@@ -2524,8 +2711,18 @@ class NetworkMonitor: ObservableObject {
     @Published var isAvailable = false
     @Published var localIP = "—"
     @Published var wifiSSID = ""
-    @Published var downloadHistory: [Double] = Array(repeating: 0, count: 60)
-    @Published var uploadHistory: [Double] = Array(repeating: 0, count: 60)
+    @Published var downloadHistory: [Double] = []
+    @Published var uploadHistory: [Double] = []
+    private var downloadRing = RingBuffer<Double>(capacity: 0, fill: 0)
+    private var uploadRing = RingBuffer<Double>(capacity: 0, fill: 0)
+
+    func syncHistoryBuffers() {
+        let cap = MonitorActivity.recordsHistory ? 60 : 0
+        downloadRing.resize(capacity: cap, fill: 0)
+        uploadRing.resize(capacity: cap, fill: 0)
+        downloadHistory = cap > 0 ? downloadRing.asArray : []
+        uploadHistory = cap > 0 ? uploadRing.asArray : []
+    }
 
     private var timer: Timer?
     private var lastDown: UInt64 = 0
@@ -2615,10 +2812,12 @@ class NetworkMonitor: ObservableObject {
             self.isAvailable = true
             self.localIP = ip
             self.wifiSSID = ssid
-            self.downloadHistory.removeFirst()
-            self.downloadHistory.append(downMbps)
-            self.uploadHistory.removeFirst()
-            self.uploadHistory.append(upMbps)
+            if MonitorActivity.recordsHistory {
+                self.downloadRing.append(downMbps)
+                self.uploadRing.append(upMbps)
+                self.downloadHistory = self.downloadRing.asArray
+                self.uploadHistory = self.uploadRing.asArray
+            }
         }
     }
 
@@ -2722,7 +2921,14 @@ class DiskActivityMonitor: ObservableObject {
 
     @Published var readMBps: Double = 0
     @Published var writeMBps: Double = 0
-    @Published var activityHistory: [Double] = Array(repeating: 0, count: 60)
+    @Published var activityHistory: [Double] = []
+    private var activityRing = RingBuffer<Double>(capacity: 0, fill: 0)
+
+    func syncHistoryBuffer() {
+        let cap = MonitorActivity.recordsHistory ? 60 : 0
+        activityRing.resize(capacity: cap, fill: 0)
+        activityHistory = cap > 0 ? activityRing.asArray : []
+    }
 
     private var timer: Timer?
     private var sampleTick = 0
@@ -2756,8 +2962,10 @@ class DiskActivityMonitor: ObservableObject {
         DispatchQueue.main.async {
             self.readMBps = half
             self.writeMBps = half
-            self.activityHistory.removeFirst()
-            self.activityHistory.append(mbps)
+            if MonitorActivity.recordsHistory {
+                self.activityRing.append(mbps)
+                self.activityHistory = self.activityRing.asArray
+            }
         }
     }
 }
@@ -3033,24 +3241,60 @@ class BTCPriceMonitor: ObservableObject {
 enum MonitorActivity {
     private(set) static var popoverOpen = false
 
-    static var cpuInterval: TimeInterval { popoverOpen ? 1.0 : 2.0 }
+    static var idleProfile: IdleProfile {
+        IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .balanced
+    }
+
+    static var enabledSlots: [MenuBarSlot] { MenuBarConfig.enabledSlots }
+
+    static var tier: SamplingTier {
+        if popoverOpen { return .full }
+        let slots = enabledSlots
+        if slots.isEmpty || slots == [.cpu] { return .minimal }
+        return .slotAware
+    }
+
+    static var cpuInterval: TimeInterval {
+        if popoverOpen { return 1.0 }
+        return idleProfile == .aggressive ? 4.0 : 2.0
+    }
+
     static var gpuInterval: TimeInterval { 3.0 }
     static var networkInterval: TimeInterval { popoverOpen ? 1.5 : 3.0 }
-    static var batteryInterval: TimeInterval { popoverOpen ? 2.0 : 5.0 }
+    static var batteryInterval: TimeInterval {
+        if popoverOpen { return 2.0 }
+        return idleProfile == .aggressive ? 10.0 : 5.0
+    }
+    static var memoryInterval: TimeInterval {
+        if popoverOpen { return 2.0 }
+        return idleProfile == .aggressive ? 10.0 : 5.0
+    }
     static var diskInterval: TimeInterval { popoverOpen ? 5.0 : 8.0 }
     static var sensorsInterval: TimeInterval { popoverOpen ? 3.0 : 8.0 }
-    static var includePowerSample: Bool { popoverOpen }
+    static var includePowerSample: Bool {
+        popoverOpen || enabledSlots.contains(.power)
+    }
     static var smcCacheTTL: TimeInterval { popoverOpen ? 1.0 : 3.0 }
     static var includeSmcSample: Bool {
-        popoverOpen || MenuBarConfig.enabledSlots.contains(.temp)
+        popoverOpen || enabledSlots.contains(.temp)
+    }
+    static var samplesMemory: Bool {
+        popoverOpen || enabledSlots.contains(.ram)
+    }
+    static var includePerCoreSampling: Bool { popoverOpen }
+    static var recordsHistory: Bool { popoverOpen }
+    static var historyCapacity: Int { popoverOpen ? 80 : 0 }
+
+    static var tracksBatteryHistory: Bool {
+        popoverOpen || UserDefaults.standard.bool(forKey: "rnitro.sectionExpanded.battery")
     }
 
     static var needsNetworkMonitor: Bool {
-        popoverOpen || MenuBarConfig.enabledSlots.contains(.network)
+        popoverOpen || enabledSlots.contains(.network)
     }
 
     static var needsBTCMonitor: Bool {
-        MenuBarConfig.enabledSlots.contains(.btc)
+        enabledSlots.contains(.btc)
     }
 
     static var needsAdvisorMonitor: Bool {
@@ -3066,9 +3310,19 @@ enum MonitorActivity {
         }
     }
 
+    static func applyIdleProfileChange() {
+        CPUMonitor.shared.setPollInterval(cpuInterval)
+        BatteryMonitor.shared.applyActivityInterval()
+        NetworkMonitor.shared.applyActivityInterval()
+    }
+
     static func setPopoverOpen(_ open: Bool) {
         guard popoverOpen != open else { return }
         popoverOpen = open
+        CPUMonitor.shared.syncHistoryBuffers()
+        GPUMonitor.shared.syncHistoryBuffer()
+        NetworkMonitor.shared.syncHistoryBuffers()
+        DiskActivityMonitor.shared.syncHistoryBuffer()
         CPUMonitor.shared.setPollInterval(cpuInterval)
         BatteryMonitor.shared.applyActivityInterval()
         refreshOptionalServices()
@@ -3087,7 +3341,14 @@ enum MonitorActivity {
 class GPUMonitor: ObservableObject {
     static let shared = GPUMonitor()
     @Published var usage: Double = 0
-    @Published var usageHistory: [Double] = Array(repeating: 0, count: 80)
+    @Published var usageHistory: [Double] = []
+    private var usageRing = RingBuffer<Double>(capacity: 0, fill: 0)
+
+    func syncHistoryBuffer() {
+        let cap = MonitorActivity.historyCapacity
+        usageRing.resize(capacity: cap, fill: 0)
+        usageHistory = cap > 0 ? usageRing.asArray : []
+    }
 
     private var timer: Timer?
     private let queue = DispatchQueue(label: "rnitro.gpu", qos: .utility)
@@ -3111,8 +3372,10 @@ class GPUMonitor: ObservableObject {
         let val = Self.readGPUUsageIOKit()
         DispatchQueue.main.async {
             self.usage = min(100, val)
-            self.usageHistory.removeFirst()
-            self.usageHistory.append(self.usage)
+            if MonitorActivity.recordsHistory {
+                self.usageRing.append(self.usage)
+                self.usageHistory = self.usageRing.asArray
+            }
         }
     }
 
@@ -5017,6 +5280,20 @@ struct SettingsGeneralSection: View {
                     Text("Launch at Login requires macOS 13 or later.")
                         .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
+                Text("Idle efficiency")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 6)
+                Picker("Idle profile", selection: Binding(
+                    get: { IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .balanced },
+                    set: { UserDefaults.standard.set($0.rawValue, forKey: MonitorPreferences.idleProfileKey); MonitorActivity.applyIdleProfileChange() }
+                )) {
+                    ForEach(IdleProfile.allCases) { p in
+                        Text(p.label).tag(p)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text("Balanced keeps the menu bar snappy. Aggressive uses slower polls and skips history buffers until the popover opens.")
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 MonitorRow(label: "Version", value: UpdateChecker.displayLabel(CURRENT_VERSION))
                 MonitorRow(label: "Install location", value: UpdateChecker.installPathLabel())
                 MinimalButton(title: "Check for Updates", action: { UpdateChecker.checkManually() })
@@ -6168,7 +6445,7 @@ struct StatDetailPopup: View {
             if monitor.isLowPowerModeEnabled {
                 rows.append(("Low Power Mode", "On — clocks/background work may be reduced"))
             }
-            rows.append(("Source", "pmset + ioreg (macOS)"))
+            rows.append(("Source", "IOKit + pmset/ioreg fallback (macOS)"))
             return rows
         case .cpuPower:
             let measured = monitor.packagePowerSource.contains("measured")
@@ -6309,6 +6586,7 @@ enum MonitorPreferences {
     static let uiStyleKey = "rnitro.uiStyle"
     static let launchAtLoginKey = "rnitro.launchAtLogin"
     static let firstLaunchTipsKey = "rnitro.firstLaunchTipsSeen"
+    static let idleProfileKey = "rnitro.idleProfile"
 }
 
 enum FirstLaunchTips {
@@ -6522,6 +6800,9 @@ enum MenuBarStatusFormatter {
             return "↓\(NetworkMonitor.formatSpeed(net.downloadMbps).replacingOccurrences(of: " ", with: ""))"
         case .battery:
             guard bat.isPresent else { return "—" }
+            if bat.isCharging, bat.chargeWatts > 0 {
+                return String(format: "%d%% %.0fW", bat.levelPercent, bat.chargeWatts)
+            }
             return bat.isCharging ? "\(bat.levelPercent)%⚡" : "\(bat.levelPercent)%"
         case .btc:
             if let p = BTCPriceMonitor.shared.priceUSD {
@@ -7543,6 +7824,7 @@ struct HowItWorksView: View {
                 updaterFlowchart
                 monitorFlowchart
                 beta813PerformanceFlowchart
+                beta815EfficiencyFlowchart
 
                 HStack(spacing: 10) {
                     MinimalButton(title: "Open website", tint: .accent) {
@@ -7822,11 +8104,51 @@ struct HowItWorksView: View {
                 FlowchartConnector()
                 FlowchartBranch(
                     leftTitle: "No → idle path",
-                    leftDetail: "Thermal estimate; SMC TTL 3s; disk/GPU/sensors off; pmset/ioreg skipped when IOKit battery is complete.",
+                    leftDetail: "Thermal estimate; SMC TTL 3s; disk/GPU/sensors off; charge watts via IOKit ChargerData (ioreg fallback if missing).",
                     rightTitle: "Yes → full path",
                     rightDetail: "GPU via IOKit; SMC 1s; disk at diskInterval; IOReport power; network 1.5s.",
                     leftAccent: .secondary,
                     rightAccent: .nGreen
+                )
+            }
+        }
+    }
+
+    private var beta815EfficiencyFlowchart: some View {
+        FlowchartPanel(
+            title: "Beta 8.3.15 — Deeper RAM efficiency",
+            caption: "Tiered sampling + RingBuffer histories. Settings → General → Idle profile (Balanced or Aggressive)."
+        ) {
+            VStack(alignment: .leading, spacing: 0) {
+                FlowchartNode(
+                    title: "Idle profile",
+                    detail: "Balanced: CPU 2s / battery 5s. Aggressive: CPU 4s / battery 10s / no history buffers until popover opens.",
+                    accent: .nOrange
+                )
+                FlowchartConnector()
+                FlowchartNode(
+                    title: "Sampling tier",
+                    detail: "minimal (CPU-only menubar) → loadavg estimate, no per-core Mach alloc. slotAware adds RAM/temp/power slots. full when popover open.",
+                    accent: .accent
+                )
+                FlowchartConnector()
+                FlowchartNode(
+                    title: "RingBuffer histories",
+                    detail: "Graph sparklines use fixed-capacity rings — no removeFirst array copies. Histories frozen while popover is closed.",
+                    accent: .nGreen
+                )
+                FlowchartConnector()
+                FlowchartNode(
+                    title: "Coalesced publish",
+                    detail: "Skip @Published updates when values barely changed; memory sampled on its own interval, not every CPU tick.",
+                    accent: .nGreen
+                )
+                FlowchartConnector()
+                FlowchartNode(
+                    title: "Lazy battery 12h graph",
+                    detail: "Battery history points only when popover open or Battery section expanded.",
+                    accent: .cyan,
+                    kind: .terminal
                 )
             }
         }
@@ -7869,37 +8191,213 @@ struct HowItWorksView: View {
     }
 }
 
-struct MonitorTabContent: View {
+struct MonitorModernHeaderView: View {
     @Environment(\.uiMetrics) private var metrics
-    let layout: ContentLayout
-    @Binding var statDetail: StatDetailKind?
     @ObservedObject private var m = CPUMonitor.shared
-    @ObservedObject private var bat = BatteryMonitor.shared
-    @ObservedObject private var net = NetworkMonitor.shared
-    @ObservedObject private var gpu = GPUMonitor.shared
-    @ObservedObject private var disk = DiskActivityMonitor.shared
-    @ObservedObject private var sensors = SensorsMonitor.shared
-    @ObservedObject private var btc = BTCPriceMonitor.shared
-    @ObservedObject private var stress = StressTester.shared
-    @ObservedObject private var bench = BenchmarkRunner.shared
-    @AppStorage(MonitorPreferences.stressKey) private var showStressUI = true
-    @AppStorage(MonitorPreferences.benchmarkKey) private var showBenchmarkUI = true
-    @AppStorage(MonitorPreferences.networkKey) private var showNetworkUI = true
-    @AppStorage(MonitorPreferences.uiStyleKey) private var uiStyleRaw = MonitorUIStyle.modern.rawValue
-    @AppStorage(MonitorPreferences.showWeatherKey) private var showWeather = true
-    @ObservedObject private var weather = WeatherService.shared
-
-    private func toggleStatDetail(_ kind: StatDetailKind) {
-        statDetail = statDetail == kind ? nil : kind
-    }
 
     var body: some View {
-        Group {
-            if uiStyleRaw == MonitorUIStyle.legacy.rawValue {
-                legacyMonitorTab
-            } else {
-                modernMonitorTab
+        HStack(spacing: 6) {
+            Text(m.cpuName)
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(.secondary)
+                .lineLimit(1).truncationMode(.tail)
+            Spacer()
+            if m.isLowPowerModeEnabled {
+                LowPowerModeBadge(compact: true)
             }
+            Text(CURRENT_VERSION)
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, metrics.hPad).padding(.top, 10).padding(.bottom, 6)
+    }
+}
+
+struct MonitorBatterySectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var bat = BatteryMonitor.shared
+    @ObservedObject private var m = CPUMonitor.shared
+    let onBatteryTap: () -> Void
+    let onCpuPowerTap: () -> Void
+
+    var body: some View {
+        MonitorSection(
+            title: "Battery & Power",
+            accent: .nGreen,
+            summary: bat.isPresent ? "\(bat.levelPercent)%" : String(format: "%.1fW", m.packagePowerWatts),
+            sparkline: m.powerHistory,
+            sparkMax: max(m.powerHistory.max() ?? 1, CPUMonitor.chipPowerCeiling(m.cpuName)),
+            storageKey: "rnitro.sectionExpanded.battery"
+        ) {
+            BatteryCpuPowerRow(
+                bat: bat, monitor: m,
+                onBatteryTap: bat.isPresent ? onBatteryTap : nil,
+                onCpuPowerTap: onCpuPowerTap
+            )
+            if m.isLowPowerModeEnabled {
+                MonitorRow(
+                    label: "Low Power Mode",
+                    value: "On",
+                    valueColor: Color(red: 0.55, green: 0.88, blue: 0.42)
+                )
+            }
+            PowerGraphView(
+                history: m.powerHistory,
+                color: Color.usage(m.totalUsage),
+                maxWatts: max(CPUMonitor.chipPowerCeiling(m.cpuName) * 1.2, m.powerHistory.max() ?? 0, 8)
+            )
+            .frame(height: metrics.graphHeight)
+        }
+    }
+}
+
+struct MonitorCPUSectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var m = CPUMonitor.shared
+    let onTemperatureTap: () -> Void
+
+    var body: some View {
+        MonitorSection(
+            title: "CPU",
+            accent: .accent,
+            summary: String(format: "%.0f%%", m.totalUsage),
+            sparkline: m.usageHistory,
+            storageKey: "rnitro.sectionExpanded.cpu"
+        ) {
+            GraphView(history: m.usageHistory, color: Color.usage(m.totalUsage))
+                .frame(height: metrics.graphHeight)
+            MonitorRow(label: "Usage", value: String(format: "%.1f%%", m.totalUsage), valueColor: Color.usage(m.totalUsage))
+            MonitorRow(label: "Load avg", value: String(format: "%.2f · %.2f · %.2f", m.loadAverage1, m.loadAverage5, m.loadAverage15))
+            MonitorRow(label: "Uptime", value: CPUMonitor.formatUptime(m.systemUptime))
+            MonitorRow(label: "Clock", value: String(format: "%.0f / %.0f MHz", m.baseClock, m.boostClock))
+            Button(action: onTemperatureTap) {
+                MonitorRow(label: "Temperature", value: String(format: "%.0f °C", m.temperature), valueColor: Color.temp(m.temperature))
+            }.buttonStyle(.plain)
+            VStack(spacing: 4) {
+                ForEach(Array(m.cores.enumerated()), id: \.offset) { i, core in
+                    let eff = i < m.efficiencyCoreCount
+                    let cIdx = eff ? i : i - m.efficiencyCoreCount
+                    CoreRow(core: core, index: i, isEfficiency: eff, clusterIndex: cIdx)
+                }
+            }
+        }
+    }
+}
+
+struct MonitorGPUSectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var gpu = GPUMonitor.shared
+    @ObservedObject private var m = CPUMonitor.shared
+
+    var body: some View {
+        MonitorSection(
+            title: "GPU",
+            accent: .nGreen,
+            summary: String(format: "%.0f%%", gpu.usage),
+            sparkline: gpu.usageHistory,
+            storageKey: "rnitro.sectionExpanded.gpu"
+        ) {
+            GraphView(history: gpu.usageHistory, color: Color.usage(gpu.usage))
+                .frame(height: metrics.graphHeight)
+            MonitorRow(label: "Usage", value: String(format: "%.1f%%", gpu.usage), valueColor: Color.usage(gpu.usage))
+            MonitorRow(label: "Power", value: String(format: "%.1f W", m.gpuPowerWatts))
+        }
+    }
+}
+
+struct MonitorMemorySectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var m = CPUMonitor.shared
+    let onMemoryTap: () -> Void
+
+    var body: some View {
+        MonitorSection(
+            title: "Memory",
+            accent: .nPurple,
+            summary: String(format: "%.0f%%", m.memoryUsedPercent),
+            sparkline: m.memoryHistory,
+            storageKey: "rnitro.sectionExpanded.memory"
+        ) {
+            UsageBarRow(label: "RAM", usedGB: m.memoryUsedGB, freeGB: m.memoryFreeGB,
+                        totalGB: m.memoryTotalGB, usedPercent: m.memoryUsedPercent,
+                        action: onMemoryTap)
+            MonitorRow(label: "Pressure", value: m.memoryPressure, valueColor: Color.pressure(m.memoryPressure))
+            MonitorRow(label: "Wired", value: String(format: "%.1f GB", m.memoryWiredGB))
+            MonitorRow(label: "Compressed", value: String(format: "%.1f GB", m.memoryCompressedGB))
+            MonitorRow(label: "Swap used", value: String(format: "%.1f GB", m.memorySwapGB))
+        }
+    }
+}
+
+struct MonitorDiskSectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var m = CPUMonitor.shared
+    @ObservedObject private var disk = DiskActivityMonitor.shared
+    let onStorageTap: () -> Void
+
+    var body: some View {
+        MonitorSection(
+            title: "Disk",
+            accent: .nOrange,
+            summary: String(format: "%.0f%%", m.diskUsedPercent),
+            sparkline: disk.activityHistory,
+            sparkMax: max(disk.activityHistory.max() ?? 1, 10),
+            storageKey: "rnitro.sectionExpanded.disk"
+        ) {
+            UsageBarRow(label: "SSD · \(m.diskVolumeName)", usedGB: m.diskUsedGB, freeGB: m.diskFreeGB,
+                        totalGB: m.diskTotalGB, usedPercent: m.diskUsedPercent,
+                        action: onStorageTap)
+            MiniGraphView(history: disk.activityHistory, color: .nOrange, maxValue: max(disk.activityHistory.max() ?? 1, 10))
+                .frame(height: 28)
+            MonitorRow(label: "Read", value: String(format: "%.1f MB/s", disk.readMBps))
+            MonitorRow(label: "Write", value: String(format: "%.1f MB/s", disk.writeMBps))
+        }
+    }
+}
+
+struct MonitorNetworkSectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var net = NetworkMonitor.shared
+    @ObservedObject private var weather = WeatherService.shared
+    let showWeather: Bool
+
+    var body: some View {
+        MonitorSection(
+            title: "Network",
+            accent: .nBlue,
+            summary: net.isAvailable ? NetworkMonitor.formatSpeed(net.downloadMbps) : "—",
+            sparkline: net.downloadHistory,
+            sparkMax: max(net.downloadHistory.max() ?? 1, 100),
+            storageKey: "rnitro.sectionExpanded.network"
+        ) {
+            NetworkMonitorRow(net: net)
+            MonitorRow(label: "IP", value: net.localIP)
+            if !net.wifiSSID.isEmpty {
+                MonitorRow(label: "Wi-Fi", value: net.wifiSSID)
+            }
+            if showWeather, let w = weather.snapshot {
+                MonitorRow(label: "Weather", value: String(format: "%.0f°C %@", w.tempC, w.condition))
+                MonitorRow(label: "Location", value: w.city)
+            } else if showWeather && weather.isLoading {
+                MonitorRow(label: "Weather", value: "Loading…")
+            }
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Download").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    MiniGraphView(history: net.downloadHistory, color: .accent, maxValue: max(net.downloadHistory.max() ?? 1, 100))
+                        .frame(height: 24)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Upload").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    MiniGraphView(history: net.uploadHistory, color: .nGreen, maxValue: max(net.uploadHistory.max() ?? 1, 100))
+                        .frame(height: 24)
+                }
+            }
+        }
+        .onAppear {
+            let key = net.wifiSSID.isEmpty ? "wired-\(net.interfaceName)" : net.wifiSSID
+            weather.refresh(forNetworkKey: key, enabled: showWeather)
         }
         .onChange(of: net.wifiSSID) { _, _ in
             let key = net.wifiSSID.isEmpty ? "wired-\(net.interfaceName)" : net.wifiSSID
@@ -7910,229 +8408,144 @@ struct MonitorTabContent: View {
             weather.refresh(forNetworkKey: key, enabled: on)
         }
     }
+}
 
-    private var modernMonitorTab: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
-                    Text(m.cpuName)
-                        .font(rNitroFont(.caption, metrics: metrics))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1).truncationMode(.tail)
-                    Spacer()
-                    if m.isLowPowerModeEnabled {
-                        LowPowerModeBadge(compact: true)
-                    }
-                    Text(CURRENT_VERSION)
-                        .font(rNitroFont(.micro, metrics: metrics))
-                        .foregroundColor(.secondary.opacity(0.7))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, metrics.hPad).padding(.top, 10).padding(.bottom, 6)
+struct MonitorSensorsSectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var sensors = SensorsMonitor.shared
 
-                MonitorSection(
-                    title: "Battery & Power",
-                    accent: .nGreen,
-                    summary: bat.isPresent ? "\(bat.levelPercent)%" : String(format: "%.1fW", m.packagePowerWatts),
-                    sparkline: m.powerHistory,
-                    sparkMax: max(m.powerHistory.max() ?? 1, CPUMonitor.chipPowerCeiling(m.cpuName)),
-                    storageKey: "rnitro.sectionExpanded.battery"
-                ) {
-                    BatteryCpuPowerRow(
-                        bat: bat, monitor: m,
-                        onBatteryTap: bat.isPresent ? { toggleStatDetail(.battery) } : nil,
-                        onCpuPowerTap: { toggleStatDetail(.cpuPower) }
-                    )
-                    if m.isLowPowerModeEnabled {
-                        MonitorRow(
-                            label: "Low Power Mode",
-                            value: "On",
-                            valueColor: Color(red: 0.55, green: 0.88, blue: 0.42)
-                        )
-                    }
-                    PowerGraphView(
-                        history: m.powerHistory,
-                        color: Color.usage(m.totalUsage),
-                        maxWatts: max(CPUMonitor.chipPowerCeiling(m.cpuName) * 1.2, m.powerHistory.max() ?? 0, 8)
-                    )
-                    .frame(height: metrics.graphHeight)
-                }
-
-                MonitorSection(
-                    title: "CPU",
-                    accent: .accent,
-                    summary: String(format: "%.0f%%", m.totalUsage),
-                    sparkline: m.usageHistory,
-                    storageKey: "rnitro.sectionExpanded.cpu"
-                ) {
-                    GraphView(history: m.usageHistory, color: Color.usage(m.totalUsage))
-                        .frame(height: metrics.graphHeight)
-                    MonitorRow(label: "Usage", value: String(format: "%.1f%%", m.totalUsage), valueColor: Color.usage(m.totalUsage))
-                    MonitorRow(label: "Load avg", value: String(format: "%.2f · %.2f · %.2f", m.loadAverage1, m.loadAverage5, m.loadAverage15))
-                    MonitorRow(label: "Uptime", value: CPUMonitor.formatUptime(m.systemUptime))
-                    MonitorRow(label: "Clock", value: String(format: "%.0f / %.0f MHz", m.baseClock, m.boostClock))
-                    Button(action: { toggleStatDetail(.temperature) }) {
-                        MonitorRow(label: "Temperature", value: String(format: "%.0f °C", m.temperature), valueColor: Color.temp(m.temperature))
-                    }.buttonStyle(.plain)
-                    VStack(spacing: 4) {
-                        ForEach(Array(m.cores.enumerated()), id: \.offset) { i, core in
-                            let eff = i < m.efficiencyCoreCount
-                            let cIdx = eff ? i : i - m.efficiencyCoreCount
-                            CoreRow(core: core, index: i, isEfficiency: eff, clusterIndex: cIdx)
-                        }
-                    }
-                }
-
-                MonitorSection(
-                    title: "GPU",
-                    accent: .nGreen,
-                    summary: String(format: "%.0f%%", gpu.usage),
-                    sparkline: gpu.usageHistory,
-                    storageKey: "rnitro.sectionExpanded.gpu"
-                ) {
-                    GraphView(history: gpu.usageHistory, color: Color.usage(gpu.usage))
-                        .frame(height: metrics.graphHeight)
-                    MonitorRow(label: "Usage", value: String(format: "%.1f%%", gpu.usage), valueColor: Color.usage(gpu.usage))
-                    MonitorRow(label: "Power", value: String(format: "%.1f W", m.gpuPowerWatts))
-                }
-
-                MonitorSection(
-                    title: "Memory",
-                    accent: .nPurple,
-                    summary: String(format: "%.0f%%", m.memoryUsedPercent),
-                    sparkline: m.memoryHistory,
-                    storageKey: "rnitro.sectionExpanded.memory"
-                ) {
-                    UsageBarRow(label: "RAM", usedGB: m.memoryUsedGB, freeGB: m.memoryFreeGB,
-                                totalGB: m.memoryTotalGB, usedPercent: m.memoryUsedPercent,
-                                action: { toggleStatDetail(.memory) })
-                    MonitorRow(label: "Pressure", value: m.memoryPressure, valueColor: Color.pressure(m.memoryPressure))
-                    MonitorRow(label: "Wired", value: String(format: "%.1f GB", m.memoryWiredGB))
-                    MonitorRow(label: "Compressed", value: String(format: "%.1f GB", m.memoryCompressedGB))
-                    MonitorRow(label: "Swap used", value: String(format: "%.1f GB", m.memorySwapGB))
-                }
-
-                MonitorSection(
-                    title: "Disk",
-                    accent: .nOrange,
-                    summary: String(format: "%.0f%%", m.diskUsedPercent),
-                    sparkline: disk.activityHistory,
-                    sparkMax: max(disk.activityHistory.max() ?? 1, 10),
-                    storageKey: "rnitro.sectionExpanded.disk"
-                ) {
-                    UsageBarRow(label: "SSD · \(m.diskVolumeName)", usedGB: m.diskUsedGB, freeGB: m.diskFreeGB,
-                                totalGB: m.diskTotalGB, usedPercent: m.diskUsedPercent,
-                                action: { toggleStatDetail(.storage) })
-                    MiniGraphView(history: disk.activityHistory, color: .nOrange, maxValue: max(disk.activityHistory.max() ?? 1, 10))
-                        .frame(height: 28)
-                    MonitorRow(label: "Read", value: String(format: "%.1f MB/s", disk.readMBps))
-                    MonitorRow(label: "Write", value: String(format: "%.1f MB/s", disk.writeMBps))
-                }
-
-                if showNetworkUI {
-                    MonitorSection(
-                        title: "Network",
-                        accent: .nBlue,
-                        summary: net.isAvailable ? NetworkMonitor.formatSpeed(net.downloadMbps) : "—",
-                        sparkline: net.downloadHistory,
-                        sparkMax: max(net.downloadHistory.max() ?? 1, 100),
-                        storageKey: "rnitro.sectionExpanded.network"
-                    ) {
-                        NetworkMonitorRow(net: net)
-                        MonitorRow(label: "IP", value: net.localIP)
-                        if !net.wifiSSID.isEmpty {
-                            MonitorRow(label: "Wi-Fi", value: net.wifiSSID)
-                        }
-
-                        if showWeather, let w = weather.snapshot {
-                            MonitorRow(label: "Weather", value: String(format: "%.0f°C %@", w.tempC, w.condition))
-                            MonitorRow(label: "Location", value: w.city)
-                        } else if showWeather && weather.isLoading {
-                            MonitorRow(label: "Weather", value: "Loading…")
-                        }
-
-                        HStack(spacing: 8) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Download").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
-                                MiniGraphView(history: net.downloadHistory, color: .accent, maxValue: max(net.downloadHistory.max() ?? 1, 100))
-                                    .frame(height: 24)
-                            }
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Upload").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
-                                MiniGraphView(history: net.uploadHistory, color: .nGreen, maxValue: max(net.uploadHistory.max() ?? 1, 100))
-                                    .frame(height: 24)
+    var body: some View {
+        MonitorSection(
+            title: "Sensors",
+            accent: .nOrange,
+            summary: sensors.entries.isEmpty ? "—" : "\(sensors.entries.count) readings",
+            storageKey: "rnitro.sectionExpanded.sensors"
+        ) {
+            if sensors.entries.isEmpty {
+                MonitorRow(label: "Status", value: "No temperature or fan sensors found")
+                MonitorRow(label: "Tip", value: "SMC keys vary by chip — CPU temp still shown above")
+            } else {
+                let groups = Dictionary(grouping: sensors.entries, by: { $0.group })
+                ForEach(["Temperatures", "Fans"], id: \.self) { group in
+                    if let items = groups[group] {
+                        Text(group).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                        ForEach(items) { entry in
+                            VStack(alignment: .leading, spacing: 0) {
+                                MonitorRow(label: entry.name, value: "\(entry.value) \(entry.unit)")
+                                Text(entry.rawKey).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary.opacity(0.6))
                             }
                         }
                     }
-                }
-
-                MonitorSection(
-                    title: "Sensors",
-                    accent: .nOrange,
-                    summary: sensors.entries.isEmpty ? "—" : "\(sensors.entries.count) readings",
-                    storageKey: "rnitro.sectionExpanded.sensors"
-                ) {
-                    if sensors.entries.isEmpty {
-                        MonitorRow(label: "Status", value: "No temperature or fan sensors found")
-                        MonitorRow(label: "Tip", value: "SMC keys vary by chip — CPU temp still shown above")
-                    } else {
-                        let groups = Dictionary(grouping: sensors.entries, by: { $0.group })
-                        ForEach(["Temperatures", "Fans"], id: \.self) { group in
-                            if let items = groups[group] {
-                                Text(group).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
-                                ForEach(items) { entry in
-                                    VStack(alignment: .leading, spacing: 0) {
-                                        MonitorRow(label: entry.name, value: "\(entry.value) \(entry.unit)")
-                                        Text(entry.rawKey).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary.opacity(0.6))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                MonitorSection(
-                    title: "Tools",
-                    accent: .secondary,
-                    summary: "Stress & Benchmark",
-                    storageKey: "rnitro.sectionExpanded.settings"
-                ) {
-                    if let price = btc.priceUSD {
-                        MonitorRow(label: "Bitcoin", value: String(format: "$%.0f", price))
-                    }
-                    HStack {
-                        Text("Stress Test").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
-                        Spacer()
-                        MinimalButton(
-                            title: stress.isRunning ? "Stop" : "Start",
-                            tint: stress.isRunning ? .nRed : .nOrange,
-                            disabled: bench.isRunning,
-                            action: { stress.isRunning ? stress.stop() : stress.start() }
-                        )
-                    }
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Benchmark").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
-                            Text("1-core \(bench.singleCoreScore.map { String(format: "%.0f", $0) } ?? "—") · multi \(bench.multiCoreScore.map { String(format: "%.0f", $0) } ?? "—")")
-                                .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        MinimalButton(
-                            title: bench.isRunning ? "Running…" : "Run",
-                            disabled: bench.isRunning || stress.isRunning,
-                            action: { bench.run() }
-                        )
-                    }
-                }
-                .padding(.bottom, 12)
-                .onAppear {
-                    SectionExpansionStore.migrateExtrasKey()
-                    let key = net.wifiSSID.isEmpty ? "wired-\(net.interfaceName)" : net.wifiSSID
-                    weather.refresh(forNetworkKey: key, enabled: showWeather)
                 }
             }
         }
+    }
+}
+
+struct MonitorToolsSectionView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var btc = BTCPriceMonitor.shared
+    @ObservedObject private var stress = StressTester.shared
+    @ObservedObject private var bench = BenchmarkRunner.shared
+
+    var body: some View {
+        MonitorSection(
+            title: "Tools",
+            accent: .secondary,
+            summary: "Stress & Benchmark",
+            storageKey: "rnitro.sectionExpanded.settings"
+        ) {
+            if let price = btc.priceUSD {
+                MonitorRow(label: "Bitcoin", value: String(format: "$%.0f", price))
+            }
+            HStack {
+                Text("Stress Test").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                Spacer()
+                MinimalButton(
+                    title: stress.isRunning ? "Stop" : "Start",
+                    tint: stress.isRunning ? .nRed : .nOrange,
+                    disabled: bench.isRunning,
+                    action: { stress.isRunning ? stress.stop() : stress.start() }
+                )
+            }
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Benchmark").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                    Text("1-core \(bench.singleCoreScore.map { String(format: "%.0f", $0) } ?? "—") · multi \(bench.multiCoreScore.map { String(format: "%.0f", $0) } ?? "—")")
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                }
+                Spacer()
+                MinimalButton(
+                    title: bench.isRunning ? "Running…" : "Run",
+                    disabled: bench.isRunning || stress.isRunning,
+                    action: { bench.run() }
+                )
+            }
+        }
+        .padding(.bottom, 12)
+    }
+}
+
+struct MonitorModernTabView: View {
+    @Binding var statDetail: StatDetailKind?
+    @AppStorage(MonitorPreferences.networkKey) private var showNetworkUI = true
+    @AppStorage(MonitorPreferences.showWeatherKey) private var showWeather = true
+
+    private func toggleStatDetail(_ kind: StatDetailKind) {
+        statDetail = statDetail == kind ? nil : kind
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                MonitorModernHeaderView()
+                MonitorBatterySectionView(
+                    onBatteryTap: { toggleStatDetail(.battery) },
+                    onCpuPowerTap: { toggleStatDetail(.cpuPower) }
+                )
+                MonitorCPUSectionView(onTemperatureTap: { toggleStatDetail(.temperature) })
+                MonitorGPUSectionView()
+                MonitorMemorySectionView(onMemoryTap: { toggleStatDetail(.memory) })
+                MonitorDiskSectionView(onStorageTap: { toggleStatDetail(.storage) })
+                if showNetworkUI {
+                    MonitorNetworkSectionView(showWeather: showWeather)
+                }
+                MonitorSensorsSectionView()
+                MonitorToolsSectionView()
+            }
+        }
         .clipped()
+        .onAppear { SectionExpansionStore.migrateExtrasKey() }
+    }
+}
+
+struct MonitorTabContent: View {
+    @Environment(\.uiMetrics) private var metrics
+    let layout: ContentLayout
+    @Binding var statDetail: StatDetailKind?
+    @AppStorage(MonitorPreferences.stressKey) private var showStressUI = true
+    @AppStorage(MonitorPreferences.benchmarkKey) private var showBenchmarkUI = true
+    @AppStorage(MonitorPreferences.networkKey) private var showNetworkUI = true
+    @AppStorage(MonitorPreferences.uiStyleKey) private var uiStyleRaw = MonitorUIStyle.modern.rawValue
+    @ObservedObject private var m = CPUMonitor.shared
+    @ObservedObject private var bat = BatteryMonitor.shared
+    @ObservedObject private var net = NetworkMonitor.shared
+    @ObservedObject private var stress = StressTester.shared
+    @ObservedObject private var bench = BenchmarkRunner.shared
+    @ObservedObject private var btc = BTCPriceMonitor.shared
+
+    private func toggleStatDetail(_ kind: StatDetailKind) {
+        statDetail = statDetail == kind ? nil : kind
+    }
+
+    var body: some View {
+        Group {
+            if uiStyleRaw == MonitorUIStyle.legacy.rawValue {
+                legacyMonitorTab
+            } else {
+                MonitorModernTabView(statDetail: $statDetail)
+            }
+        }
     }
 
     private var legacyMonitorTab: some View {
@@ -8768,6 +9181,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 BatteryMonitor.shared.$levelPercent.map { _ in () }.eraseToAnyPublisher(),
                 BatteryMonitor.shared.$isCharging.map { _ in () }.eraseToAnyPublisher(),
                 BatteryMonitor.shared.$isOnAC.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$chargeWatts.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$chargeRateText.map { _ in () }.eraseToAnyPublisher(),
                 BatteryMonitor.shared.$timeRemainingMinutes.map { _ in () }.eraseToAnyPublisher(),
                 BatteryMonitor.shared.$timeToFullMinutes.map { _ in () }.eraseToAnyPublisher()
             ])
