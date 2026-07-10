@@ -119,6 +119,7 @@ def main() -> None:
     elif args.mode == "netlify":
         release_app_zip(quick=True)
         release_sync(skip_installers=True)
+        run("build-homebrew.py")
         run("deploy-netlify.py")
         print("\n=== Netlify deploy ===")
         print("  Claim link opened in browser (or see Desktop/rnitro-netlify-deploy/CLAIM-NETLIFY.txt)")
@@ -139,6 +140,9 @@ def main() -> None:
         release_zip(quick=False)
         run("build-linux-tar.py")
         release_sync(skip_installers=False)
+
+    if args.mode in ("quick", "full"):
+        run("build-homebrew.py")
 
     print("\n=== Release complete ===")
     data = __import__("versions").load()

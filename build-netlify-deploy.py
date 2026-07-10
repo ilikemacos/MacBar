@@ -47,6 +47,9 @@ def netlify_files(data: dict, *, include_bundle_zip: bool = False, website_zip: 
     for name in pv.deploy_files(archive, website=website_zip):
         if name not in files:
             files.append(name)
+    for dmg in SITE.glob("rNitro-v*-arm64.dmg"):
+        if dmg.name not in files:
+            files.append(dmg.name)
     return files
 
 

@@ -46,6 +46,7 @@ DIRS = ["fonts"]
 
 WEBSITE_FILES = [
     "404.html",
+    "archives.html",
     "index.html",
     "googleadfac0eaf77a74e6.html",
     "version.json",

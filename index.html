@@ -5,14 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- @sync:hero-head -->
 <title>rNitro — CPU Monitor for macOS, Linux &amp; Windows</title>
-<meta name="description" content="rNitro — real-time CPU monitor for Apple Silicon macOS (v8.3.6 Stable / v8.3.12 Beta), Linux v0.1 pre-release, and legacy Windows builds. Free, no telemetry.">
+<meta name="description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v8.3.6 Stable / v8.3.12 Beta). CPU, temperature, MacBook battery %, GPU, RAM. Linux v0.1 pre-release. No account, no telemetry.">
 <link rel="canonical" href="https://getrnitro.netlify.app/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="rNitro — CPU Monitor">
-<meta property="og:description" content="rNitro — real-time CPU monitor for Apple Silicon macOS (v8.3.6 Stable / v8.3.12 Beta), Linux v0.1 pre-release, and legacy Windows builds. Free, no telemetry.">
+<meta property="og:title" content="rNitro — Menu Bar System Monitor">
+<meta property="og:description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v8.3.6 Stable / v8.3.12 Beta). CPU, temperature, MacBook battery %, GPU, RAM. Linux v0.1 pre-release. No account, no telemetry.">
 <meta property="og:url" content="https://getrnitro.netlify.app/">
 <meta property="og:image" content="https://getrnitro.netlify.app/apple-touch-icon.png">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "rNitro", "operatingSystem": "macOS, Linux, Windows", "applicationCategory": "UtilitiesApplication", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://getrnitro.netlify.app"}</script>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="rNitro — Menu Bar System Monitor">
+<meta name="twitter:description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v8.3.6 Stable / v8.3.12 Beta). CPU, temperature, MacBook battery %, GPU, RAM. Linux v0.1 pre-release. No account, no telemetry.">
+<meta name="twitter:image" content="https://getrnitro.netlify.app/apple-touch-icon.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "rNitro", "operatingSystem": "macOS, Linux, Windows", "applicationCategory": "UtilitiesApplication", "softwareVersion": "v8.3.12", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://getrnitro.netlify.app"}</script>
 <!-- @end:hero-head -->
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -1250,7 +1254,7 @@
 <!-- @end:hero-more -->
 <!-- @sync:hero-dl-note -->
     <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a> — v8.3.6 Final and v8.3.12 Beta (ZIP, PKG, DMG). Linux v0.1 pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers.
+      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a> — v8.3.6 Final and v8.3.12 Beta (ZIP, PKG, DMG). Linux v0.1 pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers. Older DMG builds: <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a>.
     </p>
 <!-- @end:hero-dl-note -->
   </div>
@@ -1662,146 +1666,6 @@
             <li><strong>Homebrew</strong> — brew tap ilikemacos/rnitro && brew install rnitro.</li>
           </ul>
         </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.8 Beta</h3>
-          <ul>
-            <li><strong>Updater reliability</strong> — post-quit helper writes update-result.txt; failed updates alert on next launch. /System/Volumes/Data/Applications normalized to admin replace.</li>
-            <li><strong>Update UX</strong> — download progress bar, success dialog before restart, beta-first install button, Launch at Login re-registration after update.</li>
-            <li><strong>How it works flowcharts</strong> — three visual diagrams: getting started, in-app updater, and live monitor loop (replaces the end-to-end table).</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.3.5 Final</h3>
-          <ul>
-            <li><strong>Updater reliability</strong> — same post-quit failure reporting, system Applications path fix, and manual Check for Updates in Settings → General.</li>
-            <li><strong>Promoted fixes</strong> — all v8.3.4 updater improvements plus silent-failure diagnostics and install-location label.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.6 Beta</h3>
-          <ul>
-            <li><strong>Updater fix (real)</strong> — PKG installs in /Applications now update in place with an admin password prompt instead of silently installing to ~/Applications. Quit-then-replace for other paths, durable staging cache, and Check for Updates in Settings → General.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.3.4 Final</h3>
-          <ul>
-            <li><strong>Updater fix</strong> — same /Applications in-place update fix, quit-then-replace helper, and manual update check in Settings → General.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.5 Beta</h3>
-          <ul>
-            <li><strong>In-app updater rewrite</strong> — resolves ZIP names from version.json, downloads to disk, ditto/unzip extract fallback, installs to ~/Applications when translocated, synchronous /Applications replace with password prompt, and logs to ~/Library/Logs/rNitro/update.log.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.3.3 Final</h3>
-          <ul>
-            <li><strong>In-app updater rewrite</strong> — same updater reliability fixes as Beta: manifest-based ZIP URLs, disk download, extract fallback, translocation-aware install path, and admin password prompt for /Applications.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.3.1 Final</h3>
-          <ul>
-            <li><strong>Settings subtabs</strong> — AI, Appearance, Menubar, Monitor, Alerts, and General — all configuration in one place.</li>
-            <li><strong>Promoted from Beta</strong> — Settings tab, How it works tables, in-app updater with Final/Beta picker, App Cleaner, and streaming chat (OpenAI + OpenRouter).</li>
-            <li><strong>Cleaner Monitor tab</strong> — live stats and Tools (Stress/Benchmark) only; no more buried toggles in the monitor accordion.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.3.2 Final</h3>
-          <ul>
-            <li><strong>Updater fixes</strong> — detects bad downloads, validates ZIP files, and prompts for admin password on /Applications PKG installs.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.4 Beta</h3>
-          <ul>
-            <li><strong>Updater fixes</strong> — detects 404/HTML downloads, validates ZIP magic bytes, and prompts for admin password when replacing /Applications installs.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.3 Beta</h3>
-          <ul>
-            <li><strong>Updater fixes</strong> — detects 404/HTML downloads, validates ZIP magic bytes, and prompts for admin password when replacing /Applications installs.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.2 Beta</h3>
-          <ul>
-            <li><strong>Settings subtabs</strong> — AI, Appearance, Menubar, Monitor, Alerts, and General replace scattered UI toggles.</li>
-            <li><strong>Advisor alerts relocated</strong> — warning thresholds and notification toggles moved to Settings → Alerts.</li>
-            <li><strong>Monitor focus</strong> — Monitor tab is stats + tools; menubar slots, panel visibility, and appearance live in Settings.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.1 Beta</h3>
-          <ul>
-            <li><strong>Settings tab</strong> — API keys, test connection, and provider status moved out of Chat into a dedicated Settings tab.</li>
-            <li><strong>Streaming chat</strong> — OpenAI, Groq, DeepSeek, OpenRouter, and LM Studio responses stream token-by-token.</li>
-            <li><strong>Updater progress</strong> — in-app updates show a byte progress bar, then restart automatically.</li>
-            <li><strong>Menubar discoverability</strong> — popover footer link opens the full main window (Cleaner, Settings, full Chat).</li>
-            <li><strong>App Cleaner honesty</strong> — shows "unknown" when Spotlight has no last-opened date instead of implying wrong data.</li>
-            <li><strong>Update channel picker</strong> — on launch, choose Install Final or Install Beta when a newer build is available.</li>
-            <li><strong>How it works tab</strong> — scrollable tables for platforms, download formats, and end-to-end flow (synced with the website).</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.0 Beta</h3>
-          <ul>
-            <li><strong>In-app updater</strong> — download progress panel, ZIP size verification, and bundle-path replace (no browser redirect).</li>
-            <li><strong>Faster App Cleaner</strong> — phased scan, Rescan button, and Last opened (macOS) labels with multi-source Spotlight lookup.</li>
-            <li><strong>Linux v0.1</strong> — GTK4 desktop app with Monitor, Advisor, Chat, and Cleaner for x86_64 Linux.</li>
-            <li><strong>macOS polish</strong> — removed legacy monitor sections, fixed onChange deprecations, Battery stays at top.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.2.9 Final</h3>
-          <ul>
-            <li><strong>In-app updater</strong> — stable channel now downloads and installs updates without opening the website.</li>
-            <li><strong>App Cleaner</strong> — uninstall apps and remove leftover Library files on the stable channel.</li>
-            <li><strong>Production ready</strong> — OpenAI + OpenRouter chat on stable; all beta experimental features remain on v8.3.0 Beta.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.2.9 Beta</h3>
-          <ul>
-            <li><strong>iStats-style sidebar</strong> — panel picker, Solo Mode accordion, and per-panel visibility controls.</li>
-            <li><strong>17pt responsive UI</strong> — fonts scale up when you resize the window.</li>
-            <li><strong>Human-readable sensors</strong> — SMC keys and network interfaces (en0) shown as friendly names.</li>
-            <li><strong>Per-network weather</strong> — IP-based weather row in Network (toggle in Settings).</li>
-            <li><strong>App Cleaner</strong> — find apps sorted by last used; trash app plus leftover caches and preferences.</li>
-            <li><strong>Settings renamed</strong> — Extras is now Settings.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.2.8 Final</h3>
-          <ul>
-            <li><strong>App Cleaner</strong> — new Cleaner tab: uninstall apps and remove leftover Library files, sorted by last used.</li>
-            <li><strong>Stable channel</strong> — production CPU monitor with OpenAI and OpenRouter chat.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.2.8 Beta</h3>
-          <ul>
-            <li><strong>GitHub releases</strong> — Stable and Beta each ship App ZIP (with rNitro.app), PKG, and DMG on github.com/ilikemacos/rNitro/releases.</li>
-            <li><strong>AES-256-GCM encryption</strong> — API keys and AI chat history encrypted at rest with CryptoKit (256-bit master key in Keychain). Plaintext data migrates automatically on first launch.</li>
-            <li><strong>Patched major bugs</strong> — website download buttons and file-save flow fixed in v8.2.7.</li>
-            <li><strong>First-launch tips sheet</strong> — quick welcome on first open (menubar icon, Gatekeeper, App ZIP install).</li>
-            <li><strong>Low Power Mode badge</strong> — green LP pill when macOS Energy Mode is on.</li>
-            <li><strong>All AI providers</strong> — Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.2.6 Stable</h3>
-          <ul>
-            <li><strong>Patched major bugs</strong> — website download buttons work again; App ZIP, PKG, DMG, and .sh downloads trigger reliably after Terms acceptance.</li>
-            <li><strong>Stable channel</strong> — production-ready CPU monitor, benchmark, and stress test.</li>
-            <li><strong>AI chat (trimmed)</strong> — OpenAI (GPT) and OpenRouter only.</li>
-            <li><strong>System Advisor</strong> — client-side specs assistant with customizable warn/critical thresholds.</li>
-          </ul>
-        </div>
       </div>
     </div>
   </div>
@@ -1905,57 +1769,12 @@
       </div>
 <!-- @end:download-more -->
 <!-- @sync:download-previous -->
-  <div id="prev-versions-panel" class="prev-versions-panel" style="margin-top:16px;">
-    <button type="button" class="prev-versions-toggle" onclick="togglePreviousVersions()" aria-expanded="false">
-      <span>Previous versions</span>
-      <span class="prev-versions-chevron" aria-hidden="true">▸</span>
-    </button>
-    <p class="prev-versions-note">Older builds for rollback or compatibility — use if a newer release misbehaves on your Mac.</p>
-    <div class="prev-versions-body">
-      <div class="prev-versions-scroll">
-        <table class="prev-versions-table">
-          <thead>
-            <tr>
-              <th>Version</th><th>Channel</th><th>.sh</th><th>PKG</th><th>DMG</th><th>SHA-256 (.sh)</th>
-            </tr>
-          </thead>
-          <tbody>
-      <tr>
-        <td style="color:var(--text); font-weight:600;">v8.3.5-Final-arm64</td>
-        <td><span class="prev-channel" style="color:var(--green); border-color:var(--green);">Stable</span></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.sh')">.sh</button></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.pkg')">PKG</button></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.5-Final-arm64.dmg')">DMG</button></td>
-        <td class="prev-hash" title="5d5e28340648994727c80f60baf1b94d5b26e5aaff368f2ebb5e34c28ca06c61">5d5e283406489947…</td>
-      </tr>
-      <tr>
-        <td style="color:var(--text); font-weight:600;">v8.3.11-Beta-arm64</td>
-        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.11-Beta-arm64.sh')">.sh</button></td>
-        <td><span style="color:var(--muted)">—</span></td>
-        <td><span style="color:var(--muted)">—</span></td>
-        <td class="prev-hash" title="f680af2c58a4c8a90c34fbdb72a3861f8547a97f37ed326405472cb0d8656b08">f680af2c58a4c8a9…</td>
-      </tr>
-      <tr>
-        <td style="color:var(--text); font-weight:600;">v8.3.10-Beta-arm64</td>
-        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.sh')">.sh</button></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.pkg')">PKG</button></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.10-Beta-arm64.dmg')">DMG</button></td>
-        <td class="prev-hash" title="c2f666e5b42c0f2b0b969ac8168207bcf011a82ec610073a4bdde9e9b607b573">c2f666e5b42c0f2b…</td>
-      </tr>
-      <tr>
-        <td style="color:var(--text); font-weight:600;">v8.3.9-Beta-arm64</td>
-        <td><span class="prev-channel" style="color:var(--orange); border-color:var(--orange);">Beta</span></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.9-Beta-arm64.sh')">.sh</button></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.9-Beta-arm64.pkg')">PKG</button></td>
-        <td><button type="button" class="prev-dl-link" onclick="requestDownload('rNitro-v8.3.9-Beta-arm64.dmg')">DMG</button></td>
-        <td class="prev-hash" title="82225d3f83e83e3960a16c23349c9e9a5e90268128b00af8ce019427dee85507">82225d3f83e83e39…</td>
-      </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+  <div style="margin-top:16px; text-align:center;">
+    <p style="color:var(--muted); font-size:14px; font-family:var(--mono); line-height:1.6;">
+      Need an older build? Shell installers for v8.3.9–v8.3.11 are in <strong style="color:var(--text);">Other download options</strong> above.
+      All hosted <strong style="color:var(--text);">DMG</strong> disk images (current + archive) are on
+      <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a> — v8.3.6 Final, v8.3.12 Beta, and older releases.
+    </p>
   </div>
 <!-- @end:download-previous -->
 
@@ -2036,285 +1855,15 @@
 <!-- @sync:changelog -->
   <div class="features" style="grid-template-columns:1fr;">
     <div class="feature">
-      <div class="feature-title">v8.3.2-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--green);">Updater fixes</strong> — in-app updates detect missing ZIPs (HTTP 404/HTML), validate the download is a real ZIP, and ask for your Mac password when updating a PKG install in /Applications.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.3.4-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--orange);">Updater fixes</strong> — in-app updates now detect missing ZIPs (HTTP 404/HTML), validate the download is a real ZIP, and ask for your Mac password when updating a PKG install in /Applications.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.3.1-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--green);">Settings subtabs</strong> — AI, Appearance, Menubar, Monitor, Alerts, and General replace scattered configuration toggles.<br><br><strong style="color:var(--green);">Promoted features</strong> — Settings tab, How it works tables, in-app updater with Final/Beta picker, App Cleaner, streaming chat (OpenAI + OpenRouter).<br><br><strong style="color:var(--green);">Monitor cleanup</strong> — live stats and Tools only; configuration lives in Settings.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.3.2-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--orange);">Settings subtabs</strong> — AI, Appearance, Menubar, Monitor, Alerts, and General in one organized tab.<br><br><strong style="color:var(--orange);">Advisor alerts</strong> — thresholds and notification toggles moved to Settings → Alerts.<br><br><strong style="color:var(--orange);">Monitor focus</strong> — menubar, panel visibility, and appearance settings removed from the Monitor accordion.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.3.1-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--orange);">Settings tab</strong> — API keys, test connection, and provider status dots live in a dedicated Settings tab; Chat is conversation-only.<br><br><strong style="color:var(--orange);">Streaming chat</strong> — OpenAI, Groq, DeepSeek, OpenRouter, and LM Studio stream responses live.<br><br><strong style="color:var(--orange);">Updater UX</strong> — byte progress bar during in-app ZIP download; app restarts after install.<br><br><strong style="color:var(--orange);">Update channel picker</strong> — on launch, pick Install Final or Install Beta when an update is available.<br><br><strong style="color:var(--orange);">How it works tab</strong> — scrollable tables for platforms, download formats, and end-to-end flow (synced with getrnitro.netlify.app).<br><br><strong style="color:var(--orange);">Menubar</strong> — popover footer opens the full main window.<br><br><strong style="color:var(--orange);">App Cleaner</strong> — "unknown" last-opened label when Spotlight has no data.
-      </div>
-    </div>
-    <div class="feature">
       <div class="feature-title">Website — Windows end of support</div>
       <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
         <strong style="color:var(--orange);">Windows deprecated</strong> — rNitro is no longer actively developed for Windows. The last build (<code>v4.2.2-Windows-Final-x86</code>) stays on the Windows tab and GitHub for download. New platforms: <strong>Linux v0.1</strong> pre-release (Linux tab + GitHub Releases).
       </div>
     </div>
     <div class="feature">
-      <div class="feature-title">v8.2.8-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--orange);">AES-256-GCM encryption</strong> — cloud API keys and per-provider AI chat history are encrypted at rest using CryptoKit AES-256-GCM. A device-bound 256-bit master key lives in Keychain (<code>app.rnitro.crypto</code>); key blobs use the <code>RNENC1</code> envelope format. Existing plaintext keys and history migrate automatically on first read after upgrade.<br><br>
-        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.7-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--orange);">Patched major bugs</strong> — fixed broken download buttons on getrnitro.netlify.app (JavaScript parse error in the support-chat knowledge base broke all page scripts), unreliable ZIP/PKG/DMG downloads (now use proper file-save links instead of full-page navigation), and Terms modal confirm edge cases. Version bump + refreshed signed App ZIP downloads.<br><br>
-        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.6-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--green);">Patched major bugs</strong> — same website download fixes as v8.2.7 Beta. Stable channel: CPU monitor, benchmark, stress test, AI chat (OpenAI + OpenRouter), and System Advisor.
-      </div>
-    </div>
-    <div class="feature">
       <div class="feature-title">v4.2.2-Windows-Final-x86</div>
       <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
         <strong style="color:var(--cyan);">Patched major bugs</strong> — version bump aligned with macOS v8.2.6/v8.2.7 website fixes. Windows tray monitor unchanged; download buttons on the site work again.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.6-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--orange);">First-launch tips sheet</strong> — welcome dialog on first open with menubar icon, Gatekeeper, and App ZIP install steps.<br><br><strong style="color:var(--orange);">Low Power Mode badge</strong> — green <strong>LP</strong> pill in the popover when macOS Low Power / Energy Mode is on.<br><br><strong style="color:var(--orange);">Varela Round</strong> UI font across the app (bundled in the .app). Optional <strong>critical temperature banners</strong> — macOS notifications when live CPU temp or thermal pressure crosses warn/critical limits you configure in System Advisor. Includes System Advisor, iStats-style popover, all AI providers, and signed App ZIP downloads on the website.<br><br>
-        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.5-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--green);">Stable release</strong> — CPU monitor, benchmark, stress test, and AI chat limited to <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong>. System Advisor tab with client-side specs assistant and customizable temp/CPU/RAM/GPU/battery warnings. iStats-style sectioned menubar popover with Modern/Legacy UI toggle.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.4-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong>System Advisor</strong> tab — client-side specs assistant that reads live hardware stats and warns when temps, CPU, RAM, GPU, or battery cross thresholds you set. No API key; fully on-device. All beta AI providers included.<br><br>
-        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.3-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Refinements on the v8.2.2 popover and provider stack — stability and layout polish ahead of System Advisor.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.2-Final-arm64 / v8.2.2-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong>iStats-style sectioned popover</strong> — cleaner menubar layout with single-line stat values (no stacked CPU/RAM labels). <strong>Modern/Legacy UI toggle</strong> in Extras/Tools for users who prefer the older compact layout.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.2.1-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Full AI provider lineup — Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes. Menu bar light/dark icons, network monitor in popover, and <code>uninstall-rNitro.sh</code> companion script.<br><br>
-        <strong style="color:var(--orange);">Beta notice:</strong> Experimental features — report issues via Support.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.1.1-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fully responsive UI — window and menubar popover reflow from narrow to wide; adaptive stat grids, flexible detail popups, and scrollable AI provider tabs. 14px default typography (12px in compact layouts). Fixed battery charging status; battery time remaining beside charge level; toggles to show/hide Stress Test and Benchmark.<br><br>
-        AI Chat in menubar popover (Monitor + Chat tabs); per-provider saved history; connection status indicators (Connected / Needs API Key / Offline / Not Configured). Auth fixes for OpenRouter and LM Studio. Boba Tea Tycoon removed from UI.<br><br>
-        <strong style="color:var(--orange);">Beta notice:</strong> This is a beta version — crashes and code errors are possible. Please report to Support if anything goes wrong.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v7.0.1a-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fully responsive CPU monitor UI — adaptive layouts, flexible stat cards, scalable charts and panels, 14px default font (12px compact). Fixed battery charging status; battery time remaining beside charge level; toggles to show/hide Stress Test and Benchmark. All monitor features with improved resize behavior. No AI chat. Boba Tea Tycoon removed.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v8.1-Beta-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Beta AI chat — Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes. Cloud keys in Keychain; local LM Studio/Ollama/Hermes need no API key. All v6.2.4 monitor features included.<br><br>
-        <strong style="color:var(--orange);">Beta notice:</strong> This is a beta version — crashes and code errors are possible. Please report to Support if anything goes wrong.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v6.2.4-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Stable release — CPU monitor, Boba Tea, benchmark, fixed menu bar popover layout and in-popover stat detail popups. No AI chat.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v6.2.3-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Gemini Chat tab in the main window — bring your own API key (stored in Mac Keychain), chat via gemini-2.0-flash. Menu bar popover unchanged (Monitor + Boba Tea only).
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v6.2.2-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fixed temperature stuck at 50°C — wider load-based estimate, SMC peak reading (not average), and blend when package sensors read low. Minecraft server section on the website.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v6.2.1-Final-arm64</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Final Apple Silicon build — live battery % and charge speed (pmset/ioreg), Boba Tea Tycoon tab, CPU/SSD fixes, stat detail sheets, game bundling, Lazy Dog UI, RAM/SSD stats, and DMG distribution.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v6.0.1a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        v6 release — minimal UI redesign, Lazy Dog font, live RAM and SSD stats, improved benchmarking, clickable detail popups, and <code>rNitro-v6.0.1a.dmg</code> on the website.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v5.0.0a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        More accurate benchmarking — 3-second timed phases, dedicated serial single-core queue, warm-up/cool-down between phases, <code>@inline(never)</code> hot loop, and WorkSink accumulator. Clickable BASE/BOOST/TEMP/CORES detail popups. EB Garamond font (later changed to Lazy Dog in v6).
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v5.1.2a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fixed inaccurate benchmark results. The single-core timing could be optimized away entirely since its result was never used, and multi-core rendered slightly different content than single-core, so the two scores weren't truly comparable. Both phases now render identical work, run for a fixed 2-second window each (so they self-scale to any CPU speed), include a short warm-up so clocks are ramped before timing starts, and score real completed work that the compiler can't discard.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v5.1.1a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        More accurate temperatures — rNitro now reads real sensor data straight from the SMC (the same controller iStat Menus, TG Pro, and Macs Fan Control read from), falling back to the old estimate only if the SMC can't be reached. Also bumped the live refresh rate from 900ms to 750ms, so the menu bar, popover stats, and history graph all feel snappier.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v5.0.1a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Added stress test and benchmarking. A new built-in benchmark sits next to the stress test in the popover: it times a fixed, repeatable render workload — first on a single thread, then across every logical core — and turns the throughput into single-core and multi-core scores, Cinebench-style, so you get a comparable number instead of just a live load graph.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v4.2.0</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Added a built-in CPU stress test. Spins up one real busy-loop thread per logical core (like Prime95 or stress-ng) so you can watch usage, temperature, and clock speed respond live under genuine full load, right inside the popover. Always user-initiated, stoppable with one click, and automatically stops if the app quits.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v4.1.2</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fixed the popover getting visually cut off. Dynamic header text (CPU name, core count) could force the app's content to grow past its declared frame, making the popover render wider than it should — now hard-clamped so this can't happen, and widened slightly for more breathing room.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v4.1.1w-21a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Added a support chatbot to the website — a small popup in the bottom-right corner that answers common questions about install, temperature readings, Windows support, BTC price, security, and uninstalling. Fully client-side, rule-based, no backend or API key. Falls back to the email support form for anything it doesn't recognize.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">Beta-v3.27w-23a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fixed minor bugs.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v3.2.2a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fixed a compile error — <code>ptrace()</code> isn't bridged by Swift's Darwin module, so the anti-debugger check now resolves it via <code>dlsym</code> at runtime. Also replaced a deprecated Security-framework API (<code>SecTrustGetCertificateAtIndex</code>) with its modern equivalent (<code>SecTrustCopyCertificateChain</code>) in the pinned TLS session.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v3.2.1b</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Added support for Windows 10 and 11 — a PowerShell installer (<code>install-rNitro-windows.ps1</code>) that compiles rNitro from C# source using <code>csc.exe</code> built into .NET Framework. No SDK download required. Includes a system tray icon, live CPU/RAM/temp popup, 60-second history graphs, and live BTC price — same data sources as the Mac version. Download on the Windows tab above.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v3.1.3</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Refresh rate changed to 900ms. Added a ₿ symbol to the left of the menu bar CPU readout.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v3.1.2b</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Stats now refresh every 500ms instead of every 1 second — the menu bar, popover, and game overlay HUD all feel noticeably snappier. The usage history graph buffer was doubled so it still spans a full 60 seconds at the new refresh rate.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v3.1.2</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Menu bar now shows "CPU: X%  Temp: Y°" instead of just a usage percentage, so both numbers are visible at a glance without opening the popover.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v3.1.1a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Added an automatic update check. On every launch, rNitro checks getrnitro.netlify.app for the latest published version; if a newer one exists, you'll see an alert and your default browser will open to this page so you can grab it.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v2.1.0</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Added an in-game overlay HUD — like MSI Afterburner's on-screen display — showing live CPU%, GPU%, temperature, and RAM. Toggle with ⌥⇧O. It's click-through and stays on top of fullscreen games without stealing input. Also added "Launch App with FPS HUD," which runs a Metal-based game with Apple's own native Metal HUD enabled for real, engine-reported FPS and frame time — we don't fake FPS numbers, since macOS has no public API to hook another process's renderer. GPU usage and RAM usage are now read from real OS sources (IOKit accelerator stats, host VM statistics) too, not estimated.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v2.0.1a</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fixed minor temperature bug — the gauge could appear stuck at one value (e.g. 40°C) while in the Nominal thermal state. It now interpolates within each thermal-state band based on live CPU usage, so it moves smoothly instead of sitting flat. Still grounded in the OS's real Nominal/Fair/Serious/Critical signal, not a synthetic guess.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v2.0.1</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Fixed menu bar bug — the menu bar popover's content was getting clipped/cut off. Version bump also marks the 2.0 line — real thermal-state monitoring and menu bar mode (introduced in 1.2.2) are now the baseline.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v1.2.2</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Replaced the synthetic temperature estimate with a value driven by macOS's real thermal state (<code style="font-family:var(--mono); background:var(--card2); border:1px solid var(--border); padding:1px 6px; border-radius:4px; color:var(--green);">ProcessInfo.thermalState</code>) instead of a fake formula based on load — still shown in °C for readability, banded by the OS's actual Nominal/Fair/Serious/Critical signal rather than guessed. Added menu bar mode: a live CPU% readout always visible in the menu bar, with a click-to-open quick view, independent of the main window.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v1.2.1</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Patched minor bug. Added a custom app icon, generated programmatically at install time and embedded into the app bundle.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v1.1.0 — Security Update</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        Hardened the installer end-to-end: refuses to run via <code style="font-family:var(--mono); background:var(--card2); border:1px solid var(--border); padding:1px 6px; border-radius:4px; color:var(--green);">curl | bash</code>,
-        builds in a randomized, permission-locked temp directory instead of a predictable path under Downloads,
-        verifies all required tools exist before use, checks the compiled binary isn't a symlink before installing it,
-        refuses to delete <code style="font-family:var(--mono); background:var(--card2); border:1px solid var(--border); padding:1px 6px; border-radius:4px; color:var(--green);">~/Applications/rNitro.app</code> if it's been swapped for a symlink,
-        tightens file permissions throughout, and ad-hoc code-signs the final app bundle. The self-verifying SHA-256 checksum is now pinned and published above.
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v1.0 — Initial release</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        First public release. Native CPU usage, temperature, clock speed, and per-core monitoring, compiled locally via swiftc.
       </div>
     </div>
   </div>
@@ -3015,7 +2564,7 @@
       a: "The full install script (including the app's source) is right there in the downloaded .sh / .ps1 file — nothing is hidden or obfuscated. You're compiling it yourself." },
     // @sync:chat-whats-new
     { label: "What's new in v8.3.12?", kws: ["whats new", "what's new", "v8.3.12", "v8.3.6", "varela", "font", "changelog", "low power"],
-      a: "v8.3.6 Final highlights:\n• Battery fix — MacBooks show live charge % via direct IOKit reads (backport from v8.3.12 Beta; fixes — % / desktop on laptops).\n\nv8.3.12 Beta highlights:\n• Battery fix — MacBooks now show live charge % via direct IOKit AppleSmartBattery reads (fixes — % / desktop / N/A when pmset subprocesses fail).\n• Reliability — battery polling always runs at launch with pmset/ioreg fallbacks; no desktop-Mac false detection.\n\nv8.3.9 Beta highlights:\n• Performance — CPU monitoring on a background queue with batched UI updates; SMC key cache; debounced menubar refresh; narrower SwiftUI observation in the monitor tab.\n• Open source — full source on GitHub (install-rNitro.sh, build scripts, Linux/Windows companions); slim repo with binaries on Releases only.\n• Homebrew — brew tap ilikemacos/rnitro && brew install rnitro.\n\nv8.3.8 Beta highlights:\n• Updater reliability — post-quit helper writes update-result.txt; failed updates alert on next launch. /System/Volumes/Data/Applications normalized to admin replace.\n• Update UX — download progress bar, success dialog before restart, beta-first install button, Launch at Login re-registration after update.\n• How it works flowcharts — three visual diagrams: getting started, in-app updater, and live monitor loop (replaces the end-to-end table).\n\nv8.3.5 Final highlights:\n• Updater reliability — same post-quit failure reporting, system Applications path fix, and manual Check for Updates in Settings → General.\n• Promoted fixes — all v8.3.4 updater improvements plus silent-failure diagnostics and install-location label.\n\nv8.3.6 Beta highlights:\n• Updater fix (real) — PKG installs in /Applications now update in place with an admin password prompt instead of silently installing to ~/Applications. Quit-then-replace for other paths, durable staging cache, and Check for Updates in Settings → General.\n\nv8.3.4 Final highlights:\n• Updater fix — same /Applications in-place update fix, quit-then-replace helper, and manual update check in Settings → General.\n\nv8.3.5 Beta highlights:\n• In-app updater rewrite — resolves ZIP names from version.json, downloads to disk, ditto/unzip extract fallback, installs to ~/Applications when translocated, synchronous /Applications replace with password prompt, and logs to ~/Library/Logs/rNitro/update.log.\n\nv8.3.3 Final highlights:\n• In-app updater rewrite — same updater reliability fixes as Beta: manifest-based ZIP URLs, disk download, extract fallback, translocation-aware install path, and admin password prompt for /Applications.\n\nv8.3.1 Final highlights:\n• Settings subtabs — AI, Appearance, Menubar, Monitor, Alerts, and General — all configuration in one place.\n• Promoted from Beta — Settings tab, How it works tables, in-app updater with Final/Beta picker, App Cleaner, and streaming chat (OpenAI + OpenRouter).\n• Cleaner Monitor tab — live stats and Tools (Stress/Benchmark) only; no more buried toggles in the monitor accordion.\n\nv8.3.2 Final highlights:\n• Updater fixes — detects bad downloads, validates ZIP files, and prompts for admin password on /Applications PKG installs.\n\nv8.3.4 Beta highlights:\n• Updater fixes — detects 404/HTML downloads, validates ZIP magic bytes, and prompts for admin password when replacing /Applications installs.\n\nv8.3.3 Beta highlights:\n• Updater fixes — detects 404/HTML downloads, validates ZIP magic bytes, and prompts for admin password when replacing /Applications installs.\n\nv8.3.2 Beta highlights:\n• Settings subtabs — AI, Appearance, Menubar, Monitor, Alerts, and General replace scattered UI toggles.\n• Advisor alerts relocated — warning thresholds and notification toggles moved to Settings → Alerts.\n• Monitor focus — Monitor tab is stats + tools; menubar slots, panel visibility, and appearance live in Settings.\n\nv8.3.1 Beta highlights:\n• Settings tab — API keys, test connection, and provider status moved out of Chat into a dedicated Settings tab.\n• Streaming chat — OpenAI, Groq, DeepSeek, OpenRouter, and LM Studio responses stream token-by-token.\n• Updater progress — in-app updates show a byte progress bar, then restart automatically.\n• Menubar discoverability — popover footer link opens the full main window (Cleaner, Settings, full Chat).\n• App Cleaner honesty — shows \"unknown\" when Spotlight has no last-opened date instead of implying wrong data.\n• Update channel picker — on launch, choose Install Final or Install Beta when a newer build is available.\n• How it works tab — scrollable tables for platforms, download formats, and end-to-end flow (synced with the website).\n\nv8.3.0 Beta highlights:\n• In-app updater — download progress panel, ZIP size verification, and bundle-path replace (no browser redirect).\n• Faster App Cleaner — phased scan, Rescan button, and Last opened (macOS) labels with multi-source Spotlight lookup.\n• Linux v0.1 — GTK4 desktop app with Monitor, Advisor, Chat, and Cleaner for x86_64 Linux.\n• macOS polish — removed legacy monitor sections, fixed onChange deprecations, Battery stays at top.\n\nv8.2.9 Final highlights:\n• In-app updater — stable channel now downloads and installs updates without opening the website.\n• App Cleaner — uninstall apps and remove leftover Library files on the stable channel.\n• Production ready — OpenAI + OpenRouter chat on stable; all beta experimental features remain on v8.3.0 Beta.\n\nv8.2.9 Beta highlights:\n• iStats-style sidebar — panel picker, Solo Mode accordion, and per-panel visibility controls.\n• 17pt responsive UI — fonts scale up when you resize the window.\n• Human-readable sensors — SMC keys and network interfaces (en0) shown as friendly names.\n• Per-network weather — IP-based weather row in Network (toggle in Settings).\n• App Cleaner — find apps sorted by last used; trash app plus leftover caches and preferences.\n• Settings renamed — Extras is now Settings.\n\nv8.2.8 Final highlights:\n• App Cleaner — new Cleaner tab: uninstall apps and remove leftover Library files, sorted by last used.\n• Stable channel — production CPU monitor with OpenAI and OpenRouter chat.\n\nv8.2.8 Beta highlights:\n• GitHub releases — Stable and Beta each ship App ZIP (with rNitro.app), PKG, and DMG on github.com/ilikemacos/rNitro/releases.\n• AES-256-GCM encryption — API keys and AI chat history encrypted at rest with CryptoKit (256-bit master key in Keychain). Plaintext data migrates automatically on first launch.\n• Patched major bugs — website download buttons and file-save flow fixed in v8.2.7.\n• First-launch tips sheet — quick welcome on first open (menubar icon, Gatekeeper, App ZIP install).\n• Low Power Mode badge — green LP pill when macOS Energy Mode is on.\n• All AI providers — Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes.\n\nv8.2.6 Stable highlights:\n• Patched major bugs — website download buttons work again; App ZIP, PKG, DMG, and .sh downloads trigger reliably after Terms acceptance.\n• Stable channel — production-ready CPU monitor, benchmark, and stress test.\n• AI chat (trimmed) — OpenAI (GPT) and OpenRouter only.\n• System Advisor — client-side specs assistant with customizable warn/critical thresholds." },
+      a: "v8.3.6 Final highlights:\n• Battery fix — MacBooks show live charge % via direct IOKit reads (backport from v8.3.12 Beta; fixes — % / desktop on laptops).\n\nv8.3.12 Beta highlights:\n• Battery fix — MacBooks now show live charge % via direct IOKit AppleSmartBattery reads (fixes — % / desktop / N/A when pmset subprocesses fail).\n• Reliability — battery polling always runs at launch with pmset/ioreg fallbacks; no desktop-Mac false detection.\n\nv8.3.9 Beta highlights:\n• Performance — CPU monitoring on a background queue with batched UI updates; SMC key cache; debounced menubar refresh; narrower SwiftUI observation in the monitor tab.\n• Open source — full source on GitHub (install-rNitro.sh, build scripts, Linux/Windows companions); slim repo with binaries on Releases only.\n• Homebrew — brew tap ilikemacos/rnitro && brew install rnitro." },
     // @end:chat-whats-new
     { label: 'App ZIP won\'t open?', kws: ['wont run', "won't run", 'damaged', 'quarantine', 'xattr', '3.6', 'small', 'zip'],
       a: "If Gatekeeper blocks the App ZIP: right-click rNitro.app → Open → Open (once). Or run in Terminal:\nxattr -cr ~/Applications/rNitro.app\n\nThe .app is ~3.5–3.7 MB (native Swift, not Electron). Download the fresh build from getrnitro.netlify.app — older zips may have been stale." },
