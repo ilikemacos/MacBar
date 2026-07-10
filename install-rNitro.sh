@@ -2,6 +2,7 @@
 #
 # rNitro installer — hardened
 #
+# v8.4.1-Beta-arm64 — top processes by CPU/RAM while popover open.
 # v8.4.0-Beta-arm64 — Settings: font size + language (EN/ZH/ES/DE).
 # v8.3.16-Beta-arm64 — removed in-app How it works tab (overview remains on website).
 # v8.3.15-Beta-arm64 — tiered idle sampling, RingBuffer histories, lazy battery graph, idle profile setting.
@@ -210,7 +211,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="3174d6b67894d22d84b94ee11dcc5bdd3cb78d8c16408850694541d3500a08fa"
+EXPECTED_HASH="ec94027d937b119b78ce07f14b62dda7b24b0da4adecabd161488f78999fc7b9"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -368,7 +369,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.4.0-Beta-arm64"
+let CURRENT_VERSION = "v8.4.1-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -2972,6 +2973,115 @@ class DiskActivityMonitor: ObservableObject {
     }
 }
 
+// ── Top processes (CPU / RAM while popover open) ────────────────────────────
+struct ProcessSnapshot: Identifiable, Equatable {
+    let pid: Int32
+    let name: String
+    let cpuPercent: Double
+    let memoryMB: Double
+    var id: Int32 { pid }
+}
+
+final class ProcessMonitor: ObservableObject {
+    static let shared = ProcessMonitor()
+
+    @Published private(set) var topByCPU: [ProcessSnapshot] = []
+    @Published private(set) var topByMemory: [ProcessSnapshot] = []
+    @Published private(set) var isSampling = false
+
+    private let queue = DispatchQueue(label: "rnitro.processes", qos: .utility)
+    private var timer: DispatchSourceTimer?
+    private var lastTicks: [Int32: UInt64] = [:]
+    private var lastSampleTime = Date.distantPast
+    private let topN = 5
+    private let interval: TimeInterval = 3.0
+
+    func start() {
+        stop()
+        isSampling = true
+        lastTicks.removeAll()
+        lastSampleTime = Date.distantPast
+        queue.async { [weak self] in self?.sample() }
+        let source = DispatchSource.makeTimerSource(queue: queue)
+        source.schedule(deadline: .now() + interval, repeating: interval)
+        source.setEventHandler { [weak self] in self?.sample() }
+        source.resume()
+        timer = source
+    }
+
+    func stop() {
+        timer?.cancel()
+        timer = nil
+        DispatchQueue.main.async {
+            self.topByCPU = []
+            self.topByMemory = []
+            self.isSampling = false
+        }
+        lastTicks.removeAll()
+        lastSampleTime = Date.distantPast
+    }
+
+    private func sample() {
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastSampleTime)
+        let isFirst = lastSampleTime == Date.distantPast
+        var snapshots: [ProcessSnapshot] = []
+
+        let pids = Self.listPids()
+        for pid in pids where pid > 0 {
+            guard let name = Self.processName(pid), !name.isEmpty else { continue }
+            guard let info = Self.taskInfo(pid) else { continue }
+            let memMB = Double(info.pti_resident_size) / 1_048_576.0
+            let totalTicks = info.pti_total_user + info.pti_total_system
+            var cpuPct = 0.0
+            if !isFirst, elapsed > 0.05, let prev = lastTicks[pid] {
+                let delta = Double(totalTicks > prev ? totalTicks - prev : 0)
+                cpuPct = (delta / (elapsed * 1_000_000_000.0)) * 100.0
+            }
+            lastTicks[pid] = totalTicks
+            if memMB < 0.5 && cpuPct < 0.05 { continue }
+            snapshots.append(ProcessSnapshot(pid: pid, name: name, cpuPercent: min(cpuPct, 999), memoryMB: memMB))
+        }
+
+        lastSampleTime = now
+        let byCPU = Array(snapshots.sorted { $0.cpuPercent > $1.cpuPercent }.prefix(topN))
+        let byMem = Array(snapshots.sorted { $0.memoryMB > $1.memoryMB }.prefix(topN))
+        DispatchQueue.main.async {
+            self.topByCPU = byCPU
+            self.topByMemory = byMem
+            self.isSampling = false
+        }
+    }
+
+    private static func listPids() -> [pid_t] {
+        let cap = 4096
+        var buf = [pid_t](repeating: 0, count: cap)
+        let bytes = buf.withUnsafeMutableBufferPointer { ptr -> Int in
+            guard let base = ptr.baseAddress else { return 0 }
+            return Int(proc_listallpids(base, Int32(MemoryLayout<pid_t>.size * cap)))
+        }
+        guard bytes > 0 else { return [] }
+        let count = bytes / MemoryLayout<pid_t>.size
+        return Array(buf.prefix(count))
+    }
+
+    private static func processName(_ pid: pid_t) -> String? {
+        var name = [CChar](repeating: 0, count: 256)
+        guard proc_name(pid, &name, UInt32(name.count)) > 0 else { return nil }
+        let raw = String(cString: name)
+        return raw.isEmpty ? nil : raw
+    }
+
+    private static func taskInfo(_ pid: pid_t) -> proc_taskinfo? {
+        var info = proc_taskinfo()
+        let size = MemoryLayout<proc_taskinfo>.size
+        let ok = withUnsafeMutablePointer(to: &info) { ptr -> Int32 in
+            proc_pidinfo(pid, 4, 0, ptr, Int32(size))
+        }
+        return ok > 0 ? info : nil
+    }
+}
+
 extension NetworkMonitor {
     static func runToolPublic(_ path: String, _ args: [String]) -> String? {
         let task = Process()
@@ -3332,10 +3442,12 @@ enum MonitorActivity {
             GPUMonitor.shared.start()
             DiskActivityMonitor.shared.start()
             SensorsMonitor.shared.start()
+            ProcessMonitor.shared.start()
         } else {
             GPUMonitor.shared.stop()
             DiskActivityMonitor.shared.stop()
             SensorsMonitor.shared.stop()
+            ProcessMonitor.shared.stop()
         }
     }
 }
@@ -6752,6 +6864,8 @@ final class DisplayPreferencesStore: ObservableObject {
         "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Memory", "panel.disk": "Disk",
         "panel.network": "Network", "panel.battery": "Battery & Power", "panel.sensors": "Sensors",
         "panel.settings": "Settings", "panel.cleaner": "Cleaner",
+        "processes.topCpu": "Top processes (CPU)", "processes.topRam": "Top processes (RAM)",
+        "processes.none": "Sampling…", "processes.col.cpu": "CPU", "processes.col.ram": "RAM",
     ]
 
     private static let zhStrings: [String: String] = [
@@ -6799,6 +6913,8 @@ final class DisplayPreferencesStore: ObservableObject {
         "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "内存", "panel.disk": "磁盘",
         "panel.network": "网络", "panel.battery": "电池与功耗", "panel.sensors": "传感器",
         "panel.settings": "设置", "panel.cleaner": "清理",
+        "processes.topCpu": "CPU 占用最高进程", "processes.topRam": "内存占用最高进程",
+        "processes.none": "采样中…", "processes.col.cpu": "CPU", "processes.col.ram": "内存",
     ]
 
     private static let esStrings: [String: String] = [
@@ -6846,6 +6962,8 @@ final class DisplayPreferencesStore: ObservableObject {
         "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Memoria", "panel.disk": "Disco",
         "panel.network": "Red", "panel.battery": "Batería y energía", "panel.sensors": "Sensores",
         "panel.settings": "Ajustes", "panel.cleaner": "Limpiador",
+        "processes.topCpu": "Procesos principales (CPU)", "processes.topRam": "Procesos principales (RAM)",
+        "processes.none": "Muestreando…", "processes.col.cpu": "CPU", "processes.col.ram": "RAM",
     ]
 
     private static let deStrings: [String: String] = [
@@ -6893,6 +7011,8 @@ final class DisplayPreferencesStore: ObservableObject {
         "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Speicher", "panel.disk": "Festplatte",
         "panel.network": "Netzwerk", "panel.battery": "Akku & Leistung", "panel.sensors": "Sensoren",
         "panel.settings": "Einstellungen", "panel.cleaner": "Reiniger",
+        "processes.topCpu": "Top-Prozesse (CPU)", "processes.topRam": "Top-Prozesse (RAM)",
+        "processes.none": "Erfasse…", "processes.col.cpu": "CPU", "processes.col.ram": "RAM",
     ]
 }
 
@@ -7883,6 +8003,49 @@ struct AppTabSidebar: View {
     }
 }
 
+enum ProcessHighlight {
+    case cpu, memory
+}
+
+struct ProcessUsageRow: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
+    let snapshot: ProcessSnapshot
+    let highlight: ProcessHighlight
+
+    var body: some View {
+        HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(snapshot.name)
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
+                    .lineLimit(1).truncationMode(.tail)
+                Text("pid \(snapshot.pid)")
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+            Spacer(minLength: 4)
+            if highlight == .cpu {
+                Text(String(format: "%.1f%%", snapshot.cpuPercent))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(Color.usage(min(100, snapshot.cpuPercent)))
+                Text(String(format: "%.0f MB", snapshot.memoryMB))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+                    .frame(width: 52, alignment: .trailing)
+            } else {
+                Text(String(format: "%.0f MB", snapshot.memoryMB))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nPurple)
+                Text(String(format: "%.1f%%", snapshot.cpuPercent))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+                    .frame(width: 44, alignment: .trailing)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
 struct MonitorModernHeaderView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var m = CPUMonitor.shared
@@ -7949,6 +8112,7 @@ struct MonitorCPUSectionView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var m = CPUMonitor.shared
+    @ObservedObject private var proc = ProcessMonitor.shared
     let onTemperatureTap: () -> Void
 
     var body: some View {
@@ -7973,6 +8137,19 @@ struct MonitorCPUSectionView: View {
                     let eff = i < m.efficiencyCoreCount
                     let cIdx = eff ? i : i - m.efficiencyCoreCount
                     CoreRow(core: core, index: i, isEfficiency: eff, clusterIndex: cIdx)
+                }
+            }
+            Text(display.tr("processes.topCpu"))
+                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                .foregroundColor(.secondary)
+                .padding(.top, 6)
+            if proc.topByCPU.isEmpty {
+                MonitorRow(label: display.tr("processes.col.cpu"), value: display.tr("processes.none"))
+            } else {
+                VStack(spacing: 2) {
+                    ForEach(proc.topByCPU) { p in
+                        ProcessUsageRow(snapshot: p, highlight: .cpu)
+                    }
                 }
             }
         }
@@ -8005,6 +8182,7 @@ struct MonitorMemorySectionView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var m = CPUMonitor.shared
+    @ObservedObject private var proc = ProcessMonitor.shared
     let onMemoryTap: () -> Void
 
     var body: some View {
@@ -8022,6 +8200,19 @@ struct MonitorMemorySectionView: View {
             MonitorRow(label: display.tr("row.wired"), value: String(format: "%.1f GB", m.memoryWiredGB))
             MonitorRow(label: display.tr("row.compressed"), value: String(format: "%.1f GB", m.memoryCompressedGB))
             MonitorRow(label: display.tr("row.swap"), value: String(format: "%.1f GB", m.memorySwapGB))
+            Text(display.tr("processes.topRam"))
+                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                .foregroundColor(.secondary)
+                .padding(.top, 6)
+            if proc.topByMemory.isEmpty {
+                MonitorRow(label: display.tr("processes.col.ram"), value: display.tr("processes.none"))
+            } else {
+                VStack(spacing: 2) {
+                    ForEach(proc.topByMemory) { p in
+                        ProcessUsageRow(snapshot: p, highlight: .memory)
+                    }
+                }
+            }
         }
     }
 }

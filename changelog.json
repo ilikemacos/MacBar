@@ -13,6 +13,17 @@
     },
     {
       "channel": "beta",
+      "title": "v8.4.1 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Top processes",
+          "text": " \u2014 CPU section shows top 5 by CPU%; Memory section shows top 5 by RAM. Polls every 3s while the menubar popover is open (idle-safe)."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.4.0 Beta",
       "accent": "orange",
       "items": [
