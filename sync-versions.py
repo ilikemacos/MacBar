@@ -988,7 +988,7 @@ def chat_kb_platform(data: dict) -> str:
     linux = v.linux_release(data)
     linux_gh = v.github_release_page_url(linux["id"])
     return f"""    {{ label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
-      a: "On macOS Beta, open the main window and pick the **How it works** tab — same overview as the website. On the site, scroll to **How everything works** for tables covering macOS Stable ({stable['short']}), macOS Beta ({beta['short']}), Linux ({linux['short']}), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." }},
+      a: "Scroll to **How everything works** on [getrnitro.netlify.app](https://getrnitro.netlify.app/) for tables covering macOS Stable ({stable['short']}), macOS Beta ({beta['short']}), Linux ({linux['short']}), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." }},
     {{ label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
       a: `Windows is no longer actively supported. The last build (${{RNITRO_VERSIONS.windows.id}}) remains on the Windows tab — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` }},
     {{ label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
