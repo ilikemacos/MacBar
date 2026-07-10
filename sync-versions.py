@@ -15,6 +15,7 @@ import versions as v
 
 SITE = v.SITE
 INDEX = SITE / "index.html"
+ARCHIVES_HTML = SITE / "archives.html"
 README = SITE / "README.md"
 MAKE_STABLE = SITE / "make-v6-nochat.sh.py"
 
@@ -272,10 +273,11 @@ def hero_head(data: dict) -> str:
     beta = v.beta_release(data)
     linux = v.linux_release(data)
     desc = (
-        f"rNitro — real-time CPU monitor for Apple Silicon macOS "
-        f"({stable['short']} Stable / {beta['short']} Beta), "
-        f"Linux {linux['short']} pre-release, and legacy Windows builds. Free, no telemetry."
+        f"rNitro — free menu bar system monitor for Apple Silicon Macs "
+        f"({stable['short']} Stable / {beta['short']} Beta). CPU, temperature, MacBook battery %, "
+        f"GPU, RAM. Linux {linux['short']} pre-release. No account, no telemetry."
     )
+    og_image = f"{SITE_URL}/apple-touch-icon.png"
     ld_json = json.dumps(
         {
             "@context": "https://schema.org",
@@ -283,6 +285,7 @@ def hero_head(data: dict) -> str:
             "name": "rNitro",
             "operatingSystem": "macOS, Linux, Windows",
             "applicationCategory": "UtilitiesApplication",
+            "softwareVersion": beta["short"],
             "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
             "downloadUrl": SITE_URL,
         },
@@ -292,10 +295,14 @@ def hero_head(data: dict) -> str:
 <meta name="description" content="{desc}">
 <link rel="canonical" href="{SITE_URL}/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="rNitro — CPU Monitor">
+<meta property="og:title" content="rNitro — Menu Bar System Monitor">
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{SITE_URL}/">
-<meta property="og:image" content="{SITE_URL}/apple-touch-icon.png">
+<meta property="og:image" content="{og_image}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="rNitro — Menu Bar System Monitor">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="{og_image}">
 <script type="application/ld+json">{ld_json}</script>"""
 
 
@@ -396,7 +403,7 @@ def hero_dl_note(data: dict) -> str:
     gh = v.github_releases_url()
     linux_gh = v.github_release_page_url(linux["id"])
     return f"""    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> — {stable["short"]} Final and {beta["short"]} Beta (ZIP, PKG, DMG). Linux {linux["short"]} pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="{linux_gh}" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers.
+      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> — {stable["short"]} Final and {beta["short"]} Beta (ZIP, PKG, DMG). Linux {linux["short"]} pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="{linux_gh}" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers. Older DMG builds: <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a>.
     </p>"""
 
 
@@ -632,44 +639,14 @@ def _archive_link(fname: str | None, label: str) -> str:
 
 
 def download_previous_section(data: dict) -> str:
-    archive = data.get("archive") or []
-    rows = []
-    for row in archive:
-        ch = row["channel"]
-        ch_color = "var(--green)" if ch == "stable" else "var(--orange)"
-        ch_label = "Stable" if ch == "stable" else "Beta"
-        short_hash = row["sh_hash"][:16] + "…"
-        rows.append(
-            f"""      <tr>
-        <td style="color:var(--text); font-weight:600;">{row["id"]}</td>
-        <td><span class="prev-channel" style="color:{ch_color}; border-color:{ch_color};">{ch_label}</span></td>
-        <td>{_archive_link(row.get("sh"), ".sh")}</td>
-        <td>{_archive_link(row.get("pkg"), "PKG")}</td>
-        <td>{_archive_link(row.get("dmg"), "DMG")}</td>
-        <td class="prev-hash" title="{row["sh_hash"]}">{short_hash}</td>
-      </tr>"""
-        )
-    body = "\n".join(rows) if rows else '      <tr><td colspan="6" style="color:var(--muted);">No archive builds staged.</td></tr>'
-    return f"""  <div id="prev-versions-panel" class="prev-versions-panel" style="margin-top:16px;">
-    <button type="button" class="prev-versions-toggle" onclick="togglePreviousVersions()" aria-expanded="false">
-      <span>Previous versions</span>
-      <span class="prev-versions-chevron" aria-hidden="true">▸</span>
-    </button>
-    <p class="prev-versions-note">Older builds for rollback or compatibility — use if a newer release misbehaves on your Mac.</p>
-    <div class="prev-versions-body">
-      <div class="prev-versions-scroll">
-        <table class="prev-versions-table">
-          <thead>
-            <tr>
-              <th>Version</th><th>Channel</th><th>.sh</th><th>PKG</th><th>DMG</th><th>SHA-256 (.sh)</th>
-            </tr>
-          </thead>
-          <tbody>
-{body}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    stable = v.stable_release(data)
+    beta = v.beta_release(data)
+    return f"""  <div style="margin-top:16px; text-align:center;">
+    <p style="color:var(--muted); font-size:14px; font-family:var(--mono); line-height:1.6;">
+      Need an older build? Shell installers for v8.3.9–v8.3.11 are in <strong style="color:var(--text);">Other download options</strong> above.
+      All hosted <strong style="color:var(--text);">DMG</strong> disk images (current + archive) are on
+      <a href="archives.html" style="color:var(--cyan);">rNitro Archives</a> — {stable["short"]} Final, {beta["short"]} Beta, and older releases.
+    </p>
   </div>"""
 
 
@@ -1154,6 +1131,162 @@ def readme_curl(data: dict) -> str:
 ```"""
 
 
+def _parse_release_id_from_dmg(name: str) -> str | None:
+    m = re.match(r"^rNitro-(v[\w.-]+-arm64)\.dmg$", name)
+    return m.group(1) if m else None
+
+
+def _version_sort_key(release_id: str) -> tuple[int, int, int, int]:
+    m = re.search(r"v(\d+)\.(\d+)\.(\d+)", release_id)
+    if not m:
+        return (0, 0, 0, 0)
+    major, minor, patch = (int(x) for x in m.groups())
+    is_beta = 1 if "Beta" in release_id else 0
+    return (major, minor, patch, is_beta)
+
+
+def dmg_archive_rows(data: dict) -> list[dict]:
+    stable_id = v.stable_id(data)
+    beta_id = v.beta_id(data)
+    rows: list[dict] = []
+    for path in sorted(SITE.glob("rNitro-v*-arm64.dmg"), key=lambda p: _version_sort_key(p.stem.removeprefix("rNitro-")), reverse=True):
+        rid = _parse_release_id_from_dmg(path.name)
+        if not rid:
+            continue
+        if "Beta" in rid:
+            channel, ch_label, ch_color = "beta", "Beta", "var(--orange)"
+        else:
+            channel, ch_label, ch_color = "stable", "Stable", "var(--green)"
+        badge = ""
+        if rid == stable_id:
+            badge = ' <span style="color:var(--green); font-size:11px;">(current stable)</span>'
+        elif rid == beta_id:
+            badge = ' <span style="color:var(--orange); font-size:11px;">(current beta)</span>'
+        rows.append(
+            {
+                "id": rid,
+                "channel": channel,
+                "ch_label": ch_label,
+                "ch_color": ch_color,
+                "filename": path.name,
+                "size": fmt_size(path.stat().st_size),
+                "badge": badge,
+            }
+        )
+    return rows
+
+
+def generate_archives_html(data: dict) -> str:
+    stable = v.stable_release(data)
+    beta = v.beta_release(data)
+    rows = dmg_archive_rows(data)
+    table_rows = []
+    for row in rows:
+        table_rows.append(
+            f"""        <tr>
+          <td style="color:var(--text); font-weight:600;">{row["id"]}{row["badge"]}</td>
+          <td><span class="tag" style="color:{row["ch_color"]}; border-color:{row["ch_color"]};">{row["ch_label"]}</span></td>
+          <td>{row["size"]}</td>
+          <td><button type="button" class="dl-btn" onclick="requestDownload('{row["filename"]}')">Download DMG</button></td>
+        </tr>"""
+        )
+    tbody = "\n".join(table_rows) if table_rows else '        <tr><td colspan="4" style="color:var(--muted);">No DMG files found.</td></tr>'
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rNitro Archives — DMG Downloads</title>
+<meta name="description" content="All hosted rNitro macOS DMG disk images — {stable["short"]} Stable, {beta["short"]} Beta, and older releases.">
+<link rel="canonical" href="{SITE_URL}/archives.html">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<style>
+  @font-face {{
+    font-family: 'Varela Round';
+    src: url('VarelaRound.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }}
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  :root {{
+    --bg: #0A0A0F; --card: #13131E; --border: #2A2A40;
+    --cyan: #00D9FF; --green: #00FF80; --orange: #FF8C1A;
+    --text: #E8E8F0; --muted: #6B6B8A;
+    --mono: ui-monospace, Menlo, monospace;
+    --sans: 'Varela Round', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }}
+  body {{
+    background: var(--bg); color: var(--text); font-family: var(--sans);
+    font-size: 14px; min-height: 100vh; padding: 32px 16px 48px;
+  }}
+  .wrap {{ max-width: 820px; margin: 0 auto; }}
+  h1 {{ font-size: 28px; margin-bottom: 6px; }}
+  h1 span {{ color: var(--cyan); }}
+  .sub {{ color: var(--muted); line-height: 1.6; margin-bottom: 24px; max-width: 640px; }}
+  .back {{ display: inline-block; margin-bottom: 20px; color: var(--cyan); text-decoration: none; font-family: var(--mono); font-size: 13px; }}
+  .back:hover {{ text-decoration: underline; }}
+  .card {{
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; overflow-x: auto;
+  }}
+  table {{ width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }}
+  th, td {{ padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }}
+  th {{ color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }}
+  .tag {{
+    display: inline-block; padding: 2px 8px; border-radius: 12px; border: 1px solid;
+    font-size: 11px; font-weight: 500;
+  }}
+  .dl-btn {{
+    background: transparent; border: 1px solid var(--cyan); color: var(--cyan);
+    border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 12px;
+    cursor: pointer;
+  }}
+  .dl-btn:hover {{ background: rgba(0,217,255,0.1); }}
+  .note {{
+    margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.55;
+    font-family: var(--mono);
+  }}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Main download page</a>
+  <h1><span>rNitro</span> Archives</h1>
+  <p class="sub">All hosted macOS <strong>DMG</strong> disk images. Open the DMG, drag <code>rNitro.app</code> to Applications, then right-click → <strong>Open</strong> once if Gatekeeper blocks it. For ZIP, PKG, or curl installers see the <a href="index.html" style="color:var(--cyan);">main page</a>.</p>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Version</th><th>Channel</th><th>Size</th><th>Download</th></tr>
+      </thead>
+      <tbody>
+{tbody}
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Current releases: {stable["label"]} (stable) · {beta["label"]} (beta). GitHub: <a href="{v.github_releases_url()}" style="color:var(--cyan);">ilikemacos/rNitro</a></p>
+</div>
+<script>
+function requestDownload(filename) {{
+  const a = document.createElement('a');
+  a.href = filename;
+  a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}}
+</script>
+</body>
+</html>"""
+
+
+def sync_archives_html(data: dict) -> None:
+    ARCHIVES_HTML.write_text(generate_archives_html(data), encoding="utf-8")
+    print(f"Updated {ARCHIVES_HTML.name}")
+
+
 def sync_readme(data: dict) -> None:
     if not README.is_file():
         print(f"Skipping {README.name} (not found)")
@@ -1217,6 +1350,7 @@ def main() -> None:
 
     print("Syncing index.html...")
     sync_index(data)
+    sync_archives_html(data)
     sync_readme(data)
 
     print("\nDone. version.json:")
