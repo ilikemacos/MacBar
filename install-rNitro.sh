@@ -2,6 +2,7 @@
 #
 # rNitro installer — hardened
 #
+# v8.3.13-Beta-arm64 — performance: lower idle CPU/RAM; lazy monitors; IOKit battery fast path; SMC TTL cache.
 # v8.3.12-Beta-arm64 — battery: direct IOKit AppleSmartBattery read (fixes — % / desktop on MacBooks).
 # v8.3.9-Beta-arm64 — performance: background CPU polling, SMC key cache, debounced menubar, narrower SwiftUI observation.
 # v8.3.0-Beta-arm64 — in-app updater polish, faster App Cleaner, Linux v0.1 companion release.
@@ -207,7 +208,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="42a3aa69b64a4c02b1150734ceb849d7944d8a91f44c662b4f0cf54c4f9d1381"
+EXPECTED_HASH="09ed067da0c59bab731960bfe2453cbd69d364c9d9698fef5f461565f5f29339"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -365,7 +366,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.3.12-Beta-arm64"
+let CURRENT_VERSION = "v8.3.13-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -1069,6 +1070,8 @@ fileprivate final class SMCReader {
         let dataType: UInt32
     }
     private var resolvedTempKeys: [String: CachedKey]?
+    private var cachedReadings: [Double] = []
+    private var lastReadingsTime = Date.distantPast
     private let cacheLock = NSLock()
 
     private struct SMCVersion {
@@ -1225,14 +1228,29 @@ fileprivate final class SMCReader {
     }
 
     func smcReadings() -> [Double] {
+        let ttl = MonitorActivity.smcCacheTTL
+        cacheLock.lock()
+        let age = Date().timeIntervalSince(lastReadingsTime)
+        if age < ttl, !cachedReadings.isEmpty {
+            let hit = cachedReadings
+            cacheLock.unlock()
+            return hit
+        }
+        cacheLock.unlock()
+
         ensureTempKeyCache()
         cacheLock.lock()
         let keys = resolvedTempKeys ?? [:]
         cacheLock.unlock()
         guard !keys.isEmpty else { return [] }
-        return keys.compactMap { key, info in
+        let fresh = keys.compactMap { key, info in
             readCachedTemperature(key: key, info: info)
         }.filter { $0 >= 20 && $0 <= 95 }
+        cacheLock.lock()
+        cachedReadings = fresh
+        lastReadingsTime = Date()
+        cacheLock.unlock()
+        return fresh
     }
 
     private static let fanKeys = ["F0Ac", "F1Ac", "F2Ac", "F0Mn", "F1Mn", "F0Md", "F1Md"]
@@ -1664,6 +1682,8 @@ class CPUMonitor: ObservableObject {
     private let workQueue = DispatchQueue(label: "rnitro.cpu.monitor", qos: .utility)
     private var prevCPUInfo: processor_info_array_t?
     private var prevNumCPUInfo: mach_msg_type_number_t = 0
+    private var cachedMemsizeGB: Double = 0
+    private var lastDiskSampleTime = Date.distantPast
 
     private struct MemorySample {
         let totalGB, usedGB, freeGB, usedPct: Double
@@ -1744,6 +1764,11 @@ class CPUMonitor: ObservableObject {
             clockSource = "Apple Silicon model table"
         }
         cores = (0..<max(logicalCores, 1)).map { CoreInfo(id: $0, usage: 0, clockMHz: baseClock) }
+        var memSize: UInt64 = 0
+        var memLen = MemoryLayout<UInt64>.size
+        if sysctlbyname("hw.memsize", &memSize, &memLen, nil, 0) == 0, memSize > 0 {
+            cachedMemsizeGB = Double(memSize) / 1_073_741_824
+        }
     }
 
     private var pollInterval: TimeInterval = MonitorActivity.cpuInterval
@@ -1772,7 +1797,12 @@ class CPUMonitor: ObservableObject {
     private func update() {
         let cpu = updateCPUUsage()
         let mem = sampleMemory()
-        let disk = sampleDisk()
+        let now = Date()
+        var disk: DiskSample? = nil
+        if now.timeIntervalSince(lastDiskSampleTime) >= MonitorActivity.diskInterval {
+            disk = sampleDisk()
+            lastDiskSampleTime = now
+        }
         let sys = sampleSystemStats()
         let derived = sampleDerived()
         DispatchQueue.main.async { [weak self] in
@@ -1832,10 +1862,8 @@ class CPUMonitor: ObservableObject {
     }
 
     private func sampleMemory() -> MemorySample? {
-        var memSize: UInt64 = 0
-        var memLen = MemoryLayout<UInt64>.size
-        sysctlbyname("hw.memsize", &memSize, &memLen, nil, 0)
-        let totalGB = Double(memSize) / 1_073_741_824
+        let totalGB = cachedMemsizeGB > 0 ? cachedMemsizeGB : memoryTotalGB
+        guard totalGB > 0 else { return nil }
 
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
@@ -1945,10 +1973,13 @@ class CPUMonitor: ObservableObject {
     }
 
     private func sampleDerived() -> DerivedSample {
-        DerivedSample(
+        let sensors: [Double] = MonitorActivity.includeSmcSample
+            ? SMCReader.shared.smcReadings() + IOHIDTempReader.shared.readings()
+            : []
+        return DerivedSample(
             lpm: Self.readLowPowerModeEnabled(),
             state: ProcessInfo.processInfo.thermalState,
-            sensorReadings: SMCReader.shared.smcReadings() + IOHIDTempReader.shared.readings(),
+            sensorReadings: sensors,
             socSample: MonitorActivity.includePowerSample ? IOReportPowerReader.shared.sample() : nil
         )
     }
@@ -2053,6 +2084,7 @@ class BatteryMonitor: ObservableObject {
     }
 
     private var timerSource: DispatchSourceTimer?
+    private let workQueue = DispatchQueue(label: "rnitro.battery", qos: .utility)
     private var prevLevel: Int?
     private var prevSampleTime: Date?
     private var historyPoints: [(Date, Int)] = []
@@ -2084,7 +2116,7 @@ class BatteryMonitor: ObservableObject {
     func applyActivityInterval() {
         timerSource?.cancel()
         timerSource = nil
-        let src = DispatchSource.makeTimerSource(queue: .main)
+        let src = DispatchSource.makeTimerSource(queue: workQueue)
         src.schedule(deadline: .now(), repeating: MonitorActivity.batteryInterval)
         src.setEventHandler { [weak self] in self?.poll() }
         src.resume()
@@ -2127,7 +2159,11 @@ class BatteryMonitor: ObservableObject {
             }
             let cutoff = now.addingTimeInterval(-12 * 3600)
             historyPoints.removeAll { $0.0 < cutoff }
-            history12h = historyPoints.map { Double($0.1) }
+            if history12h.count == historyPoints.count, !historyPoints.isEmpty {
+                history12h[history12h.count - 1] = Double(historyPoints.last!.1)
+            } else {
+                history12h = historyPoints.map { Double($0.1) }
+            }
         }
         isPresent = snap.isPresent
         levelPercent = snap.levelPercent
@@ -2144,8 +2180,16 @@ class BatteryMonitor: ObservableObject {
         healthPercent = snap.healthPercent
     }
 
+    private static func iokitSnapshotComplete(_ snap: Snapshot) -> Bool {
+        snap.isPresent && snap.levelPercent > 0
+    }
+
     private static func collectSnapshot(prevLevel: Int?, prevSampleTime: Date?) -> Snapshot {
         var snap = readIOKitBattery() ?? Snapshot()
+        if iokitSnapshotComplete(snap) {
+            finalizeSnapshot(&snap, prevLevel: prevLevel, prevSampleTime: prevSampleTime)
+            return snap
+        }
         if let pm = readPmset() { mergePmset(pm, into: &snap) }
         if let hw = readIoreg() { mergeIoreg(hw, into: &snap) }
         finalizeSnapshot(&snap, prevLevel: prevLevel, prevSampleTime: prevSampleTime)
@@ -2959,8 +3003,16 @@ class BTCPriceMonitor: ObservableObject {
     )!
 
     func start() {
+        guard timer == nil else { return }
         fetch()
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.fetch() }
+        let t = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.fetch() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
     }
 
     private func fetch() {
@@ -2988,13 +3040,38 @@ enum MonitorActivity {
     static var diskInterval: TimeInterval { popoverOpen ? 5.0 : 8.0 }
     static var sensorsInterval: TimeInterval { popoverOpen ? 3.0 : 8.0 }
     static var includePowerSample: Bool { popoverOpen }
+    static var smcCacheTTL: TimeInterval { popoverOpen ? 1.0 : 3.0 }
+    static var includeSmcSample: Bool {
+        popoverOpen || MenuBarConfig.enabledSlots.contains(.temp)
+    }
+
+    static var needsNetworkMonitor: Bool {
+        popoverOpen || MenuBarConfig.enabledSlots.contains(.network)
+    }
+
+    static var needsBTCMonitor: Bool {
+        MenuBarConfig.enabledSlots.contains(.btc)
+    }
+
+    static var needsAdvisorMonitor: Bool {
+        AdvisorThresholds.load().proactiveEnabled && popoverOpen
+    }
+
+    static func refreshOptionalServices() {
+        if needsNetworkMonitor { NetworkMonitor.shared.start() } else { NetworkMonitor.shared.stop() }
+        if needsBTCMonitor { BTCPriceMonitor.shared.start() } else { BTCPriceMonitor.shared.stop() }
+        let advisorOn = needsAdvisorMonitor
+        DispatchQueue.main.async {
+            if advisorOn { SystemAdvisorModel.shared.startMonitoring() } else { SystemAdvisorModel.shared.stopMonitoring() }
+        }
+    }
 
     static func setPopoverOpen(_ open: Bool) {
         guard popoverOpen != open else { return }
         popoverOpen = open
         CPUMonitor.shared.setPollInterval(cpuInterval)
-        NetworkMonitor.shared.applyActivityInterval()
         BatteryMonitor.shared.applyActivityInterval()
+        refreshOptionalServices()
         if open {
             GPUMonitor.shared.start()
             DiskActivityMonitor.shared.start()
@@ -3031,27 +3108,32 @@ class GPUMonitor: ObservableObject {
     }
 
     private func poll() {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/sbin/ioreg")
-        task.arguments = ["-r", "-d", "1", "-c", "IOAccelerator"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
-        do { try task.run() } catch { return }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        task.waitUntilExit()
-        guard let out = String(data: data, encoding: .utf8) else { return }
-        if let range = out.range(of: "\"Device Utilization %\"=") {
-            let after = out[range.upperBound...]
-            let numStr = after.prefix(while: { $0.isNumber })
-            if let val = Double(numStr) {
-                DispatchQueue.main.async {
-                    self.usage = min(100, val)
-                    self.usageHistory.removeFirst()
-                    self.usageHistory.append(self.usage)
+        let val = Self.readGPUUsageIOKit()
+        DispatchQueue.main.async {
+            self.usage = min(100, val)
+            self.usageHistory.removeFirst()
+            self.usageHistory.append(self.usage)
+        }
+    }
+
+    private static func readGPUUsageIOKit() -> Double {
+        var iter: io_iterator_t = 0
+        guard IOServiceGetMatchingServices(0, IOServiceMatching("IOAccelerator"), &iter) == KERN_SUCCESS else { return 0 }
+        defer { IOObjectRelease(iter) }
+        var service = IOIteratorNext(iter)
+        while service != 0 {
+            defer { IOObjectRelease(service) }
+            if let stats = IORegistryEntryCreateCFProperty(service, "PerformanceStatistics" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() {
+                if let dict = stats as? [String: Any], let util = dict["Device Utilization %"] as? NSNumber {
+                    return util.doubleValue
+                }
+                if let dict = stats as? NSDictionary, let util = dict["Device Utilization %"] as? NSNumber {
+                    return util.doubleValue
                 }
             }
+            service = IOIteratorNext(iter)
         }
+        return 0
     }
 }
 
@@ -7460,6 +7542,7 @@ struct HowItWorksView: View {
                 gettingStartedFlowchart
                 updaterFlowchart
                 monitorFlowchart
+                beta813PerformanceFlowchart
 
                 HStack(spacing: 10) {
                     MinimalButton(title: "Open website", tint: .accent) {
@@ -7500,7 +7583,7 @@ struct HowItWorksView: View {
                 AnyView(howCode("rNitro-\(model.betaId).zip")),
                 AnyView(howCode("~/Applications/rNitro.app")),
                 AnyView(Text("In-app — Install Final or Install Beta")),
-                AnyView(Text("Everything in Stable plus all AI providers, temp banners, AES-256 keys, first-launch tips. You're on \(UpdateChecker.displayLabel(CURRENT_VERSION))."))
+                AnyView(Text("Everything in Stable plus all AI providers, temp banners, AES-256 keys, first-launch tips, and v8.3.13 idle optimisations. You're on \(UpdateChecker.displayLabel(CURRENT_VERSION))."))
             ],
             [
                 AnyView(platformLabel("Linux", channel: "Pre-release", accent: linuxGold)),
@@ -7669,7 +7752,7 @@ struct HowItWorksView: View {
     private var monitorFlowchart: some View {
         FlowchartPanel(
             title: "Live monitor loop",
-            caption: "How menu bar stats stay current while rNitro is running."
+            caption: "How menu bar stats stay current while rNitro is running. See Beta 8.3.13 for the optimised idle model."
         ) {
                 VStack(alignment: .leading, spacing: 0) {
                     FlowchartNode(
@@ -7703,6 +7786,49 @@ struct HowItWorksView: View {
                         kind: .terminal
                     )
                 }
+        }
+    }
+
+    private var beta813PerformanceFlowchart: some View {
+        FlowchartPanel(
+            title: "Beta 8.3.13 — How it works",
+            caption: "Lower idle CPU and RAM: only run what the menu bar and open popover actually need."
+        ) {
+            VStack(alignment: .leading, spacing: 0) {
+                FlowchartNode(
+                    title: "App launch",
+                    detail: "CPUMonitor + BatteryMonitor always run for the menu bar. Optional services start only when needed.",
+                    accent: .nOrange
+                )
+                FlowchartConnector()
+                FlowchartNode(
+                    title: "Always-on (menubar idle)",
+                    detail: "CPU 2s · Battery 5s (IOKit first). Network, BTC, and Advisor stay off unless a slot or the popover needs them.",
+                    accent: .accent
+                )
+                FlowchartConnector()
+                FlowchartNode(
+                    title: "Menubar subscriptions",
+                    detail: "Combine publishers wired only to enabled slots — not every stat on every tick.",
+                    accent: .nGreen
+                )
+                FlowchartConnector()
+                FlowchartNode(
+                    title: "Popover open?",
+                    detail: "MonitorActivity switches intervals and enables heavier readers.",
+                    accent: .nOrange,
+                    kind: .decision
+                )
+                FlowchartConnector()
+                FlowchartBranch(
+                    leftTitle: "No → idle path",
+                    leftDetail: "Thermal estimate; SMC TTL 3s; disk/GPU/sensors off; pmset/ioreg skipped when IOKit battery is complete.",
+                    rightTitle: "Yes → full path",
+                    rightDetail: "GPU via IOKit; SMC 1s; disk at diskInterval; IOReport power; network 1.5s.",
+                    leftAccent: .secondary,
+                    rightAccent: .nGreen
+                )
+            }
         }
     }
 
@@ -8473,12 +8599,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func applicationDidFinishLaunching(_ notification: Notification) {
         FontRegistrar.registerVarelaRound()
         UpdateChecker.checkOnLaunch()
-        BTCPriceMonitor.shared.start()
-        NetworkMonitor.shared.start()
         MonitorActivity.setPopoverOpen(false)
         UNUserNotificationCenter.current().delegate = self
         AdvisorNotificationCenter.configure()
-        SystemAdvisorModel.shared.startMonitoring()
         BatteryMonitor.shared.startMonitoring()
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -8489,34 +8612,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             MenuBarIconManager.shared.attach(to: button)
         }
         updateStatusTitle()
-
-        menuBarRefreshTrigger
-            .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
-            .sink { [weak self] in self?.updateStatusTitle() }
-            .store(in: &subscriptions)
-        let scheduleRefresh: () -> Void = { [weak self] in self?.menuBarRefreshTrigger.send() }
-        let main = DispatchQueue.main
-        let monitors: [AnyPublisher<Void, Never>] = [
-            CPUMonitor.shared.$totalUsage.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$temperature.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$packagePowerWatts.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$memoryUsedPercent.map { _ in () }.eraseToAnyPublisher(),
-            CPUMonitor.shared.$isLowPowerModeEnabled.map { _ in () }.eraseToAnyPublisher(),
-            NetworkMonitor.shared.$downloadMbps.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$levelPercent.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$isCharging.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$isOnAC.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$timeRemainingMinutes.map { _ in () }.eraseToAnyPublisher(),
-            BatteryMonitor.shared.$timeToFullMinutes.map { _ in () }.eraseToAnyPublisher(),
-            BTCPriceMonitor.shared.$priceUSD.map { _ in () }.eraseToAnyPublisher()
-        ]
-        for publisher in monitors {
-            publisher.receive(on: main).sink { _ in scheduleRefresh() }.store(in: &subscriptions)
-        }
+        rebuildMenubarSubscriptions()
 
         modeObserver = NotificationCenter.default.addObserver(
             forName: .menuBarModeChanged, object: nil, queue: .main
-        ) { [weak self] _ in self?.updateStatusTitle() }
+        ) { [weak self] _ in
+            MonitorActivity.refreshOptionalServices()
+            self?.rebuildMenubarSubscriptions()
+            self?.updateStatusTitle()
+        }
 
         powerModeObserver = NotificationCenter.default.addObserver(
             forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main
@@ -8635,6 +8739,47 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
+    private func rebuildMenubarSubscriptions() {
+        subscriptions.removeAll()
+        menuBarRefreshTrigger
+            .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
+            .sink { [weak self] in self?.updateStatusTitle() }
+            .store(in: &subscriptions)
+        let scheduleRefresh: () -> Void = { [weak self] in self?.menuBarRefreshTrigger.send() }
+        let slots = MenuBarConfig.enabledSlots
+        var monitors: [AnyPublisher<Void, Never>] = [
+            CPUMonitor.shared.$totalUsage.map { _ in () }.eraseToAnyPublisher(),
+            CPUMonitor.shared.$isLowPowerModeEnabled.map { _ in () }.eraseToAnyPublisher()
+        ]
+        if slots.contains(.temp) {
+            monitors.append(CPUMonitor.shared.$temperature.map { _ in () }.eraseToAnyPublisher())
+        }
+        if slots.contains(.power) {
+            monitors.append(CPUMonitor.shared.$packagePowerWatts.map { _ in () }.eraseToAnyPublisher())
+        }
+        if slots.contains(.ram) {
+            monitors.append(CPUMonitor.shared.$memoryUsedPercent.map { _ in () }.eraseToAnyPublisher())
+        }
+        if slots.contains(.network) {
+            monitors.append(NetworkMonitor.shared.$downloadMbps.map { _ in () }.eraseToAnyPublisher())
+        }
+        if slots.contains(.battery) {
+            monitors.append(contentsOf: [
+                BatteryMonitor.shared.$levelPercent.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$isCharging.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$isOnAC.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$timeRemainingMinutes.map { _ in () }.eraseToAnyPublisher(),
+                BatteryMonitor.shared.$timeToFullMinutes.map { _ in () }.eraseToAnyPublisher()
+            ])
+        }
+        if slots.contains(.btc) {
+            monitors.append(BTCPriceMonitor.shared.$priceUSD.map { _ in () }.eraseToAnyPublisher())
+        }
+        for publisher in monitors {
+            publisher.receive(on: DispatchQueue.main).sink { _ in scheduleRefresh() }.store(in: &subscriptions)
+        }
+    }
+
     private func updateStatusTitle() {
         guard let button = statusItem?.button else { return }
         MenuBarIconManager.shared.refresh(for: button)
@@ -8693,6 +8838,8 @@ swiftc "$WORK_DIR/main.swift" \
     -lIOReport \
     -parse-as-library \
     -O
+
+strip -x "$WORK_DIR/rNitro" 2>/dev/null || true
 
 # ── Security: make sure compilation actually produced a real, executable
 #    regular file before we go any further (defends against a compromised
