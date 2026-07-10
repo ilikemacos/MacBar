@@ -2,6 +2,8 @@
 #
 # rNitro installer — hardened
 #
+# v8.4.0-Beta-arm64 — Settings: font size + language (EN/ZH/ES/DE).
+# v8.3.16-Beta-arm64 — removed in-app How it works tab (overview remains on website).
 # v8.3.15-Beta-arm64 — tiered idle sampling, RingBuffer histories, lazy battery graph, idle profile setting.
 # v8.3.12-Beta-arm64 — battery: direct IOKit AppleSmartBattery read (fixes — % / desktop on MacBooks).
 # v8.3.9-Beta-arm64 — performance: background CPU polling, SMC key cache, debounced menubar, narrower SwiftUI observation.
@@ -208,7 +210,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="bc93d6dcae55ad059584e32efd21c414ddc16e4dc98ea51ad6ce804ec2dea5f2"
+EXPECTED_HASH="3174d6b67894d22d84b94ee11dcc5bdd3cb78d8c16408850694541d3500a08fa"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -366,7 +368,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.3.15-Beta-arm64"
+let CURRENT_VERSION = "v8.4.0-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -1584,8 +1586,8 @@ enum IdleProfile: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .balanced: return "Balanced"
-        case .aggressive: return "Aggressive (lowest RAM)"
+        case .balanced: return DisplayPreferencesStore.shared.tr("general.idleBalanced")
+        case .aggressive: return DisplayPreferencesStore.shared.tr("general.idleAggressive")
         }
     }
 }
@@ -3656,7 +3658,6 @@ enum AppTab: String, CaseIterable, Identifiable {
     case chat = "Chat"
     case cleaner = "Cleaner"
     case settings = "Settings"
-    case howItWorks = "How it works"
     var id: String { rawValue }
 
     var icon: String {
@@ -3666,12 +3667,23 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .chat: return "bubble.left.and.bubble.right"
         case .cleaner: return "trash"
         case .settings: return "gearshape"
-        case .howItWorks: return "book.closed"
         }
     }
 
     static let popoverTabs: [AppTab] = [.monitor, .advisor, .chat, .cleaner]
-    static let windowTabs: [AppTab] = [.monitor, .advisor, .chat, .cleaner, .settings, .howItWorks]
+    static let windowTabs: [AppTab] = [.monitor, .advisor, .chat, .cleaner, .settings]
+
+    var localizedTitle: String {
+        let key: String
+        switch self {
+        case .monitor: key = "tab.monitor"
+        case .advisor: key = "tab.advisor"
+        case .chat: key = "tab.chat"
+        case .cleaner: key = "tab.cleaner"
+        case .settings: key = "tab.settings"
+        }
+        return DisplayPreferencesStore.shared.tr(key)
+    }
 }
 
 extension Notification.Name {
@@ -4919,14 +4931,16 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 
     var label: String {
+        let key: String
         switch self {
-        case .ai: return "AI"
-        case .appearance: return "Appearance"
-        case .menubar: return "Menubar"
-        case .monitor: return "Monitor"
-        case .alerts: return "Alerts"
-        case .general: return "General"
+        case .ai: key = "settings.ai"
+        case .appearance: key = "settings.appearance"
+        case .menubar: key = "settings.menubar"
+        case .monitor: key = "settings.monitor"
+        case .alerts: key = "settings.alerts"
+        case .general: key = "settings.general"
         }
+        return DisplayPreferencesStore.shared.tr(key)
     }
 
     var icon: String {
@@ -4943,14 +4957,15 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @State private var section: SettingsSection = .ai
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Settings")
+                Text(display.tr("settings.title"))
                     .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
-                Text("AI keys, monitor layout, menubar, alerts, and startup options.")
+                Text(display.tr("settings.subtitle"))
                     .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
@@ -5079,16 +5094,45 @@ struct SettingsAISection: View {
 
 struct SettingsAppearanceSection: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @AppStorage(MonitorPreferences.uiStyleKey) private var uiStyleRaw = MonitorUIStyle.modern.rawValue
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Monitor appearance")
+                Text(display.tr("appearance.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
-                Text("Modern uses iStats-style accordion sections. Legacy is the compact classic layout.")
+                Text(display.tr("appearance.subtitle"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                Picker("Monitor UI", selection: $uiStyleRaw) {
+                Text(display.tr("appearance.fontSize"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Picker(display.tr("appearance.fontSize"), selection: Binding(
+                    get: { display.fontSize },
+                    set: { display.setFontSize($0) }
+                )) {
+                    ForEach(FontSizePreset.allCases) { size in
+                        Text(display.tr("font.\(size.rawValue)")).tag(size)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(display.tr("appearance.language"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 4)
+                Picker(display.tr("appearance.language"), selection: Binding(
+                    get: { display.language },
+                    set: { display.setLanguage($0) }
+                )) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.nativeLabel).tag(lang)
+                    }
+                }
+                .pickerStyle(.menu)
+                Text(display.tr("appearance.monitorUI"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 4)
+                Text(display.tr("appearance.monitorUI.hint"))
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Picker(display.tr("appearance.monitorUI"), selection: $uiStyleRaw) {
                     ForEach(MonitorUIStyle.allCases) { style in
                         Text(style.label).tag(style.rawValue)
                     }
@@ -5102,16 +5146,17 @@ struct SettingsAppearanceSection: View {
 
 struct SettingsMenubarSection: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @AppStorage(MonitorPreferences.menuBarLayoutKey) private var menuBarLayoutRaw = MenuBarLayout.inline.rawValue
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Menu bar icon")
+                Text(display.tr("menubar.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
-                Text("Choose layout and which stats appear in the top-right menubar.")
+                Text(display.tr("menubar.subtitle"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                Picker("Menu Bar Layout", selection: $menuBarLayoutRaw) {
+                Picker(display.tr("menubar.layout"), selection: $menuBarLayoutRaw) {
                     ForEach(MenuBarLayout.allCases) { layout in
                         Text(layout.label).tag(layout.rawValue)
                     }
@@ -5139,6 +5184,7 @@ struct SettingsMenubarSection: View {
 
 struct SettingsMonitorSection: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var net = NetworkMonitor.shared
     @ObservedObject private var weather = WeatherService.shared
     @ObservedObject private var stress = StressTester.shared
@@ -5152,33 +5198,33 @@ struct SettingsMonitorSection: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Monitor sections")
+                Text(display.tr("monitor.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
-                Text("Control which panels and tools appear on the Monitor tab.")
+                Text(display.tr("monitor.subtitle"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Toggle(isOn: $showStressUI) {
-                    Text("Show Stress Test").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("monitor.stress")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 .onChange(of: showStressUI) { _, on in if !on { stress.stop() } }
                 Toggle(isOn: $showBenchmarkUI) {
-                    Text("Show Benchmark").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("monitor.benchmark")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch).disabled(bench.isRunning)
                 Toggle(isOn: $showNetworkUI) {
-                    Text("Show Network").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("monitor.network")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 if RNITRO_FEATURE_BETA_UI {
                     Toggle(isOn: $soloMode) {
-                        Text("Solo Mode (one panel open)").font(rNitroFont(.label, metrics: metrics))
+                        Text(display.tr("monitor.solo")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
                     Toggle(isOn: $showWeather) {
-                        Text("Show weather on Network").font(rNitroFont(.label, metrics: metrics))
+                        Text(display.tr("monitor.weather")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
-                    Text("Visible panels")
+                    Text(display.tr("monitor.panels"))
                         .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                         .padding(.top, 4)
                     ForEach(MonitorPanel.allCases.filter { $0 != .cleaner }) { panel in
@@ -5207,16 +5253,17 @@ struct SettingsMonitorSection: View {
 
 struct SettingsAlertsSection: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var advisor = SystemAdvisorModel.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("System Advisor alerts")
+                Text(display.tr("alerts.advisorTitle"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
-                Text("Warning thresholds and notification behavior for the Advisor tab.")
+                Text(display.tr("alerts.advisorSubtitle"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                Text("Warning thresholds")
+                Text(display.tr("alerts.thresholds"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 thresholdRow("Temp warn °C", value: $advisor.thresholds.tempWarning, range: 55...95, step: 1)
                 thresholdRow("Temp critical °C", value: $advisor.thresholds.tempCritical, range: 65...105, step: 1)
@@ -5225,12 +5272,12 @@ struct SettingsAlertsSection: View {
                 thresholdRow("GPU %", value: $advisor.thresholds.gpuWarning, range: 50...100, step: 1)
                 thresholdRow("Battery low %", value: $advisor.thresholds.batteryLow, range: 5...40, step: 1)
                 Toggle(isOn: $advisor.thresholds.proactiveEnabled) {
-                    Text("Proactive alerts in chat").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("alerts.proactive")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 .onChange(of: advisor.thresholds.proactiveEnabled) { _, _ in advisor.refreshThresholds() }
                 Toggle(isOn: $advisor.thresholds.criticalTempBannersEnabled) {
-                    Text("macOS banners for critical temps").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("alerts.banners")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 .onChange(of: advisor.thresholds.criticalTempBannersEnabled) { _, _ in advisor.refreshThresholds() }
@@ -5259,16 +5306,17 @@ struct SettingsAlertsSection: View {
 
 struct SettingsGeneralSection: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @State private var launchAtLogin = LaunchAtLoginManager.isEnabled()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("General")
+                Text(display.tr("general.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 if #available(macOS 13.0, *) {
                     Toggle(isOn: $launchAtLogin) {
-                        Text("Launch at Login").font(rNitroFont(.label, metrics: metrics))
+                        Text(display.tr("general.launchAtLogin")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
                     .onChange(of: launchAtLogin) { _, _ in
@@ -5277,13 +5325,13 @@ struct SettingsGeneralSection: View {
                         }
                     }
                 } else {
-                    Text("Launch at Login requires macOS 13 or later.")
+                    Text(display.tr("general.launchAtLogin.req"))
                         .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
-                Text("Idle efficiency")
+                Text(display.tr("general.idleEfficiency"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 6)
-                Picker("Idle profile", selection: Binding(
+                Picker(display.tr("general.idleProfile"), selection: Binding(
                     get: { IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .balanced },
                     set: { UserDefaults.standard.set($0.rawValue, forKey: MonitorPreferences.idleProfileKey); MonitorActivity.applyIdleProfileChange() }
                 )) {
@@ -5292,11 +5340,11 @@ struct SettingsGeneralSection: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                Text("Balanced keeps the menu bar snappy. Aggressive uses slower polls and skips history buffers until the popover opens.")
+                Text(display.tr("general.idleHint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                MonitorRow(label: "Version", value: UpdateChecker.displayLabel(CURRENT_VERSION))
-                MonitorRow(label: "Install location", value: UpdateChecker.installPathLabel())
-                MinimalButton(title: "Check for Updates", action: { UpdateChecker.checkManually() })
+                MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
+                MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
+                MinimalButton(title: display.tr("general.checkUpdates"), action: { UpdateChecker.checkManually() })
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -6516,9 +6564,9 @@ struct UIMetrics: Equatable {
         }
     }
 
-    static func forWidth(_ w: CGFloat, layout: ContentLayout) -> UIMetrics {
+    static func forWidth(_ w: CGFloat, layout: ContentLayout, fontScale: CGFloat = 1.0) -> UIMetrics {
         let compact = layout == .popover || w < 420
-        let base: CGFloat = compact ? 12 : 14
+        let base: CGFloat = (compact ? 12 : 14) * fontScale
         return UIMetrics(
             base: base,
             compact: compact,
@@ -6547,11 +6595,12 @@ func rNitroFont(_ role: FontRole, metrics: UIMetrics, weight: Font.Weight = .reg
 
 struct MetricsReader<Content: View>: View {
     let layout: ContentLayout
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ViewBuilder let content: (UIMetrics) -> Content
 
     var body: some View {
         GeometryReader { geo in
-            let metrics = UIMetrics.forWidth(geo.size.width, layout: layout)
+            let metrics = UIMetrics.forWidth(geo.size.width, layout: layout, fontScale: display.fontSize.scale)
             content(metrics)
                 .frame(width: geo.size.width, height: geo.size.height)
                 .environment(\.uiMetrics, metrics)
@@ -6587,6 +6636,264 @@ enum MonitorPreferences {
     static let launchAtLoginKey = "rnitro.launchAtLogin"
     static let firstLaunchTipsKey = "rnitro.firstLaunchTipsSeen"
     static let idleProfileKey = "rnitro.idleProfile"
+    static let fontSizeKey = "rnitro.fontSize"
+    static let languageKey = "rnitro.language"
+}
+
+enum AppLanguage: String, CaseIterable, Identifiable {
+    case english = "en"
+    case chinese = "zh"
+    case spanish = "es"
+    case german = "de"
+    var id: String { rawValue }
+
+    var nativeLabel: String {
+        switch self {
+        case .english: return "English"
+        case .chinese: return "中文"
+        case .spanish: return "Español"
+        case .german: return "Deutsch"
+        }
+    }
+}
+
+enum FontSizePreset: String, CaseIterable, Identifiable {
+    case small, medium, large, xlarge
+    var id: String { rawValue }
+
+    var scale: CGFloat {
+        switch self {
+        case .small: return 0.88
+        case .medium: return 1.0
+        case .large: return 1.12
+        case .xlarge: return 1.25
+        }
+    }
+}
+
+final class DisplayPreferencesStore: ObservableObject {
+    static let shared = DisplayPreferencesStore()
+
+    @Published var language: AppLanguage
+    @Published var fontSize: FontSizePreset
+
+    private init() {
+        let langRaw = UserDefaults.standard.string(forKey: MonitorPreferences.languageKey) ?? AppLanguage.english.rawValue
+        language = AppLanguage(rawValue: langRaw) ?? .english
+        let sizeRaw = UserDefaults.standard.string(forKey: MonitorPreferences.fontSizeKey) ?? FontSizePreset.medium.rawValue
+        fontSize = FontSizePreset(rawValue: sizeRaw) ?? .medium
+    }
+
+    func setLanguage(_ lang: AppLanguage) {
+        language = lang
+        UserDefaults.standard.set(lang.rawValue, forKey: MonitorPreferences.languageKey)
+    }
+
+    func setFontSize(_ size: FontSizePreset) {
+        fontSize = size
+        UserDefaults.standard.set(size.rawValue, forKey: MonitorPreferences.fontSizeKey)
+    }
+
+    func tr(_ key: String) -> String {
+        Self.table[language]?[key] ?? Self.table[.english]?[key] ?? key
+    }
+
+    private static let table: [AppLanguage: [String: String]] = [
+        .english: enStrings,
+        .chinese: zhStrings,
+        .spanish: esStrings,
+        .german: deStrings,
+    ]
+
+    private static let enStrings: [String: String] = [
+        "tab.monitor": "Monitor", "tab.advisor": "Advisor", "tab.chat": "Chat",
+        "tab.cleaner": "Cleaner", "tab.settings": "Settings",
+        "settings.title": "Settings",
+        "settings.subtitle": "AI keys, monitor layout, menubar, alerts, and startup options.",
+        "settings.ai": "AI", "settings.appearance": "Appearance", "settings.menubar": "Menubar",
+        "settings.monitor": "Monitor", "settings.alerts": "Alerts", "settings.general": "General",
+        "appearance.title": "Display", "appearance.subtitle": "Font size, language, and monitor layout style.",
+        "appearance.fontSize": "Font size", "appearance.language": "Language",
+        "font.small": "Small", "font.medium": "Medium", "font.large": "Large", "font.xlarge": "Extra Large",
+        "appearance.monitorUI": "Monitor UI", "appearance.monitorUI.hint": "Modern uses iStats-style accordion sections. Legacy is the compact classic layout.",
+        "ui.modern": "Modern (iStats-style)", "ui.legacy": "Legacy",
+        "menubar.title": "Menu bar icon", "menubar.subtitle": "Choose layout and which stats appear in the top-right menubar.",
+        "menubar.layout": "Menu Bar Layout", "layout.compact": "Compact", "layout.inline": "Inline", "layout.minimal": "Minimal",
+        "slot.cpu": "CPU", "slot.temp": "Temp", "slot.ram": "RAM", "slot.power": "Power",
+        "slot.network": "Network", "slot.battery": "Battery", "slot.btc": "Bitcoin",
+        "monitor.title": "Monitor sections", "monitor.subtitle": "Control which panels and tools appear on the Monitor tab.",
+        "monitor.stress": "Show Stress Test", "monitor.benchmark": "Show Benchmark", "monitor.network": "Show Network",
+        "monitor.solo": "Solo Mode (one panel open)", "monitor.weather": "Show weather on Network",
+        "monitor.panels": "Visible panels", "monitor.tools": "Tools",
+        "alerts.title": "Alerts", "alerts.subtitle": "System Advisor thresholds and notification banners.",
+        "alerts.advisorTitle": "System Advisor alerts", "alerts.advisorSubtitle": "Warning thresholds and notification behavior for the Advisor tab.",
+        "alerts.thresholds": "Warning thresholds",
+        "alerts.proactive": "Proactive alerts in chat", "alerts.banners": "macOS banners for critical temps",
+        "general.title": "General", "general.launchAtLogin": "Launch at Login",
+        "general.launchAtLogin.req": "Launch at Login requires macOS 13 or later.",
+        "general.idleEfficiency": "Idle efficiency", "general.idleProfile": "Idle profile",
+        "general.idleBalanced": "Balanced", "general.idleAggressive": "Aggressive (lowest RAM)",
+        "general.idleHint": "Balanced keeps the menu bar snappy. Aggressive uses slower polls and skips history buffers until the popover opens.",
+        "general.version": "Version", "general.installLocation": "Install location", "general.checkUpdates": "Check for Updates",
+        "section.battery": "Battery & Power", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "Memory",
+        "section.disk": "Disk", "section.network": "Network", "section.sensors": "Sensors",
+        "section.tools": "Stress & Benchmark", "section.tools.summary": "Stress & Benchmark",
+        "row.usage": "Usage", "row.loadAvg": "Load avg", "row.uptime": "Uptime", "row.clock": "Clock",
+        "row.temperature": "Temperature", "row.power": "Power", "row.pressure": "Pressure",
+        "row.wired": "Wired", "row.compressed": "Compressed", "row.swap": "Swap used",
+        "row.read": "Read", "row.write": "Write", "row.ip": "IP", "row.wifi": "Wi-Fi",
+        "row.weather": "Weather", "row.location": "Location", "row.loading": "Loading…",
+        "row.download": "Download", "row.upload": "Upload", "row.lowPower": "Low Power Mode", "row.on": "On",
+        "row.stress": "Stress Test", "row.benchmark": "Benchmark", "row.bitcoin": "Bitcoin",
+        "row.status": "Status", "row.tip": "Tip", "row.noSensors": "No temperature or fan sensors found",
+        "row.sensorsTip": "SMC keys vary by chip — CPU temp still shown above",
+        "btn.start": "Start", "btn.stop": "Stop", "btn.run": "Run", "btn.running": "Running…",
+        "openMainWindow": "Open main window", "live": "Live", "cores": "Cores",
+        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Memory", "panel.disk": "Disk",
+        "panel.network": "Network", "panel.battery": "Battery & Power", "panel.sensors": "Sensors",
+        "panel.settings": "Settings", "panel.cleaner": "Cleaner",
+    ]
+
+    private static let zhStrings: [String: String] = [
+        "tab.monitor": "监控", "tab.advisor": "顾问", "tab.chat": "聊天", "tab.cleaner": "清理", "tab.settings": "设置",
+        "settings.title": "设置", "settings.subtitle": "AI 密钥、监控布局、菜单栏、提醒和启动选项。",
+        "settings.ai": "AI", "settings.appearance": "外观", "settings.menubar": "菜单栏",
+        "settings.monitor": "监控", "settings.alerts": "提醒", "settings.general": "通用",
+        "appearance.title": "显示", "appearance.subtitle": "字体大小、语言和监控界面样式。",
+        "appearance.fontSize": "字体大小", "appearance.language": "语言",
+        "font.small": "小", "font.medium": "中", "font.large": "大", "font.xlarge": "特大",
+        "appearance.monitorUI": "监控界面", "appearance.monitorUI.hint": "现代模式使用 iStats 风格折叠分区；经典模式为紧凑布局。",
+        "ui.modern": "现代 (iStats 风格)", "ui.legacy": "经典",
+        "menubar.title": "菜单栏图标", "menubar.subtitle": "选择布局和右上角菜单栏显示的统计项。",
+        "menubar.layout": "菜单栏布局", "layout.compact": "紧凑", "layout.inline": "单行", "layout.minimal": "极简",
+        "slot.cpu": "CPU", "slot.temp": "温度", "slot.ram": "内存", "slot.power": "功耗",
+        "slot.network": "网络", "slot.battery": "电池", "slot.btc": "比特币",
+        "monitor.title": "监控分区", "monitor.subtitle": "控制监控页显示的面板和工具。",
+        "monitor.stress": "显示压力测试", "monitor.benchmark": "显示基准测试", "monitor.network": "显示网络",
+        "monitor.solo": "单独模式（一次只展开一个面板）", "monitor.weather": "在网络分区显示天气",
+        "monitor.panels": "可见面板", "monitor.tools": "工具",
+        "alerts.title": "提醒", "alerts.subtitle": "系统顾问阈值和通知横幅。",
+        "alerts.advisorTitle": "系统顾问提醒", "alerts.advisorSubtitle": "顾问页的警告阈值和通知行为。",
+        "alerts.thresholds": "警告阈值",
+        "alerts.proactive": "聊天中的主动提醒", "alerts.banners": "严重温度时显示 macOS 横幅",
+        "general.title": "通用", "general.launchAtLogin": "登录时启动",
+        "general.launchAtLogin.req": "登录时启动需要 macOS 13 或更高版本。",
+        "general.idleEfficiency": "空闲效率", "general.idleProfile": "空闲配置",
+        "general.idleBalanced": "平衡", "general.idleAggressive": "激进（最低内存）",
+        "general.idleHint": "平衡模式保持菜单栏响应迅速；激进模式降低轮询频率，弹出窗口关闭前不记录历史数据。",
+        "general.version": "版本", "general.installLocation": "安装位置", "general.checkUpdates": "检查更新",
+        "section.battery": "电池与功耗", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "内存",
+        "section.disk": "磁盘", "section.network": "网络", "section.sensors": "传感器",
+        "section.tools": "压力与基准测试", "section.tools.summary": "压力与基准测试",
+        "row.usage": "使用率", "row.loadAvg": "平均负载", "row.uptime": "运行时间", "row.clock": "频率",
+        "row.temperature": "温度", "row.power": "功耗", "row.pressure": "压力",
+        "row.wired": "固定", "row.compressed": "压缩", "row.swap": "交换区已用",
+        "row.read": "读取", "row.write": "写入", "row.ip": "IP", "row.wifi": "Wi-Fi",
+        "row.weather": "天气", "row.location": "位置", "row.loading": "加载中…",
+        "row.download": "下载", "row.upload": "上传", "row.lowPower": "低电量模式", "row.on": "开",
+        "row.stress": "压力测试", "row.benchmark": "基准测试", "row.bitcoin": "比特币",
+        "row.status": "状态", "row.tip": "提示", "row.noSensors": "未找到温度或风扇传感器",
+        "row.sensorsTip": "SMC 键因芯片而异 — CPU 温度仍显示在上方",
+        "btn.start": "开始", "btn.stop": "停止", "btn.run": "运行", "btn.running": "运行中…",
+        "openMainWindow": "打开主窗口", "live": "实时", "cores": "核心",
+        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "内存", "panel.disk": "磁盘",
+        "panel.network": "网络", "panel.battery": "电池与功耗", "panel.sensors": "传感器",
+        "panel.settings": "设置", "panel.cleaner": "清理",
+    ]
+
+    private static let esStrings: [String: String] = [
+        "tab.monitor": "Monitor", "tab.advisor": "Asesor", "tab.chat": "Chat", "tab.cleaner": "Limpiador", "tab.settings": "Ajustes",
+        "settings.title": "Ajustes", "settings.subtitle": "Claves de IA, diseño del monitor, barra de menú, alertas y opciones de inicio.",
+        "settings.ai": "IA", "settings.appearance": "Apariencia", "settings.menubar": "Barra de menú",
+        "settings.monitor": "Monitor", "settings.alerts": "Alertas", "settings.general": "General",
+        "appearance.title": "Pantalla", "appearance.subtitle": "Tamaño de fuente, idioma y estilo del monitor.",
+        "appearance.fontSize": "Tamaño de fuente", "appearance.language": "Idioma",
+        "font.small": "Pequeño", "font.medium": "Mediano", "font.large": "Grande", "font.xlarge": "Extra grande",
+        "appearance.monitorUI": "Interfaz del monitor", "appearance.monitorUI.hint": "Moderno usa secciones plegables estilo iStats. Clásico es el diseño compacto.",
+        "ui.modern": "Moderno (estilo iStats)", "ui.legacy": "Clásico",
+        "menubar.title": "Icono de barra de menú", "menubar.subtitle": "Elige el diseño y las estadísticas en la barra superior.",
+        "menubar.layout": "Diseño de barra", "layout.compact": "Compacto", "layout.inline": "En línea", "layout.minimal": "Mínimo",
+        "slot.cpu": "CPU", "slot.temp": "Temp", "slot.ram": "RAM", "slot.power": "Potencia",
+        "slot.network": "Red", "slot.battery": "Batería", "slot.btc": "Bitcoin",
+        "monitor.title": "Secciones del monitor", "monitor.subtitle": "Controla qué paneles y herramientas aparecen.",
+        "monitor.stress": "Mostrar prueba de estrés", "monitor.benchmark": "Mostrar benchmark", "monitor.network": "Mostrar red",
+        "monitor.solo": "Modo solo (un panel abierto)", "monitor.weather": "Mostrar clima en Red",
+        "monitor.panels": "Paneles visibles", "monitor.tools": "Herramientas",
+        "alerts.title": "Alertas", "alerts.subtitle": "Umbrales del asesor del sistema y banners de notificación.",
+        "alerts.advisorTitle": "Alertas del asesor del sistema", "alerts.advisorSubtitle": "Umbrales de advertencia y notificaciones para la pestaña Asesor.",
+        "alerts.thresholds": "Umbrales de advertencia",
+        "alerts.proactive": "Alertas proactivas en el chat", "alerts.banners": "Banners de macOS para temperaturas críticas",
+        "general.title": "General", "general.launchAtLogin": "Iniciar al arrancar",
+        "general.launchAtLogin.req": "Iniciar al arrancar requiere macOS 13 o posterior.",
+        "general.idleEfficiency": "Eficiencia en reposo", "general.idleProfile": "Perfil en reposo",
+        "general.idleBalanced": "Equilibrado", "general.idleAggressive": "Agresivo (menor RAM)",
+        "general.idleHint": "Equilibrado mantiene la barra ágil. Agresivo usa sondeos más lentos y omite historiales hasta abrir el panel.",
+        "general.version": "Versión", "general.installLocation": "Ubicación de instalación", "general.checkUpdates": "Buscar actualizaciones",
+        "section.battery": "Batería y energía", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "Memoria",
+        "section.disk": "Disco", "section.network": "Red", "section.sensors": "Sensores",
+        "section.tools": "Estrés y benchmark", "section.tools.summary": "Estrés y benchmark",
+        "row.usage": "Uso", "row.loadAvg": "Carga media", "row.uptime": "Tiempo activo", "row.clock": "Reloj",
+        "row.temperature": "Temperatura", "row.power": "Potencia", "row.pressure": "Presión",
+        "row.wired": "Residente", "row.compressed": "Comprimida", "row.swap": "Swap usado",
+        "row.read": "Lectura", "row.write": "Escritura", "row.ip": "IP", "row.wifi": "Wi-Fi",
+        "row.weather": "Clima", "row.location": "Ubicación", "row.loading": "Cargando…",
+        "row.download": "Descarga", "row.upload": "Subida", "row.lowPower": "Modo bajo consumo", "row.on": "Activado",
+        "row.stress": "Prueba de estrés", "row.benchmark": "Benchmark", "row.bitcoin": "Bitcoin",
+        "row.status": "Estado", "row.tip": "Consejo", "row.noSensors": "No se encontraron sensores de temperatura o ventilador",
+        "row.sensorsTip": "Las claves SMC varían según el chip — la temp. de CPU sigue arriba",
+        "btn.start": "Iniciar", "btn.stop": "Detener", "btn.run": "Ejecutar", "btn.running": "Ejecutando…",
+        "openMainWindow": "Abrir ventana principal", "live": "En vivo", "cores": "Núcleos",
+        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Memoria", "panel.disk": "Disco",
+        "panel.network": "Red", "panel.battery": "Batería y energía", "panel.sensors": "Sensores",
+        "panel.settings": "Ajustes", "panel.cleaner": "Limpiador",
+    ]
+
+    private static let deStrings: [String: String] = [
+        "tab.monitor": "Monitor", "tab.advisor": "Berater", "tab.chat": "Chat", "tab.cleaner": "Reiniger", "tab.settings": "Einstellungen",
+        "settings.title": "Einstellungen", "settings.subtitle": "KI-Schlüssel, Monitor-Layout, Menüleiste, Warnungen und Startoptionen.",
+        "settings.ai": "KI", "settings.appearance": "Darstellung", "settings.menubar": "Menüleiste",
+        "settings.monitor": "Monitor", "settings.alerts": "Warnungen", "settings.general": "Allgemein",
+        "appearance.title": "Anzeige", "appearance.subtitle": "Schriftgröße, Sprache und Monitor-Stil.",
+        "appearance.fontSize": "Schriftgröße", "appearance.language": "Sprache",
+        "font.small": "Klein", "font.medium": "Mittel", "font.large": "Groß", "font.xlarge": "Sehr groß",
+        "appearance.monitorUI": "Monitor-Oberfläche", "appearance.monitorUI.hint": "Modern nutzt iStats-ähnliche Abschnitte. Legacy ist das kompakte Layout.",
+        "ui.modern": "Modern (iStats-Stil)", "ui.legacy": "Legacy",
+        "menubar.title": "Menüleisten-Symbol", "menubar.subtitle": "Layout und Statistiken in der Menüleiste wählen.",
+        "menubar.layout": "Menüleisten-Layout", "layout.compact": "Kompakt", "layout.inline": "Inline", "layout.minimal": "Minimal",
+        "slot.cpu": "CPU", "slot.temp": "Temp", "slot.ram": "RAM", "slot.power": "Leistung",
+        "slot.network": "Netzwerk", "slot.battery": "Akku", "slot.btc": "Bitcoin",
+        "monitor.title": "Monitor-Bereiche", "monitor.subtitle": "Steuert, welche Panels und Tools angezeigt werden.",
+        "monitor.stress": "Stresstest anzeigen", "monitor.benchmark": "Benchmark anzeigen", "monitor.network": "Netzwerk anzeigen",
+        "monitor.solo": "Solo-Modus (ein Panel offen)", "monitor.weather": "Wetter im Netzwerk-Bereich",
+        "monitor.panels": "Sichtbare Panels", "monitor.tools": "Werkzeuge",
+        "alerts.title": "Warnungen", "alerts.subtitle": "Systemberater-Schwellen und Benachrichtigungsbanner.",
+        "alerts.advisorTitle": "Systemberater-Warnungen", "alerts.advisorSubtitle": "Warnschwellen und Benachrichtigungen für den Berater-Tab.",
+        "alerts.thresholds": "Warnschwellen",
+        "alerts.proactive": "Proaktive Chat-Warnungen", "alerts.banners": "macOS-Banner bei kritischen Temperaturen",
+        "general.title": "Allgemein", "general.launchAtLogin": "Beim Anmelden starten",
+        "general.launchAtLogin.req": "Beim Anmelden starten erfordert macOS 13 oder neuer.",
+        "general.idleEfficiency": "Leerlauf-Effizienz", "general.idleProfile": "Leerlauf-Profil",
+        "general.idleBalanced": "Ausgewogen", "general.idleAggressive": "Aggressiv (wenig RAM)",
+        "general.idleHint": "Ausgewogen hält die Menüleiste reaktionsschnell. Aggressiv nutzt langsamere Abfragen und keine Verläufe bis das Panel offen ist.",
+        "general.version": "Version", "general.installLocation": "Installationsort", "general.checkUpdates": "Nach Updates suchen",
+        "section.battery": "Akku & Leistung", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "Speicher",
+        "section.disk": "Festplatte", "section.network": "Netzwerk", "section.sensors": "Sensoren",
+        "section.tools": "Stress & Benchmark", "section.tools.summary": "Stress & Benchmark",
+        "row.usage": "Auslastung", "row.loadAvg": "Load avg", "row.uptime": "Laufzeit", "row.clock": "Takt",
+        "row.temperature": "Temperatur", "row.power": "Leistung", "row.pressure": "Druck",
+        "row.wired": "Fest", "row.compressed": "Komprimiert", "row.swap": "Swap belegt",
+        "row.read": "Lesen", "row.write": "Schreiben", "row.ip": "IP", "row.wifi": "WLAN",
+        "row.weather": "Wetter", "row.location": "Ort", "row.loading": "Lädt…",
+        "row.download": "Download", "row.upload": "Upload", "row.lowPower": "Stromsparmodus", "row.on": "An",
+        "row.stress": "Stresstest", "row.benchmark": "Benchmark", "row.bitcoin": "Bitcoin",
+        "row.status": "Status", "row.tip": "Tipp", "row.noSensors": "Keine Temperatur- oder Lüftersensoren gefunden",
+        "row.sensorsTip": "SMC-Schlüssel variieren je nach Chip — CPU-Temp. oben angezeigt",
+        "btn.start": "Start", "btn.stop": "Stopp", "btn.run": "Ausführen", "btn.running": "Läuft…",
+        "openMainWindow": "Hauptfenster öffnen", "live": "Live", "cores": "Kerne",
+        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Speicher", "panel.disk": "Festplatte",
+        "panel.network": "Netzwerk", "panel.battery": "Akku & Leistung", "panel.sensors": "Sensoren",
+        "panel.settings": "Einstellungen", "panel.cleaner": "Reiniger",
+    ]
 }
 
 enum FirstLaunchTips {
@@ -6656,8 +6963,8 @@ enum MonitorUIStyle: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .modern: return "Modern (iStats-style)"
-        case .legacy: return "Legacy"
+        case .modern: return DisplayPreferencesStore.shared.tr("ui.modern")
+        case .legacy: return DisplayPreferencesStore.shared.tr("ui.legacy")
         }
     }
 }
@@ -6696,13 +7003,13 @@ enum MenuBarSlot: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .cpu: return "CPU"
-        case .temp: return "Temp"
-        case .ram: return "RAM"
-        case .power: return "Power"
-        case .network: return "Network"
-        case .battery: return "Battery"
-        case .btc: return "Bitcoin"
+        case .cpu: return DisplayPreferencesStore.shared.tr("slot.cpu")
+        case .temp: return DisplayPreferencesStore.shared.tr("slot.temp")
+        case .ram: return DisplayPreferencesStore.shared.tr("slot.ram")
+        case .power: return DisplayPreferencesStore.shared.tr("slot.power")
+        case .network: return DisplayPreferencesStore.shared.tr("slot.network")
+        case .battery: return DisplayPreferencesStore.shared.tr("slot.battery")
+        case .btc: return DisplayPreferencesStore.shared.tr("slot.btc")
         }
     }
 
@@ -6726,9 +7033,9 @@ enum MenuBarLayout: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .combined: return "Compact"
-        case .inline: return "Inline"
-        case .minimal: return "Minimal"
+        case .combined: return DisplayPreferencesStore.shared.tr("layout.compact")
+        case .inline: return DisplayPreferencesStore.shared.tr("layout.inline")
+        case .minimal: return DisplayPreferencesStore.shared.tr("layout.minimal")
         }
     }
 }
@@ -7492,15 +7799,15 @@ enum MonitorPanel: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .cpu: return "CPU"
-        case .gpu: return "GPU"
-        case .memory: return "Memory"
-        case .disk: return "Disk"
-        case .network: return "Network"
-        case .battery: return "Battery & Power"
-        case .sensors: return "Sensors"
-        case .settings: return "Settings"
-        case .cleaner: return "Cleaner"
+        case .cpu: return DisplayPreferencesStore.shared.tr("panel.cpu")
+        case .gpu: return DisplayPreferencesStore.shared.tr("panel.gpu")
+        case .memory: return DisplayPreferencesStore.shared.tr("panel.memory")
+        case .disk: return DisplayPreferencesStore.shared.tr("panel.disk")
+        case .network: return DisplayPreferencesStore.shared.tr("panel.network")
+        case .battery: return DisplayPreferencesStore.shared.tr("panel.battery")
+        case .sensors: return DisplayPreferencesStore.shared.tr("panel.sensors")
+        case .settings: return DisplayPreferencesStore.shared.tr("panel.settings")
+        case .cleaner: return DisplayPreferencesStore.shared.tr("panel.cleaner")
         }
     }
 
@@ -7538,6 +7845,7 @@ enum MonitorPanel: String, CaseIterable, Identifiable {
 
 struct AppTabSidebar: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     let tabs: [AppTab]
     @Binding var tab: AppTab
     var advisorHasWarnings: Bool
@@ -7551,7 +7859,7 @@ struct AppTabSidebar: View {
                         Image(systemName: t.icon)
                             .frame(width: 16)
                         if !compact {
-                            Text(t.rawValue)
+                            Text(t.localizedTitle)
                                 .font(rNitroFont(.label, metrics: metrics, weight: tab == t ? .semibold : .regular))
                         }
                         if t == .advisor && advisorHasWarnings {
@@ -7572,622 +7880,6 @@ struct AppTabSidebar: View {
         .padding(.vertical, 8)
         .frame(width: compact ? 48 : 156)
         .background(Color.card.opacity(0.35))
-    }
-}
-
-@MainActor
-final class HowItWorksModel: ObservableObject {
-    @Published var stableId = "v8.3.2-Final-arm64"
-    @Published var betaId = CURRENT_VERSION
-    @Published var linuxId = "v0.1-Linux-Beta-Pre-release-x64"
-    @Published var windowsId = "v4.2.2-Windows-Final-x86"
-    @Published var lastFetched: Date?
-
-    func refresh() {
-        var req = URLRequest(url: UPDATE_CHECK_URL)
-        req.cachePolicy = .reloadIgnoringLocalCacheData
-        req.timeoutInterval = 8
-        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
-            guard let data = data,
-                  let info = try? JSONDecoder().decode(VersionInfo.self, from: data) else { return }
-            Task { @MainActor in
-                self?.stableId = info.latest
-                if let beta = info.beta { self?.betaId = beta }
-                self?.lastFetched = Date()
-            }
-        }.resume()
-    }
-}
-
-private struct HowStatusPill: View {
-    @Environment(\.uiMetrics) private var metrics
-    let label: String
-    let color: Color
-
-    var body: some View {
-        Text(label)
-            .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
-            .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.12))
-            .overlay(Capsule().stroke(color.opacity(0.35), lineWidth: 0.5))
-            .clipShape(Capsule())
-    }
-}
-
-private enum FlowchartNodeKind {
-    case process, decision, terminal
-}
-
-private struct FlowchartNode: View {
-    @Environment(\.uiMetrics) private var metrics
-    let title: String
-    let detail: String
-    let accent: Color
-    var kind: FlowchartNodeKind = .process
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                if kind == .decision {
-                    Image(systemName: "arrow.triangle.branch")
-                        .font(.system(size: metrics.base * 0.62, weight: .semibold))
-                        .foregroundColor(accent)
-                }
-                Text(title)
-                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-                    .foregroundColor(.primary.opacity(0.95))
-            }
-            if !detail.isEmpty {
-                Text(detail)
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(accent.opacity(kind == .decision ? 0.1 : 0.07))
-        .overlay(
-            RoundedRectangle(cornerRadius: kind == .decision ? 8 : 10)
-                .stroke(accent.opacity(0.42), lineWidth: kind == .decision ? 1.2 : 0.8)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: kind == .decision ? 8 : 10))
-    }
-}
-
-private struct FlowchartConnector: View {
-    @Environment(\.uiMetrics) private var metrics
-    var label: String? = nil
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.border.opacity(0.55))
-                .frame(width: 1.5, height: label == nil ? 22 : 28)
-            if let label {
-                Text(label)
-                    .font(rNitroFont(.micro, metrics: metrics, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .padding(.leading, 8)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 18)
-    }
-}
-
-private struct FlowchartBranch: View {
-    @Environment(\.uiMetrics) private var metrics
-    let leftTitle: String
-    let leftDetail: String
-    let rightTitle: String
-    let rightDetail: String
-    let leftAccent: Color
-    let rightAccent: Color
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            FlowchartNode(title: leftTitle, detail: leftDetail, accent: leftAccent, kind: .terminal)
-            FlowchartNode(title: rightTitle, detail: rightDetail, accent: rightAccent)
-        }
-    }
-}
-
-private struct FlowchartPanel<Content: View>: View {
-    @Environment(\.uiMetrics) private var metrics
-    let title: String
-    let caption: String
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-                .foregroundColor(.primary.opacity(0.9))
-            if !caption.isEmpty {
-                Text(caption)
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            content()
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.card)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.border.opacity(0.45), lineWidth: 0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-private struct HowItWorksScrollTable: View {
-    @Environment(\.uiMetrics) private var metrics
-    let minWidth: CGFloat
-    let headers: [String]
-    let columnWidths: [CGFloat]
-    let rows: [[AnyView]]
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(headers.indices, id: \.self) { i in
-                        howTableCell(width: columnWidths[i], weight: .semibold, color: .secondary) {
-                            Text(headers[i])
-                        }
-                    }
-                }
-                .background(Color.card.opacity(0.55))
-                MinimalDivider()
-                ForEach(rows.indices, id: \.self) { ri in
-                    HStack(alignment: .top, spacing: 0) {
-                        ForEach(rows[ri].indices, id: \.self) { ci in
-                            howTableCell(width: columnWidths[ci]) {
-                                rows[ri][ci]
-                            }
-                        }
-                    }
-                    if ri < rows.count - 1 { MinimalDivider() }
-                }
-            }
-            .frame(minWidth: minWidth, alignment: .leading)
-        }
-        .background(Color.card)
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.border.opacity(0.45), lineWidth: 0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func howTableCell<Content: View>(
-        width: CGFloat,
-        weight: Font.Weight = .regular,
-        color: Color = .primary.opacity(0.9),
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        content()
-            .font(rNitroFont(.micro, metrics: metrics, weight: weight))
-            .foregroundColor(color)
-            .frame(width: width, alignment: .leading)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-struct HowItWorksView: View {
-    @Environment(\.uiMetrics) private var metrics
-    @StateObject private var model = HowItWorksModel()
-
-    private let platformWidths: [CGFloat] = [118, 132, 96, 168, 142, 132, 228]
-    private let formatWidths: [CGFloat] = [128, 72, 196, 176, 156]
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("How everything works")
-                        .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
-                    Text("Platforms, download formats, and flowcharts — overview synced with getrnitro.netlify.app.")
-                        .font(rNitroFont(.caption, metrics: metrics))
-                        .foregroundColor(.secondary)
-                }
-
-                howSectionTitle("Platforms & channels at a glance")
-                Text("New here? macOS Stable App ZIP for daily monitoring, or macOS Beta App ZIP for every AI provider.")
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HowItWorksScrollTable(
-                    minWidth: 1016,
-                    headers: ["Platform", "Version", "Status", "Recommended download", "Install location", "Updates", "What you get"],
-                    columnWidths: platformWidths,
-                    rows: platformRows
-                )
-
-                howSectionTitle("Download formats")
-                HowItWorksScrollTable(
-                    minWidth: 728,
-                    headers: ["Format", "Platform", "What it is", "Gatekeeper / runtime", "When to use"],
-                    columnWidths: formatWidths,
-                    rows: formatRows
-                )
-
-                howSectionTitle("Flowcharts")
-                Text("Visual maps for download, in-app updates, and live monitoring.")
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                gettingStartedFlowchart
-                updaterFlowchart
-                monitorFlowchart
-                beta813PerformanceFlowchart
-                beta815EfficiencyFlowchart
-
-                HStack(spacing: 10) {
-                    MinimalButton(title: "Open website", tint: .accent) {
-                        NSWorkspace.shared.open(UPDATE_PAGE_URL)
-                    }
-                    MinimalButton(title: "GitHub releases", tint: .nBlue) {
-                        if let url = URL(string: "https://github.com/ilikemacos/rNitro/releases") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                }
-                .padding(.top, 4)
-            }
-            .padding(.horizontal, metrics.hPad)
-            .padding(.vertical, 12)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Color.bg)
-        .onAppear { model.refresh() }
-    }
-
-    private var platformRows: [[AnyView]] {
-        let linuxGold = Color(red: 0.91, green: 0.66, blue: 0.22)
-        return [
-            [
-                AnyView(platformLabel("macOS", channel: "Stable", accent: .nGreen)),
-                AnyView(Text(model.stableId)),
-                AnyView(HowStatusPill(label: "Active", color: .nGreen)),
-                AnyView(howCode("rNitro-\(model.stableId).zip")),
-                AnyView(howCode("~/Applications/rNitro.app")),
-                AnyView(Text("In-app updater on launch")),
-                AnyView(Text("CPU monitor, benchmark, stress test, System Advisor, App Cleaner; AI chat: OpenAI + OpenRouter only"))
-            ],
-            [
-                AnyView(platformLabel("macOS", channel: "Beta", accent: .nOrange)),
-                AnyView(Text(model.betaId)),
-                AnyView(HowStatusPill(label: "Experimental", color: .nOrange)),
-                AnyView(howCode("rNitro-\(model.betaId).zip")),
-                AnyView(howCode("~/Applications/rNitro.app")),
-                AnyView(Text("In-app — Install Final or Install Beta")),
-                AnyView(Text("Everything in Stable plus all AI providers, temp banners, AES-256 keys, first-launch tips, and v8.3.13 idle optimisations. You're on \(UpdateChecker.displayLabel(CURRENT_VERSION))."))
-            ],
-            [
-                AnyView(platformLabel("Linux", channel: "Pre-release", accent: linuxGold)),
-                AnyView(Text(model.linuxId)),
-                AnyView(HowStatusPill(label: "Pre-release", color: linuxGold)),
-                AnyView(howCode("rNitro-\(model.linuxId).tar.gz")),
-                AnyView(howCode("~/.local/share/rnitro")),
-                AnyView(Text("Checks version.json on launch")),
-                AnyView(Text("GTK4 app: Monitor, Advisor, Chat, Cleaner; x86_64; needs Python 3.10+, GTK 4, libadwaita"))
-            ],
-            [
-                AnyView(platformLabel("Windows", channel: "Legacy", accent: .nBlue)),
-                AnyView(Text(model.windowsId)),
-                AnyView(HowStatusPill(label: "Deprecated", color: .secondary)),
-                AnyView(howCode("rNitro-\(model.windowsId).exe")),
-                AnyView(howCode("%LOCALAPPDATA%\\rNitro")),
-                AnyView(Text("Manual — website or GitHub")),
-                AnyView(Text("Tray monitor only (CPU, temp, RAM, BTC); no AI chat or Cleaner; .NET 8 runtime for EXE"))
-            ]
-        ]
-    }
-
-    private var formatRows: [[AnyView]] {
-        [
-            [
-                AnyView(formatLabel("App ZIP", recommended: true)),
-                AnyView(Text("macOS")),
-                AnyView(Text("Pre-built rNitro.app — unzip and drag to Applications")),
-                AnyView(Text("Right-click → Open once if Gatekeeper blocks it")),
-                AnyView(Text("Fastest path; no admin password"))
-            ],
-            [
-                AnyView(formatLabel("PKG")),
-                AnyView(Text("macOS")),
-                AnyView(Text("Installer package → Applications")),
-                AnyView(Text("System Settings → Privacy & Security → Open if blocked")),
-                AnyView(Text("One double-click install; needs admin password"))
-            ],
-            [
-                AnyView(formatLabel("DMG")),
-                AnyView(Text("macOS")),
-                AnyView(Text("Disk image — drag app to Applications")),
-                AnyView(Text("Same as App ZIP on first open")),
-                AnyView(Text("Familiar Mac workflow"))
-            ],
-            [
-                AnyView(formatLabel(".sh shell installer")),
-                AnyView(Text("macOS")),
-                AnyView(Text("Full Swift source compiled locally with swiftc")),
-                AnyView(Text("No prebuilt binary — you read the script first")),
-                AnyView(Text("Maximum trust; ~30s compile on your Mac"))
-            ],
-            [
-                AnyView(formatLabel("Tarball + .sh")),
-                AnyView(Text("Linux")),
-                AnyView(Text("Python/GTK source tree + install-rNitro-linux.sh")),
-                AnyView(Text("Installer checks deps and sets up a venv")),
-                AnyView(Text("Pre-release; also on GitHub Releases"))
-            ],
-            [
-                AnyView(formatLabel("EXE / .ps1")),
-                AnyView(Text("Windows")),
-                AnyView(Text("Pre-built tray app or PowerShell compile via csc.exe")),
-                AnyView(Text(".NET 8 Desktop Runtime for EXE")),
-                AnyView(Text("Legacy only — macOS or Linux recommended"))
-            ]
-        ]
-    }
-
-    private var gettingStartedFlowchart: some View {
-        FlowchartPanel(
-            title: "Getting started (website)",
-            caption: "Recommended path on getrnitro.netlify.app — same for Stable and Beta."
-        ) {
-                VStack(alignment: .leading, spacing: 0) {
-                    FlowchartNode(
-                        title: "1 · Pick your platform",
-                        detail: "macOS, Linux, or Windows — the site auto-detects your OS.",
-                        accent: .cyan
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "2 · Accept Terms & Conditions",
-                        detail: "Required once per browser session before any download.",
-                        accent: .cyan
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "3 · Download App ZIP",
-                        detail: "Green Stable or orange Beta recommended card — size shown on the button.",
-                        accent: .nGreen
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "4 · Install",
-                        detail: "Unzip → drag rNitro.app to Applications → right-click Open once if Gatekeeper blocks.",
-                        accent: .nGreen
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "5 · Launch & configure",
-                        detail: "Menu bar icon opens the monitor; Settings subtabs cover AI, appearance, menubar, alerts, and general.",
-                        accent: .accent
-                    )
-                    FlowchartConnector(label: "ongoing")
-                    FlowchartNode(
-                        title: "6 · Updates",
-                        detail: "macOS: in-app updater. Linux: version.json on launch. Windows: manual from website or GitHub.",
-                        accent: .nOrange,
-                        kind: .terminal
-                    )
-                }
-        }
-    }
-
-    private var updaterFlowchart: some View {
-        FlowchartPanel(
-            title: "In-app updater (macOS)",
-            caption: "What happens when a newer Final or Beta build is available."
-        ) {
-                VStack(alignment: .leading, spacing: 0) {
-                    FlowchartNode(
-                        title: "App launch",
-                        detail: "Checks getrnitro.netlify.app/version.json (PinnedSession, then URLSession fallback).",
-                        accent: .nOrange
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "Update available?",
-                        detail: "Compares your build to latest (Final) and beta entries.",
-                        accent: .nOrange,
-                        kind: .decision
-                    )
-                    FlowchartConnector()
-                    FlowchartBranch(
-                        leftTitle: "No → continue",
-                        leftDetail: "Manual check anytime in Settings → General.",
-                        rightTitle: "Yes → pick channel",
-                        rightDetail: "Install Final, Install Beta, or Later.",
-                        leftAccent: .secondary,
-                        rightAccent: .nOrange
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "Download App ZIP",
-                        detail: "Resolves filename from version.json; validates ZIP magic and size (≥ 1.4 MB).",
-                        accent: .nBlue
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "Extract & install",
-                        detail: "/Applications → admin password + replace. Other paths → quit-then-replace helper.",
-                        accent: .nBlue
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "Restart",
-                        detail: "Success dialog → app quits → new build opens. Failures logged to ~/Library/Logs/rNitro/update.log.",
-                        accent: .nGreen,
-                        kind: .terminal
-                    )
-                }
-        }
-    }
-
-    private var monitorFlowchart: some View {
-        FlowchartPanel(
-            title: "Live monitor loop",
-            caption: "How menu bar stats stay current while rNitro is running. See Beta 8.3.13 for the optimised idle model."
-        ) {
-                VStack(alignment: .leading, spacing: 0) {
-                    FlowchartNode(
-                        title: "Timer tick (~1 s)",
-                        detail: "CPUMonitor polls host statistics and thermal state.",
-                        accent: .accent
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "Read sensors",
-                        detail: "Per-core usage, SMC temperature keys, RAM, network, battery, and optional GPU.",
-                        accent: .accent
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "Smooth & colorize",
-                        detail: "History graphs, thermal color bands, and menubar slot formatting.",
-                        accent: .nGreen
-                    )
-                    FlowchartConnector()
-                    FlowchartNode(
-                        title: "Update UI",
-                        detail: "Samples run on a background queue; one batched commit updates the UI on the main thread.",
-                        accent: .nGreen
-                    )
-                    FlowchartConnector(label: "repeat")
-                    FlowchartNode(
-                        title: "Advisor & alerts",
-                        detail: "System Advisor scores load; optional alerts fire when thresholds are crossed.",
-                        accent: .cyan,
-                        kind: .terminal
-                    )
-                }
-        }
-    }
-
-    private var beta813PerformanceFlowchart: some View {
-        FlowchartPanel(
-            title: "Beta 8.3.13 — How it works",
-            caption: "Lower idle CPU and RAM: only run what the menu bar and open popover actually need."
-        ) {
-            VStack(alignment: .leading, spacing: 0) {
-                FlowchartNode(
-                    title: "App launch",
-                    detail: "CPUMonitor + BatteryMonitor always run for the menu bar. Optional services start only when needed.",
-                    accent: .nOrange
-                )
-                FlowchartConnector()
-                FlowchartNode(
-                    title: "Always-on (menubar idle)",
-                    detail: "CPU 2s · Battery 5s (IOKit first). Network, BTC, and Advisor stay off unless a slot or the popover needs them.",
-                    accent: .accent
-                )
-                FlowchartConnector()
-                FlowchartNode(
-                    title: "Menubar subscriptions",
-                    detail: "Combine publishers wired only to enabled slots — not every stat on every tick.",
-                    accent: .nGreen
-                )
-                FlowchartConnector()
-                FlowchartNode(
-                    title: "Popover open?",
-                    detail: "MonitorActivity switches intervals and enables heavier readers.",
-                    accent: .nOrange,
-                    kind: .decision
-                )
-                FlowchartConnector()
-                FlowchartBranch(
-                    leftTitle: "No → idle path",
-                    leftDetail: "Thermal estimate; SMC TTL 3s; disk/GPU/sensors off; charge watts via IOKit ChargerData (ioreg fallback if missing).",
-                    rightTitle: "Yes → full path",
-                    rightDetail: "GPU via IOKit; SMC 1s; disk at diskInterval; IOReport power; network 1.5s.",
-                    leftAccent: .secondary,
-                    rightAccent: .nGreen
-                )
-            }
-        }
-    }
-
-    private var beta815EfficiencyFlowchart: some View {
-        FlowchartPanel(
-            title: "Beta 8.3.15 — Deeper RAM efficiency",
-            caption: "Tiered sampling + RingBuffer histories. Settings → General → Idle profile (Balanced or Aggressive)."
-        ) {
-            VStack(alignment: .leading, spacing: 0) {
-                FlowchartNode(
-                    title: "Idle profile",
-                    detail: "Balanced: CPU 2s / battery 5s. Aggressive: CPU 4s / battery 10s / no history buffers until popover opens.",
-                    accent: .nOrange
-                )
-                FlowchartConnector()
-                FlowchartNode(
-                    title: "Sampling tier",
-                    detail: "minimal (CPU-only menubar) → loadavg estimate, no per-core Mach alloc. slotAware adds RAM/temp/power slots. full when popover open.",
-                    accent: .accent
-                )
-                FlowchartConnector()
-                FlowchartNode(
-                    title: "RingBuffer histories",
-                    detail: "Graph sparklines use fixed-capacity rings — no removeFirst array copies. Histories frozen while popover is closed.",
-                    accent: .nGreen
-                )
-                FlowchartConnector()
-                FlowchartNode(
-                    title: "Coalesced publish",
-                    detail: "Skip @Published updates when values barely changed; memory sampled on its own interval, not every CPU tick.",
-                    accent: .nGreen
-                )
-                FlowchartConnector()
-                FlowchartNode(
-                    title: "Lazy battery 12h graph",
-                    detail: "Battery history points only when popover open or Battery section expanded.",
-                    accent: .cyan,
-                    kind: .terminal
-                )
-            }
-        }
-    }
-
-    private func howSectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
-            .foregroundColor(.cyan)
-            .padding(.top, 6)
-    }
-
-    private func platformLabel(_ platform: String, channel: String, accent: Color) -> some View {
-        HStack(spacing: 0) {
-            Text(platform)
-                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
-                .foregroundColor(accent)
-            Text(" · \(channel)")
-                .font(rNitroFont(.micro, metrics: metrics, weight: .medium))
-                .foregroundColor(.primary.opacity(0.9))
-        }
-    }
-
-    private func formatLabel(_ title: String, recommended: Bool = false) -> some View {
-        HStack(spacing: 4) {
-            Text(title)
-                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
-            if recommended {
-                Text("(recommended)")
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.nGreen)
-            }
-        }
-    }
-
-    private func howCode(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: metrics.base * 0.72, weight: .regular, design: .monospaced))
-            .foregroundColor(.primary.opacity(0.88))
     }
 }
 
@@ -8216,6 +7908,7 @@ struct MonitorModernHeaderView: View {
 
 struct MonitorBatterySectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var bat = BatteryMonitor.shared
     @ObservedObject private var m = CPUMonitor.shared
     let onBatteryTap: () -> Void
@@ -8223,7 +7916,7 @@ struct MonitorBatterySectionView: View {
 
     var body: some View {
         MonitorSection(
-            title: "Battery & Power",
+            title: display.tr("section.battery"),
             accent: .nGreen,
             summary: bat.isPresent ? "\(bat.levelPercent)%" : String(format: "%.1fW", m.packagePowerWatts),
             sparkline: m.powerHistory,
@@ -8237,8 +7930,8 @@ struct MonitorBatterySectionView: View {
             )
             if m.isLowPowerModeEnabled {
                 MonitorRow(
-                    label: "Low Power Mode",
-                    value: "On",
+                    label: display.tr("row.lowPower"),
+                    value: display.tr("row.on"),
                     valueColor: Color(red: 0.55, green: 0.88, blue: 0.42)
                 )
             }
@@ -8254,12 +7947,13 @@ struct MonitorBatterySectionView: View {
 
 struct MonitorCPUSectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var m = CPUMonitor.shared
     let onTemperatureTap: () -> Void
 
     var body: some View {
         MonitorSection(
-            title: "CPU",
+            title: display.tr("section.cpu"),
             accent: .accent,
             summary: String(format: "%.0f%%", m.totalUsage),
             sparkline: m.usageHistory,
@@ -8267,12 +7961,12 @@ struct MonitorCPUSectionView: View {
         ) {
             GraphView(history: m.usageHistory, color: Color.usage(m.totalUsage))
                 .frame(height: metrics.graphHeight)
-            MonitorRow(label: "Usage", value: String(format: "%.1f%%", m.totalUsage), valueColor: Color.usage(m.totalUsage))
-            MonitorRow(label: "Load avg", value: String(format: "%.2f · %.2f · %.2f", m.loadAverage1, m.loadAverage5, m.loadAverage15))
-            MonitorRow(label: "Uptime", value: CPUMonitor.formatUptime(m.systemUptime))
-            MonitorRow(label: "Clock", value: String(format: "%.0f / %.0f MHz", m.baseClock, m.boostClock))
+            MonitorRow(label: display.tr("row.usage"), value: String(format: "%.1f%%", m.totalUsage), valueColor: Color.usage(m.totalUsage))
+            MonitorRow(label: display.tr("row.loadAvg"), value: String(format: "%.2f · %.2f · %.2f", m.loadAverage1, m.loadAverage5, m.loadAverage15))
+            MonitorRow(label: display.tr("row.uptime"), value: CPUMonitor.formatUptime(m.systemUptime))
+            MonitorRow(label: display.tr("row.clock"), value: String(format: "%.0f / %.0f MHz", m.baseClock, m.boostClock))
             Button(action: onTemperatureTap) {
-                MonitorRow(label: "Temperature", value: String(format: "%.0f °C", m.temperature), valueColor: Color.temp(m.temperature))
+                MonitorRow(label: display.tr("row.temperature"), value: String(format: "%.0f °C", m.temperature), valueColor: Color.temp(m.temperature))
             }.buttonStyle(.plain)
             VStack(spacing: 4) {
                 ForEach(Array(m.cores.enumerated()), id: \.offset) { i, core in
@@ -8287,12 +7981,13 @@ struct MonitorCPUSectionView: View {
 
 struct MonitorGPUSectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var gpu = GPUMonitor.shared
     @ObservedObject private var m = CPUMonitor.shared
 
     var body: some View {
         MonitorSection(
-            title: "GPU",
+            title: display.tr("section.gpu"),
             accent: .nGreen,
             summary: String(format: "%.0f%%", gpu.usage),
             sparkline: gpu.usageHistory,
@@ -8300,20 +7995,21 @@ struct MonitorGPUSectionView: View {
         ) {
             GraphView(history: gpu.usageHistory, color: Color.usage(gpu.usage))
                 .frame(height: metrics.graphHeight)
-            MonitorRow(label: "Usage", value: String(format: "%.1f%%", gpu.usage), valueColor: Color.usage(gpu.usage))
-            MonitorRow(label: "Power", value: String(format: "%.1f W", m.gpuPowerWatts))
+            MonitorRow(label: display.tr("row.usage"), value: String(format: "%.1f%%", gpu.usage), valueColor: Color.usage(gpu.usage))
+            MonitorRow(label: display.tr("row.power"), value: String(format: "%.1f W", m.gpuPowerWatts))
         }
     }
 }
 
 struct MonitorMemorySectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var m = CPUMonitor.shared
     let onMemoryTap: () -> Void
 
     var body: some View {
         MonitorSection(
-            title: "Memory",
+            title: display.tr("section.memory"),
             accent: .nPurple,
             summary: String(format: "%.0f%%", m.memoryUsedPercent),
             sparkline: m.memoryHistory,
@@ -8322,23 +8018,24 @@ struct MonitorMemorySectionView: View {
             UsageBarRow(label: "RAM", usedGB: m.memoryUsedGB, freeGB: m.memoryFreeGB,
                         totalGB: m.memoryTotalGB, usedPercent: m.memoryUsedPercent,
                         action: onMemoryTap)
-            MonitorRow(label: "Pressure", value: m.memoryPressure, valueColor: Color.pressure(m.memoryPressure))
-            MonitorRow(label: "Wired", value: String(format: "%.1f GB", m.memoryWiredGB))
-            MonitorRow(label: "Compressed", value: String(format: "%.1f GB", m.memoryCompressedGB))
-            MonitorRow(label: "Swap used", value: String(format: "%.1f GB", m.memorySwapGB))
+            MonitorRow(label: display.tr("row.pressure"), value: m.memoryPressure, valueColor: Color.pressure(m.memoryPressure))
+            MonitorRow(label: display.tr("row.wired"), value: String(format: "%.1f GB", m.memoryWiredGB))
+            MonitorRow(label: display.tr("row.compressed"), value: String(format: "%.1f GB", m.memoryCompressedGB))
+            MonitorRow(label: display.tr("row.swap"), value: String(format: "%.1f GB", m.memorySwapGB))
         }
     }
 }
 
 struct MonitorDiskSectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var m = CPUMonitor.shared
     @ObservedObject private var disk = DiskActivityMonitor.shared
     let onStorageTap: () -> Void
 
     var body: some View {
         MonitorSection(
-            title: "Disk",
+            title: display.tr("section.disk"),
             accent: .nOrange,
             summary: String(format: "%.0f%%", m.diskUsedPercent),
             sparkline: disk.activityHistory,
@@ -8350,21 +8047,22 @@ struct MonitorDiskSectionView: View {
                         action: onStorageTap)
             MiniGraphView(history: disk.activityHistory, color: .nOrange, maxValue: max(disk.activityHistory.max() ?? 1, 10))
                 .frame(height: 28)
-            MonitorRow(label: "Read", value: String(format: "%.1f MB/s", disk.readMBps))
-            MonitorRow(label: "Write", value: String(format: "%.1f MB/s", disk.writeMBps))
+            MonitorRow(label: display.tr("row.read"), value: String(format: "%.1f MB/s", disk.readMBps))
+            MonitorRow(label: display.tr("row.write"), value: String(format: "%.1f MB/s", disk.writeMBps))
         }
     }
 }
 
 struct MonitorNetworkSectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var net = NetworkMonitor.shared
     @ObservedObject private var weather = WeatherService.shared
     let showWeather: Bool
 
     var body: some View {
         MonitorSection(
-            title: "Network",
+            title: display.tr("section.network"),
             accent: .nBlue,
             summary: net.isAvailable ? NetworkMonitor.formatSpeed(net.downloadMbps) : "—",
             sparkline: net.downloadHistory,
@@ -8372,24 +8070,24 @@ struct MonitorNetworkSectionView: View {
             storageKey: "rnitro.sectionExpanded.network"
         ) {
             NetworkMonitorRow(net: net)
-            MonitorRow(label: "IP", value: net.localIP)
+            MonitorRow(label: display.tr("row.ip"), value: net.localIP)
             if !net.wifiSSID.isEmpty {
-                MonitorRow(label: "Wi-Fi", value: net.wifiSSID)
+                MonitorRow(label: display.tr("row.wifi"), value: net.wifiSSID)
             }
             if showWeather, let w = weather.snapshot {
-                MonitorRow(label: "Weather", value: String(format: "%.0f°C %@", w.tempC, w.condition))
-                MonitorRow(label: "Location", value: w.city)
+                MonitorRow(label: display.tr("row.weather"), value: String(format: "%.0f°C %@", w.tempC, w.condition))
+                MonitorRow(label: display.tr("row.location"), value: w.city)
             } else if showWeather && weather.isLoading {
-                MonitorRow(label: "Weather", value: "Loading…")
+                MonitorRow(label: display.tr("row.weather"), value: display.tr("row.loading"))
             }
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Download").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("row.download")).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                     MiniGraphView(history: net.downloadHistory, color: .accent, maxValue: max(net.downloadHistory.max() ?? 1, 100))
                         .frame(height: 24)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Upload").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("row.upload")).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                     MiniGraphView(history: net.uploadHistory, color: .nGreen, maxValue: max(net.uploadHistory.max() ?? 1, 100))
                         .frame(height: 24)
                 }
@@ -8412,18 +8110,19 @@ struct MonitorNetworkSectionView: View {
 
 struct MonitorSensorsSectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var sensors = SensorsMonitor.shared
 
     var body: some View {
         MonitorSection(
-            title: "Sensors",
+            title: display.tr("section.sensors"),
             accent: .nOrange,
             summary: sensors.entries.isEmpty ? "—" : "\(sensors.entries.count) readings",
             storageKey: "rnitro.sectionExpanded.sensors"
         ) {
             if sensors.entries.isEmpty {
-                MonitorRow(label: "Status", value: "No temperature or fan sensors found")
-                MonitorRow(label: "Tip", value: "SMC keys vary by chip — CPU temp still shown above")
+                MonitorRow(label: display.tr("row.status"), value: display.tr("row.noSensors"))
+                MonitorRow(label: display.tr("row.tip"), value: display.tr("row.sensorsTip"))
             } else {
                 let groups = Dictionary(grouping: sensors.entries, by: { $0.group })
                 ForEach(["Temperatures", "Fans"], id: \.self) { group in
@@ -8444,25 +8143,26 @@ struct MonitorSensorsSectionView: View {
 
 struct MonitorToolsSectionView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var btc = BTCPriceMonitor.shared
     @ObservedObject private var stress = StressTester.shared
     @ObservedObject private var bench = BenchmarkRunner.shared
 
     var body: some View {
         MonitorSection(
-            title: "Tools",
+            title: display.tr("section.tools"),
             accent: .secondary,
-            summary: "Stress & Benchmark",
+            summary: display.tr("section.tools.summary"),
             storageKey: "rnitro.sectionExpanded.settings"
         ) {
             if let price = btc.priceUSD {
-                MonitorRow(label: "Bitcoin", value: String(format: "$%.0f", price))
+                MonitorRow(label: display.tr("row.bitcoin"), value: String(format: "$%.0f", price))
             }
             HStack {
-                Text("Stress Test").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                Text(display.tr("row.stress")).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                 Spacer()
                 MinimalButton(
-                    title: stress.isRunning ? "Stop" : "Start",
+                    title: stress.isRunning ? display.tr("btn.stop") : display.tr("btn.start"),
                     tint: stress.isRunning ? .nRed : .nOrange,
                     disabled: bench.isRunning,
                     action: { stress.isRunning ? stress.stop() : stress.start() }
@@ -8470,13 +8170,13 @@ struct MonitorToolsSectionView: View {
             }
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Benchmark").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("row.benchmark")).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                     Text("1-core \(bench.singleCoreScore.map { String(format: "%.0f", $0) } ?? "—") · multi \(bench.multiCoreScore.map { String(format: "%.0f", $0) } ?? "—")")
                         .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
                 Spacer()
                 MinimalButton(
-                    title: bench.isRunning ? "Running…" : "Run",
+                    title: bench.isRunning ? display.tr("btn.running") : display.tr("btn.run"),
                     disabled: bench.isRunning || stress.isRunning,
                     action: { bench.run() }
                 )
@@ -8714,6 +8414,7 @@ struct MonitorTabContent: View {
 
 struct ContentView: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     let tabs: [AppTab]
     var layout: ContentLayout = .window
     @ObservedObject private var advisor = SystemAdvisorModel.shared
@@ -8808,7 +8509,7 @@ struct ContentView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "macwindow")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("Open main window")
+                    Text(display.tr("openMainWindow"))
                         .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right")
@@ -8836,8 +8537,6 @@ struct ContentView: View {
                 AppCleanerView()
             case .settings:
                 SettingsView()
-            case .howItWorks:
-                HowItWorksView()
             case .monitor:
                 MonitorTabContent(layout: layout, statDetail: $statDetail)
             }

@@ -13,6 +13,32 @@
     },
     {
       "channel": "beta",
+      "title": "v8.4.0 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Display settings",
+          "text": " \u2014 Settings \u2192 Appearance: choose font size (Small to Extra Large) and language (English, \u4e2d\u6587, Espa\u00f1ol, Deutsch)."
+        },
+        {
+          "strong": "Localization",
+          "text": " \u2014 tabs, settings, and monitor sections update live when you switch language."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
+      "title": "v8.3.16 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "UI",
+          "text": " \u2014 removed the in-app How it works tab from the main window; platform and download overview remains on getrnitro.netlify.app under How everything works."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.3.15 Beta",
       "accent": "orange",
       "items": [
