@@ -13,6 +13,25 @@
     },
     {
       "channel": "beta",
+      "title": "v8.3.13 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Performance",
+          "text": " \u2014 lower idle CPU and RAM: lazy network/BTC/advisor monitors, IOKit battery fast path, SMC TTL cache, disk decoupled from CPU tick, slot-aware menubar subscriptions."
+        },
+        {
+          "strong": "How it works",
+          "text": " \u2014 new Beta 8.3.13 flowchart in the How it works tab documents the optimised idle vs popover-open model."
+        },
+        {
+          "strong": "Binary",
+          "text": " \u2014 post-compile strip for a slightly smaller app bundle."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.3.12 Beta",
       "accent": "orange",
       "items": [
