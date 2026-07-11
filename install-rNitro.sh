@@ -5542,7 +5542,7 @@ struct SettingsGeneralSection: View {
                 MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
                 MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
                 MinimalButton(title: display.tr("general.checkUpdates"), action: { UpdateChecker.checkManually() })
-                MinimalButton(title: "Launch CLI", action: { CLIIntegration.openInTerminal() })
+                MinimalButton(title: "Launch CLI", action: { CLIIntegration.copyLaunchCommand() })
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -7185,32 +7185,25 @@ enum MonitorUIStyle: String, CaseIterable, Identifiable {
 }
 
 enum CLIIntegration {
-    static func openInTerminal() {
-        let body = """
-        #!/bin/bash
-        export PATH="$HOME/bin:/usr/local/bin:$PATH"
-        if command -v rnitro >/dev/null 2>&1; then
-          exec rnitro
-        fi
-        echo "rNitro CLI not found."
-        echo "Install from getrnitro.netlify.app → CLI tab → one-line install"
-        echo "Or: curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh"
-        echo ""
-        read -r -p "Press Return to close…"
+    static let launchCommand = "export PATH=\"$HOME/bin:/usr/local/bin:$PATH\" && rnitro"
+    static let installCommand = "curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh"
+
+    static func copyLaunchCommand() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(launchCommand, forType: .string)
+        let alert = NSAlert()
+        alert.messageText = "Paste into Terminal"
+        alert.informativeText = """
+        The launch command is on your clipboard. Open Terminal, paste, and press Return:
+
+        \(launchCommand)
+
+        First time? Install the CLI from getrnitro.netlify.app (CLI tab), or paste:
+
+        \(installCommand)
         """
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("rNitro-Launch-CLI.command")
-        do {
-            try body.write(to: url, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
-            NSWorkspace.shared.open(url)
-        } catch {
-            let alert = NSAlert()
-            alert.messageText = "Could Not Open Terminal"
-            alert.informativeText = error.localizedDescription
-            alert.alertStyle = .warning
-            alert.runModal()
-        }
+        alert.alertStyle = .informational
+        alert.runModal()
     }
 }
 
