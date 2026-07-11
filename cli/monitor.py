@@ -70,6 +70,17 @@ def _sysctl(name: str) -> str:
     return _run(["sysctl", "-n", name]).strip()
 
 
+def _display_name_from_command(command: str) -> str:
+    cmd = command.strip()
+    if not cmd:
+        return "?"
+    app = re.search(r"/([^/]+)\.app/", cmd)
+    if app:
+        return app.group(1)[:20]
+    token = cmd.split()[0]
+    return (Path(token).name or "?")[:20]
+
+
 class MetricsEngine:
     def __init__(self, poll_interval: float = 1.0) -> None:
         self.poll_interval = poll_interval
@@ -198,7 +209,7 @@ class MetricsEngine:
             try:
                 info = proc.info
                 pid = int(info["pid"])
-                name = (info.get("name") or "?")[:24]
+                name = (info.get("name") or "?")[:20]
                 cpu = float(info.get("cpu_percent") or 0.0)
                 mem_info = info.get("memory_info")
                 mem_mb = (mem_info.rss / (1024**2)) if mem_info else 0.0
@@ -322,20 +333,20 @@ class MetricsEngine:
             snap.battery_status = m.group(2).lower()
 
     def _top_processes_ps(self, n: int = 8) -> tuple[list[ProcessRow], list[ProcessRow]]:
-        out = _run(["ps", "-axo", "pid=,comm=,%cpu=,rss="])
+        out = _run(["ps", "-axo", "pid=,%cpu=,rss=,command="])
         rows: list[ProcessRow] = []
         for line in out.splitlines():
             line = line.strip()
             if not line:
                 continue
-            m = re.match(r"(\d+)\s+(\S+)\s+([\d.]+)\s+(\d+)", line)
+            m = re.match(r"(\d+)\s+([\d.]+)\s+(\d+)\s+(.+)", line)
             if not m:
                 continue
-            pid, name, cpu, rss = m.groups()
+            pid, cpu, rss, command = m.groups()
             rows.append(
                 ProcessRow(
                     pid=int(pid),
-                    name=Path(name).name[:24],
+                    name=_display_name_from_command(command),
                     cpu=float(cpu),
                     mem_mb=int(rss) / 1024.0,
                 )
