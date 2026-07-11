@@ -7185,7 +7185,7 @@ enum MonitorUIStyle: String, CaseIterable, Identifiable {
 }
 
 enum CLIIntegration {
-    static let launchCommand = "export PATH=\"$HOME/bin:/usr/local/bin:$PATH\" && rnitro"
+    static let launchCommand = "rnitro"
     static let installCommand = "curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh"
 
     static func copyLaunchCommand() {
@@ -7194,11 +7194,11 @@ enum CLIIntegration {
         let alert = NSAlert()
         alert.messageText = "Paste into Terminal"
         alert.informativeText = """
-        The launch command is on your clipboard. Open Terminal, paste, and press Return:
+        The command is on your clipboard. Open Terminal, paste, and press Return:
 
         \(launchCommand)
 
-        First time? Install the CLI from getrnitro.netlify.app (CLI tab), or paste:
+        First time? Run the installer (adds rnitro to ~/bin and your PATH), then type rnitro again:
 
         \(installCommand)
         """
