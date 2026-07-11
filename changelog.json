@@ -13,6 +13,17 @@
     },
     {
       "channel": "beta",
+      "title": "rNitro CLI v0.1",
+      "accent": "cyan",
+      "items": [
+        {
+          "strong": "Get rNitro CLI!",
+          "text": " — btop-style terminal monitor: live CPU, memory, disk, network, battery, and top processes. Run rnitro in any terminal (macOS + Linux, Python 3)."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.4.2 Beta",
       "accent": "orange",
       "items": [

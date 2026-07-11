@@ -39,6 +39,9 @@ def netlify_files(data: dict, *, include_bundle_zip: bool = False, website_zip: 
     ]
     if linux.get("tar"):
         files.extend([linux["tar"], linux["sh"]])
+    cli = data.get("releases", {}).get("cli", {})
+    if cli.get("tar"):
+        files.append(cli["tar"])
     if not website_zip:
         files.append(beta["source_sh"])
     if include_bundle_zip:
