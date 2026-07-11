@@ -5542,6 +5542,7 @@ struct SettingsGeneralSection: View {
                 MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
                 MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
                 MinimalButton(title: display.tr("general.checkUpdates"), action: { UpdateChecker.checkManually() })
+                MinimalButton(title: "Launch CLI", action: { CLIIntegration.openInTerminal() })
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -7179,6 +7180,39 @@ enum MonitorUIStyle: String, CaseIterable, Identifiable {
         switch self {
         case .modern: return DisplayPreferencesStore.shared.tr("ui.modern")
         case .legacy: return DisplayPreferencesStore.shared.tr("ui.legacy")
+        }
+    }
+}
+
+enum CLIIntegration {
+    static func openInTerminal() {
+        let launchCmd = """
+        export PATH="$HOME/bin:/usr/local/bin:$PATH"
+        if command -v rnitro >/dev/null 2>&1; then
+          rnitro
+        else
+          echo "rNitro CLI not found."
+          echo "Install from getrnitro.netlify.app → CLI tab → one-line install"
+          echo "Or: curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh"
+        fi
+        """
+        let escaped = launchCmd
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+        let script = """
+        tell application "Terminal"
+            activate
+            do script "\(escaped)"
+        end tell
+        """
+        var err: NSDictionary?
+        if NSAppleScript(source: script)?.executeAndReturnError(&err) == nil, let err {
+            let alert = NSAlert()
+            alert.messageText = "Could Not Open Terminal"
+            alert.informativeText = (err[NSAppleScript.errorMessage] as? String) ?? "Enable Terminal in System Settings → Privacy & Security → Automation."
+            alert.alertStyle = .warning
+            alert.runModal()
         }
     }
 }
