@@ -2,6 +2,7 @@
 #
 # rNitro installer — hardened
 #
+# v8.4.2-Beta-arm64 — Traditional Chinese (繁體中文) + Extra Large body 22px.
 # v8.4.1-Beta-arm64 — top processes by CPU/RAM while popover open.
 # v8.4.0-Beta-arm64 — Settings: font size + language (EN/ZH/ES/DE).
 # v8.3.16-Beta-arm64 — removed in-app How it works tab (overview remains on website).
@@ -211,7 +212,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="ec94027d937b119b78ce07f14b62dda7b24b0da4adecabd161488f78999fc7b9"
+EXPECTED_HASH="a85cbcf87ddab2ce8ff948e4b16ed2d2b0dda653bb674bb49998583f4a2ae504"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -369,7 +370,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.4.1-Beta-arm64"
+let CURRENT_VERSION = "v8.4.2-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -6762,7 +6763,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     var nativeLabel: String {
         switch self {
         case .english: return "English"
-        case .chinese: return "中文"
+        case .chinese: return "繁體中文"
         case .spanish: return "Español"
         case .german: return "Deutsch"
         }
@@ -6778,7 +6779,7 @@ enum FontSizePreset: String, CaseIterable, Identifiable {
         case .small: return 0.88
         case .medium: return 1.0
         case .large: return 1.12
-        case .xlarge: return 1.25
+        case .xlarge: return 22.0 / 14.0  // body ≈ 22px (window layout base 14)
         }
     }
 }
@@ -6869,52 +6870,52 @@ final class DisplayPreferencesStore: ObservableObject {
     ]
 
     private static let zhStrings: [String: String] = [
-        "tab.monitor": "监控", "tab.advisor": "顾问", "tab.chat": "聊天", "tab.cleaner": "清理", "tab.settings": "设置",
-        "settings.title": "设置", "settings.subtitle": "AI 密钥、监控布局、菜单栏、提醒和启动选项。",
-        "settings.ai": "AI", "settings.appearance": "外观", "settings.menubar": "菜单栏",
-        "settings.monitor": "监控", "settings.alerts": "提醒", "settings.general": "通用",
-        "appearance.title": "显示", "appearance.subtitle": "字体大小、语言和监控界面样式。",
-        "appearance.fontSize": "字体大小", "appearance.language": "语言",
+        "tab.monitor": "監控", "tab.advisor": "顧問", "tab.chat": "聊天", "tab.cleaner": "清理", "tab.settings": "設定",
+        "settings.title": "設定", "settings.subtitle": "AI 密鑰、監控版面、選單列、提醒與啟動選項。",
+        "settings.ai": "AI", "settings.appearance": "外觀", "settings.menubar": "選單列",
+        "settings.monitor": "監控", "settings.alerts": "提醒", "settings.general": "一般",
+        "appearance.title": "顯示", "appearance.subtitle": "字體大小、語言與監控介面樣式。",
+        "appearance.fontSize": "字體大小", "appearance.language": "語言",
         "font.small": "小", "font.medium": "中", "font.large": "大", "font.xlarge": "特大",
-        "appearance.monitorUI": "监控界面", "appearance.monitorUI.hint": "现代模式使用 iStats 风格折叠分区；经典模式为紧凑布局。",
-        "ui.modern": "现代 (iStats 风格)", "ui.legacy": "经典",
-        "menubar.title": "菜单栏图标", "menubar.subtitle": "选择布局和右上角菜单栏显示的统计项。",
-        "menubar.layout": "菜单栏布局", "layout.compact": "紧凑", "layout.inline": "单行", "layout.minimal": "极简",
-        "slot.cpu": "CPU", "slot.temp": "温度", "slot.ram": "内存", "slot.power": "功耗",
-        "slot.network": "网络", "slot.battery": "电池", "slot.btc": "比特币",
-        "monitor.title": "监控分区", "monitor.subtitle": "控制监控页显示的面板和工具。",
-        "monitor.stress": "显示压力测试", "monitor.benchmark": "显示基准测试", "monitor.network": "显示网络",
-        "monitor.solo": "单独模式（一次只展开一个面板）", "monitor.weather": "在网络分区显示天气",
-        "monitor.panels": "可见面板", "monitor.tools": "工具",
-        "alerts.title": "提醒", "alerts.subtitle": "系统顾问阈值和通知横幅。",
-        "alerts.advisorTitle": "系统顾问提醒", "alerts.advisorSubtitle": "顾问页的警告阈值和通知行为。",
-        "alerts.thresholds": "警告阈值",
-        "alerts.proactive": "聊天中的主动提醒", "alerts.banners": "严重温度时显示 macOS 横幅",
-        "general.title": "通用", "general.launchAtLogin": "登录时启动",
-        "general.launchAtLogin.req": "登录时启动需要 macOS 13 或更高版本。",
-        "general.idleEfficiency": "空闲效率", "general.idleProfile": "空闲配置",
-        "general.idleBalanced": "平衡", "general.idleAggressive": "激进（最低内存）",
-        "general.idleHint": "平衡模式保持菜单栏响应迅速；激进模式降低轮询频率，弹出窗口关闭前不记录历史数据。",
-        "general.version": "版本", "general.installLocation": "安装位置", "general.checkUpdates": "检查更新",
-        "section.battery": "电池与功耗", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "内存",
-        "section.disk": "磁盘", "section.network": "网络", "section.sensors": "传感器",
-        "section.tools": "压力与基准测试", "section.tools.summary": "压力与基准测试",
-        "row.usage": "使用率", "row.loadAvg": "平均负载", "row.uptime": "运行时间", "row.clock": "频率",
-        "row.temperature": "温度", "row.power": "功耗", "row.pressure": "压力",
-        "row.wired": "固定", "row.compressed": "压缩", "row.swap": "交换区已用",
-        "row.read": "读取", "row.write": "写入", "row.ip": "IP", "row.wifi": "Wi-Fi",
-        "row.weather": "天气", "row.location": "位置", "row.loading": "加载中…",
-        "row.download": "下载", "row.upload": "上传", "row.lowPower": "低电量模式", "row.on": "开",
-        "row.stress": "压力测试", "row.benchmark": "基准测试", "row.bitcoin": "比特币",
-        "row.status": "状态", "row.tip": "提示", "row.noSensors": "未找到温度或风扇传感器",
-        "row.sensorsTip": "SMC 键因芯片而异 — CPU 温度仍显示在上方",
-        "btn.start": "开始", "btn.stop": "停止", "btn.run": "运行", "btn.running": "运行中…",
-        "openMainWindow": "打开主窗口", "live": "实时", "cores": "核心",
-        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "内存", "panel.disk": "磁盘",
-        "panel.network": "网络", "panel.battery": "电池与功耗", "panel.sensors": "传感器",
-        "panel.settings": "设置", "panel.cleaner": "清理",
-        "processes.topCpu": "CPU 占用最高进程", "processes.topRam": "内存占用最高进程",
-        "processes.none": "采样中…", "processes.col.cpu": "CPU", "processes.col.ram": "内存",
+        "appearance.monitorUI": "監控介面", "appearance.monitorUI.hint": "現代模式使用 iStats 風格摺疊分區；經典模式為緊湊版面。",
+        "ui.modern": "現代 (iStats 風格)", "ui.legacy": "經典",
+        "menubar.title": "選單列圖示", "menubar.subtitle": "選擇版面與右上角選單列顯示的統計項目。",
+        "menubar.layout": "選單列版面", "layout.compact": "緊湊", "layout.inline": "單行", "layout.minimal": "極簡",
+        "slot.cpu": "CPU", "slot.temp": "溫度", "slot.ram": "記憶體", "slot.power": "功耗",
+        "slot.network": "網路", "slot.battery": "電池", "slot.btc": "比特幣",
+        "monitor.title": "監控分區", "monitor.subtitle": "控制監控頁顯示的面板與工具。",
+        "monitor.stress": "顯示壓力測試", "monitor.benchmark": "顯示基準測試", "monitor.network": "顯示網路",
+        "monitor.solo": "單獨模式（一次只展開一個面板）", "monitor.weather": "在網路分區顯示天氣",
+        "monitor.panels": "可見面板", "monitor.tools": "工具",
+        "alerts.title": "提醒", "alerts.subtitle": "系統顧問閾值與通知橫幅。",
+        "alerts.advisorTitle": "系統顧問提醒", "alerts.advisorSubtitle": "顧問頁的警告閾值與通知行為。",
+        "alerts.thresholds": "警告閾值",
+        "alerts.proactive": "聊天中的主動提醒", "alerts.banners": "嚴重溫度時顯示 macOS 橫幅",
+        "general.title": "一般", "general.launchAtLogin": "登入時啟動",
+        "general.launchAtLogin.req": "登入時啟動需要 macOS 13 或更高版本。",
+        "general.idleEfficiency": "閒置效率", "general.idleProfile": "閒置設定",
+        "general.idleBalanced": "平衡", "general.idleAggressive": "激進（最低記憶體）",
+        "general.idleHint": "平衡模式保持選單列回應迅速；激進模式降低輪詢頻率，彈出視窗關閉前不記錄歷史資料。",
+        "general.version": "版本", "general.installLocation": "安裝位置", "general.checkUpdates": "檢查更新",
+        "section.battery": "電池與功耗", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "記憶體",
+        "section.disk": "磁碟", "section.network": "網路", "section.sensors": "感測器",
+        "section.tools": "壓力與基準測試", "section.tools.summary": "壓力與基準測試",
+        "row.usage": "使用率", "row.loadAvg": "平均負載", "row.uptime": "執行時間", "row.clock": "頻率",
+        "row.temperature": "溫度", "row.power": "功耗", "row.pressure": "壓力",
+        "row.wired": "連線", "row.compressed": "壓縮", "row.swap": "交換區已用",
+        "row.read": "讀取", "row.write": "寫入", "row.ip": "IP", "row.wifi": "Wi-Fi",
+        "row.weather": "天氣", "row.location": "位置", "row.loading": "載入中…",
+        "row.download": "下載", "row.upload": "上傳", "row.lowPower": "低電量模式", "row.on": "開",
+        "row.stress": "壓力測試", "row.benchmark": "基準測試", "row.bitcoin": "比特幣",
+        "row.status": "狀態", "row.tip": "提示", "row.noSensors": "未找到溫度或風扇感測器",
+        "row.sensorsTip": "SMC 鍵因晶片而異 — CPU 溫度仍顯示在上方",
+        "btn.start": "開始", "btn.stop": "停止", "btn.run": "執行", "btn.running": "執行中…",
+        "openMainWindow": "開啟主視窗", "live": "即時", "cores": "核心",
+        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "記憶體", "panel.disk": "磁碟",
+        "panel.network": "網路", "panel.battery": "電池與功耗", "panel.sensors": "感測器",
+        "panel.settings": "設定", "panel.cleaner": "清理",
+        "processes.topCpu": "CPU 佔用最高程式", "processes.topRam": "記憶體佔用最高程式",
+        "processes.none": "採樣中…", "processes.col.cpu": "CPU", "processes.col.ram": "記憶體",
     ]
 
     private static let esStrings: [String: String] = [

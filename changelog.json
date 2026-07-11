@@ -13,6 +13,21 @@
     },
     {
       "channel": "beta",
+      "title": "v8.4.2 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Traditional Chinese",
+          "text": " \u2014 language picker shows \u7e41\u9ad4\u4e2d\u6587; all UI strings use Traditional characters (Taiwan/HK style)."
+        },
+        {
+          "strong": "Extra Large font",
+          "text": " \u2014 body text is now 22px at the Extra Large preset (was ~17.5px)."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.4.1 Beta",
       "accent": "orange",
       "items": [
