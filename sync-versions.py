@@ -160,6 +160,23 @@ def js_versions_object(data: dict) -> str:
             "curlInstall": cli_curl_install_cmd(cli["tar"]),
         },
     }
+    if data.get("refresh"):
+        ref = v.refresh_release(data)
+        payload["refresh"] = {
+            "id": ref["id"],
+            "label": ref["label"],
+            "short": ref["short"],
+            "sh": ref["sh"],
+            "pkg": ref["pkg"],
+            "dmg": ref["dmg"],
+            "zip": ref["zip"],
+            "hash": data["hashes"].get("refresh_sh", ""),
+            "curlInstall": curl_install_cmd(ref["sh"]),
+            "cliTar": ref.get("cli_tar", ""),
+            "cliVersion": ref.get("cli_version", ""),
+            "cliCurlInstall": refresh_cli_curl_install_cmd(ref.get("cli_tar", "")),
+            "githubUrl": v.github_release_page_url(ref["id"]),
+        }
     body = json.dumps(payload, indent=2)
     indented = "\n".join("  " + line if line else line for line in body.splitlines())
     return f"  const RNITRO_VERSIONS = {indented};"
@@ -169,9 +186,11 @@ def nav_right(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
     linux = v.linux_release(data)
+    ref = v.refresh_release(data) if data.get("refresh") else None
+    ref_bit = f" · {ref['label']}" if ref else ""
     return f"""  <div class="nav-right">
     <a class="nav-link" href="/archives">Archives</a>
-    <div class="nav-badge">{stable["label"]} · {beta["label"]} · CLI · Linux {linux["short"]}</div>
+    <div class="nav-badge">{stable["label"]} · {beta["label"]}{ref_bit} · CLI · Linux {linux["short"]}</div>
   </div>"""
 
 
@@ -219,6 +238,74 @@ def hero_beta_card(data: dict) -> str:
 {recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
 {other}
     </div>"""
+
+
+def hero_refresh_card(data: dict) -> str:
+    ref = v.refresh_release(data)
+    ref_gh = v.github_release_page_url(ref["id"])
+    cli_tar = ref.get("cli_tar", "")
+    cli_ver = ref.get("cli_version", "v0.3-refresh-cli")
+    cli_curl = refresh_cli_curl_install_cmd(cli_tar) if cli_tar else ""
+    curl_block = hero_curl_recommended_block(
+        "refresh", ref["sh"], accent="#f472b6", accent_rgb="244,114,182", btn_style="background:#f472b6; color:#000;"
+    )
+    other = other_downloads_panel(
+        "hero-refresh-other",
+        f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{ref["pkg"]}')">{sized_label("PKG installer", ref["pkg"])}</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('{ref["dmg"]}')">{sized_label("DMG disk image", ref["dmg"])}</button>
+            <button type="button" class="btn btn-sh" style="border-color:#f472b6; color:#f472b6;" onclick="requestDownload('{ref["sh"]}')">{sized_label("Shell installer (.sh)", ref["sh"])}</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('{cli_tar}')">{sized_label("CLI Refresh", cli_tar)}</button>
+            <button class="btn btn-secondary" onclick="copyCurlCmd('refresh')">⎘ Copy app curl</button>
+            <button class="btn btn-secondary" onclick="copyRefreshCliInstall()">⎘ Copy CLI curl</button>""",
+        note=f"<strong>Refresh</strong> is the experimental fast-moving channel — improved CLI (<code>{cli_ver}</code>), Advisor → Chat AI handoff, and Settings → Open CLI. <a href=\"{ref_gh}\" style=\"color:#f472b6;\">GitHub Release</a>. Classic <strong>v8.4.2 Beta</strong> stays on the macOS tab.",
+    )
+    return f"""    <div style="width:100%; background:var(--card); border:1px solid #f472b6; border-radius:12px; padding:20px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:#f472b6; margin-bottom:4px;">{ref["id"]}</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">{ref["label"]} — next-gen beta with <strong>improved CLI</strong> (<code>rnitro ask</code>), deeper <strong>AI integration</strong> (Advisor → Chat), and Chat → API keys.</div>
+      <p style="font-size:15px; color:#f472b6; background:rgba(244,114,182,0.08); border:1px solid rgba(244,114,182,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
+        <strong>Refresh notice:</strong> Bleeding-edge builds — may change weekly. Terms required before download. <strong>v8.4.2 Beta</strong> remains on the macOS tab for a stable beta baseline.
+      </p>
+{curl_block}
+{recommended_zip_block(ref["zip"], accent="#f472b6", accent_rgb="244,114,182", btn_style="background:#f472b6; color:#000;")}
+      <div style="margin-top:14px; text-align:left; background:var(--card2); border:1px solid rgba(244,114,182,0.35); border-radius:8px; padding:12px 14px;">
+        <div style="font-family:var(--mono); font-size:12px; color:#f472b6; margin-bottom:6px;">REFRESH CLI · {cli_ver}</div>
+        <div style="font-family:var(--mono); font-size:12px; color:var(--text); word-break:break-all; line-height:1.45;">{cli_curl}</div>
+        <p style="font-size:13px; color:var(--muted); margin:8px 0 0;">Includes <code>rnitro ask "…"</code> — uses <code>OPENAI_API_KEY</code> or <code>GEMINI_API_KEY</code> with live stats.</p>
+      </div>
+{other}
+    </div>"""
+
+
+def steps_refresh(data: dict) -> str:
+    ref = v.refresh_release(data)
+    ref_gh = v.github_release_page_url(ref["id"])
+    curl_cmd = curl_install_cmd(ref["sh"])
+    cli_curl = refresh_cli_curl_install_cmd(ref.get("cli_tar", ""))
+    return f"""  <div id="steps-refresh" class="steps" style="display:none;">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Install Refresh app (Terminal one-liner)</h3>
+        <p>Switch to the <strong>Refresh</strong> tab and paste:</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid rgba(244,114,182,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:13px; color:#f472b6; word-break:break-all; line-height:1.45;">{curl_cmd}</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Install Refresh CLI (optional)</h3>
+        <p>Improved terminal monitor with <code>rnitro ask</code> for AI-powered stats analysis:</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid rgba(244,114,182,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:12px; color:var(--text); word-break:break-all; line-height:1.45;">{cli_curl}</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Use AI integration</h3>
+        <p>Open <strong>Advisor</strong> → <strong>Ask AI</strong> to jump to Chat with a live system summary. Configure API keys under <strong>Chat → API</strong>. Also on <a href="{ref_gh}" style="color:#f472b6;">GitHub Releases</a>.</p>
+      </div>
+    </div>
+  </div>"""
 
 
 def pkg_gatekeeper_warning() -> str:
@@ -313,6 +400,14 @@ def cli_curl_install_cmd(tar_name: str) -> str:
     )
 
 
+def refresh_cli_curl_install_cmd(tar_name: str) -> str:
+    return (
+        f"curl -fsSL {SITE_URL}/{tar_name} -o /tmp/rnitro-cli-refresh.tar.gz && "
+        f"mkdir -p /tmp/rnitro-cli-refresh && tar xzf /tmp/rnitro-cli-refresh.tar.gz -C /tmp/rnitro-cli-refresh && "
+        f"bash /tmp/rnitro-cli-refresh/install-cli.sh"
+    )
+
+
 def hero_head(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
@@ -358,7 +453,7 @@ def hero_copy(data: dict) -> str:
     return f"""  <p class="hero-eyebrow">System Monitor</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, and per-core stats for <strong>macOS</strong> ({stable["short"]} Stable + {beta["short"]} Beta), <strong>rNitro CLI</strong> (terminal / btop-style), <strong>Linux</strong> ({linux["short"]} pre-release), and legacy <strong>Windows</strong> (deprecated — downloads remain).</p>"""
+  <p class="hero-sub">Real-time CPU, temperature, and per-core stats for <strong>macOS</strong> ({stable["short"]} Stable + {beta["short"]} Beta + <strong style="color:#f472b6;">0.1 Refresh</strong>), <strong>rNitro CLI</strong> (terminal / btop-style), <strong>Linux</strong> ({linux["short"]} pre-release), and legacy <strong>Windows</strong> (deprecated — downloads remain).</p>"""
 
 
 def platform_tabs() -> str:
@@ -366,6 +461,10 @@ def platform_tabs() -> str:
     <button id="tab-mac" role="tab" aria-selected="true" aria-controls="dl-mac" onclick="setTab('mac')"
       style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
       🍎 macOS
+    </button>
+    <button id="tab-refresh" role="tab" aria-selected="false" aria-controls="dl-refresh" onclick="setTab('refresh')"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+      ✨ Refresh
     </button>
     <button id="tab-cli" role="tab" aria-selected="false" aria-controls="dl-cli" onclick="setTab('cli')"
       style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
@@ -907,6 +1006,15 @@ def how_it_works_section(data: dict) -> str:
             "Everything in Stable plus all AI providers, temp banners, AES-256 key storage, first-launch tips",
         ),
         (
+            f'<strong style="color:#f472b6;">macOS</strong> · Refresh',
+            v.refresh_release(data)["id"] if data.get("refresh") else "—",
+            _status_pill("Refresh", "beta"),
+            f'<code>{v.refresh_release(data)["zip"]}</code>' if data.get("refresh") else "—",
+            "<code>~/Applications/rNitro.app</code>",
+            "Manual download / curl .sh",
+            "v8.4.2+ features plus Advisor→Chat AI, Open CLI, CLI ask command; fast-moving channel",
+        ),
+        (
             f'<strong style="color:#a78bfa;">CLI</strong> · Terminal',
             cli["version"],
             _status_pill("New", "active"),
@@ -1129,12 +1237,16 @@ def chat_whats_new_kb(data: dict, changelog: dict) -> str:
 
 
 def update_installer_versions(data: dict) -> None:
-    beta = v.beta_release(data)
-    installer = SITE / beta["source_sh"]
+    if not data.get("refresh"):
+        return
+    ref = v.refresh_release(data)
+    installer = SITE / ref["source_sh"]
+    if not installer.is_file():
+        return
     text = installer.read_text(encoding="utf-8")
     text = re.sub(
-        r'let CURRENT_VERSION = "v[^"]+"',
-        f'let CURRENT_VERSION = "{beta["id"]}"',
+        r'let CURRENT_VERSION = "[^"]+"',
+        f'let CURRENT_VERSION = "{ref["id"]}"',
         text,
         count=1,
     )
@@ -1148,12 +1260,23 @@ def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
     if not skip_stable:
         subprocess.run([sys.executable, str(MAKE_STABLE)], cwd=SITE, check=True)
 
-    src = SITE / beta["source_sh"]
-    dst = SITE / beta["sh"]
-    shutil.copy2(src, dst)
-    dst.chmod(0o755)
+    paths: list[Path] = []
+    if beta.get("source_sh"):
+        src = SITE / beta["source_sh"]
+        dst = SITE / beta["sh"]
+        shutil.copy2(src, dst)
+        dst.chmod(0o755)
+        paths.extend([src, dst])
 
-    paths = [src, dst]
+    if data.get("refresh"):
+        ref = v.refresh_release(data)
+        if ref.get("source_sh"):
+            src = SITE / ref["source_sh"]
+            dst = SITE / ref["sh"]
+            shutil.copy2(src, dst)
+            dst.chmod(0o755)
+            paths.extend([src, dst])
+
     if not skip_stable:
         paths.append(SITE / stable["sh"])
     for path in paths:
@@ -1173,7 +1296,7 @@ def js_settab_handlers() -> str:
     const params = new URLSearchParams(location.search);
     const hash = location.hash.replace('#', '');
     const fromQuery = params.get('tab');
-    const tabs = ['mac', 'cli', 'linux', 'win'];
+    const tabs = ['mac', 'refresh', 'cli', 'linux', 'win'];
     if (tabs.includes(fromQuery)) return fromQuery;
     if (tabs.includes(hash)) return hash;
     try {
@@ -1194,25 +1317,40 @@ def js_settab_handlers() -> str:
 
   function setTab(platform) {
     const isMac = platform === 'mac';
+    const isRefresh = platform === 'refresh';
     const isCli = platform === 'cli';
     const isLinux = platform === 'linux';
     const isWin = platform === 'win';
     try { localStorage.setItem('rnitro-tab', platform); } catch (e) { /* ignore */ }
     document.getElementById('dl-mac').style.display = isMac ? 'flex' : 'none';
+    document.getElementById('dl-refresh').style.display = isRefresh ? 'flex' : 'none';
     document.getElementById('dl-cli').style.display = isCli ? 'flex' : 'none';
     document.getElementById('dl-win').style.display = isWin ? 'flex' : 'none';
     document.getElementById('dl-linux').style.display = isLinux ? 'flex' : 'none';
     document.getElementById('steps-mac').style.display = isMac ? 'block' : 'none';
+    document.getElementById('steps-refresh').style.display = isRefresh ? 'block' : 'none';
     document.getElementById('steps-cli').style.display = isCli ? 'block' : 'none';
     document.getElementById('steps-linux').style.display = isLinux ? 'block' : 'none';
     document.getElementById('steps-win').style.display = isWin ? 'block' : 'none';
     document.getElementById('cards-mac').style.display = isMac ? 'block' : 'none';
+    document.getElementById('cards-refresh').style.display = isRefresh ? 'block' : 'none';
     document.getElementById('card-win').style.display = isWin ? 'flex' : 'none';
     document.getElementById('card-linux').style.display = isLinux ? 'flex' : 'none';
     setTabStyle('tab-mac', isMac, 'var(--green)');
+    setTabStyle('tab-refresh', isRefresh, '#f472b6');
     setTabStyle('tab-cli', isCli, '#a78bfa');
     setTabStyle('tab-linux', isLinux, '#e8a838');
     setTabStyle('tab-win', isWin, 'var(--cyan)');
+  }
+
+  function copyRefreshCliInstall() {
+    const cmd = RNITRO_VERSIONS.refresh?.cliCurlInstall || '';
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ Refresh CLI install copied';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
   }
 
   function copyCliInstall() {
@@ -1237,11 +1375,13 @@ def sync_index(data: dict) -> None:
         "platform-tabs": platform_tabs(),
         "hero-stable": hero_stable_card(data),
         "hero-beta": hero_beta_card(data),
+        "hero-refresh": hero_refresh_card(data),
         "hero-more": hero_more_downloads(data),
         "hero-windows": hero_windows_buttons(data),
         "hero-linux": hero_linux_buttons(data),
         "hero-cli": hero_cli_card(data),
         "steps-cli": steps_cli(data),
+        "steps-refresh": steps_refresh(data),
         "js-settab": js_settab_handlers(),
         "feature-ai-chat": feature_ai_chat(data),
         "how-it-works": how_it_works_section(data),
@@ -1493,6 +1633,10 @@ def refresh_hashes(data: dict) -> dict:
         raise SystemExit(f"Missing beta installer: {beta_path}")
     data["hashes"]["stable_sh"] = v.file_sha256(stable_path)
     data["hashes"]["beta_sh"] = v.file_sha256(beta_path)
+    if data.get("refresh"):
+        ref_path = SITE / v.refresh_release(data)["sh"]
+        if ref_path.is_file():
+            data["hashes"]["refresh_sh"] = v.file_sha256(ref_path)
     return data
 
 
@@ -1529,8 +1673,10 @@ def main() -> None:
     data = refresh_archive(data)
     v.save(data)
 
-    print("Building CLI tarball...")
+    print("Building CLI tarballs...")
     subprocess.run([sys.executable, str(SITE / "build-cli-zip.py")], cwd=SITE, check=True)
+    if data.get("refresh"):
+        subprocess.run([sys.executable, str(SITE / "build-cli-refresh-zip.py")], cwd=SITE, check=True)
 
     print("Syncing index.html...")
     sync_index(data)
@@ -1539,9 +1685,13 @@ def main() -> None:
 
     print("\nDone. version.json:")
     print(f"  latest: {data['latest']}")
-    print(f"  beta:   {data['beta']}")
+    print(f"  beta:     {data['beta']}")
+    if data.get("refresh"):
+        print(f"  refresh:  {data['refresh']}")
     print(f"  stable SHA: {data['hashes']['stable_sh'][:16]}…")
     print(f"  beta SHA:   {data['hashes']['beta_sh'][:16]}…")
+    if data.get("refresh") and data["hashes"].get("refresh_sh"):
+        print(f"  refresh SHA: {data['hashes']['refresh_sh'][:16]}…")
 
 
 if __name__ == "__main__":

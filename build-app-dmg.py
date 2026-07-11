@@ -117,7 +117,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build rNitro macOS DMG installers")
     parser.add_argument(
         "--variant",
-        choices=["beta", "stable", "all"],
+        choices=["beta", "stable", "refresh", "all"],
         default="all",
         help="Which build to package (default: all)",
     )
@@ -137,7 +137,10 @@ def main() -> None:
     if args.variant in ("stable", "all"):
         builds.append((stable["sh"], stable["dmg"], stable["sh"]))
     if args.variant in ("beta", "all"):
-        builds.append((beta["source_sh"], beta["dmg"], beta["sh"]))
+        builds.append((beta.get("source_sh") or beta["sh"], beta["dmg"], beta["sh"]))
+    if args.variant in ("refresh", "all") and data.get("refresh"):
+        ref = v.refresh_release(data)
+        builds.append((ref["source_sh"], ref["dmg"], ref["sh"]))
 
     for installer_script, dmg_name, sh_name in builds:
         out = create_dmg(
