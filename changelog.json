@@ -13,6 +13,17 @@
     },
     {
       "channel": "beta",
+      "title": "Beta 0.1 Refresh",
+      "accent": "pink",
+      "items": [
+        {
+          "strong": "New Refresh channel",
+          "text": " — rNitro-Beta-0.1-Refresh: improved CLI (rnitro ask), Advisor → Chat AI handoff, Open CLI from Settings. v8.4.2 Beta stays on the macOS tab."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.4.3 Beta",
       "accent": "orange",
       "items": [

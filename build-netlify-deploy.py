@@ -21,6 +21,7 @@ NETLIFY_ZIP_NAME = "rNitro-NETLIFY-UPLOAD.zip"
 def netlify_files(data: dict, *, include_bundle_zip: bool = False, website_zip: bool = False) -> list[str]:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
+    refresh = v.refresh_release(data) if data.get("refresh") else None
     win = v.windows_release(data)
     linux = v.linux_release(data)
     files = list(fr.WEBSITE_FILES) + [
@@ -37,13 +38,25 @@ def netlify_files(data: dict, *, include_bundle_zip: bool = False, website_zip: 
         win["ps1"],
         "install-rNitro-windows.ps1",
     ]
+    if refresh:
+        files.extend([
+            refresh["pkg"],
+            refresh["dmg"],
+            refresh["zip"],
+            refresh["sh"],
+            refresh.get("source_sh", ""),
+            refresh.get("cli_tar", ""),
+        ])
     if linux.get("tar"):
         files.extend([linux["tar"], linux["sh"]])
     cli = data.get("releases", {}).get("cli", {})
     if cli.get("tar"):
         files.append(cli["tar"])
     if not website_zip:
-        files.append(beta["source_sh"])
+        if refresh and refresh.get("source_sh"):
+            files.append(refresh["source_sh"])
+        elif beta.get("source_sh"):
+            files.append(beta["source_sh"])
     if include_bundle_zip:
         files.append(v.full_release(data)["zip"])
     archive = data.get("archive") or pv.build_archive(data)

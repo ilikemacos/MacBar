@@ -1,6 +1,7 @@
 {
   "latest": "v8.3.6-Final-arm64",
-  "beta": "v8.4.3-Beta-arm64",
+  "beta": "v8.4.2-Beta-arm64",
+  "refresh": "rNitro-Beta-0.1-Refresh-arm64",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
   "cli": "v0.2-cli",
@@ -14,13 +15,23 @@
       "zip": "rNitro-v8.3.6-Final-arm64.zip"
     },
     "beta": {
-      "label": "v8.4.3 Beta",
-      "short": "v8.4.3",
-      "sh": "rNitro-v8.4.3-Beta-arm64.sh",
-      "source_sh": "install-rNitro.sh",
-      "pkg": "rNitro-v8.4.3-Beta-arm64.pkg",
-      "dmg": "rNitro-v8.4.3-Beta-arm64.dmg",
-      "zip": "rNitro-v8.4.3-Beta-arm64.zip"
+      "label": "v8.4.2 Beta",
+      "short": "v8.4.2",
+      "sh": "rNitro-v8.4.2-Beta-arm64.sh",
+      "pkg": "rNitro-v8.4.2-Beta-arm64.pkg",
+      "dmg": "rNitro-v8.4.2-Beta-arm64.dmg",
+      "zip": "rNitro-v8.4.2-Beta-arm64.zip"
+    },
+    "refresh": {
+      "label": "Beta 0.1 Refresh",
+      "short": "0.1 Refresh",
+      "sh": "rNitro-Beta-0.1-Refresh-arm64.sh",
+      "source_sh": "install-rNitro-refresh.sh",
+      "pkg": "rNitro-Beta-0.1-Refresh-arm64.pkg",
+      "dmg": "rNitro-Beta-0.1-Refresh-arm64.dmg",
+      "zip": "rNitro-Beta-0.1-Refresh-arm64.zip",
+      "cli_tar": "rNitro-CLI-Refresh.tar.gz",
+      "cli_version": "v0.3-refresh-cli"
     },
     "linux": {
       "label": "v0.1 Linux Beta Pre-release",
@@ -49,7 +60,8 @@
   },
   "hashes": {
     "stable_sh": "9ddf154e5ad60b81c0d324396a8ff61ad0214c37956f6694628e0f1add868fc5",
-    "beta_sh": "5889792274ad200e0fbd11bd340c03b93a37e3754d5906573bd2281d3fec1306"
+    "beta_sh": "ca7ffad79b2d0477660c2f1951417aec18a177df37d297d0543efeca5b05ef5f",
+    "refresh_sh": "c4c006e5af68d41c7edff66ceb164b4421667a2605148776f668eac356520137"
   },
   "archive": [
     {

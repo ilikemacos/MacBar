@@ -127,6 +127,62 @@ def linux_release_notes(data: dict) -> str:
     return "\n".join(lines)
 
 
+def refresh_assets(data: dict) -> tuple[dict, list[Path]]:
+    rel = v.refresh_release(data)
+    names = [rel["zip"], rel["pkg"], rel["dmg"], rel["sh"]]
+    if rel.get("cli_tar"):
+        names.append(rel["cli_tar"])
+    paths = []
+    for name in names:
+        path = SITE / name
+        if not path.is_file():
+            raise SystemExit(f"Missing refresh artifact: {path}")
+        paths.append(path)
+    return rel, paths
+
+
+def refresh_release_notes(data: dict) -> str:
+    rel = v.refresh_release(data)
+    beta = v.beta_release(data)
+    lines = [
+        f"## rNitro {rel['label']}",
+        "",
+        "Experimental **Refresh** channel — improved CLI (`rnitro ask`), Advisor → Chat AI handoff, Chat → API keys, Open CLI from Settings.",
+        "",
+        "### Install",
+        "- **App ZIP** (recommended after curl one-liner on site)",
+        f"- **CLI Refresh** — `{rel.get('cli_tar', '')}` with `rnitro ask`",
+        "",
+        f"Classic beta remains: [{beta['label']}]({v.github_release_page_url(beta['id'])})",
+        "",
+        "Website: [getrnitro.netlify.app](https://getrnitro.netlify.app/) — **✨ Refresh** tab",
+    ]
+    return "\n".join(lines)
+
+
+def publish_refresh(data: dict) -> None:
+    rel, paths = refresh_assets(data)
+    tag = v.github_release_tag(rel["id"])
+    title = f"rNitro {rel['label']}"
+    delete_release(tag)
+    cmd = [
+        "gh",
+        "release",
+        "create",
+        tag,
+        *[str(p) for p in paths],
+        "--repo",
+        REPO,
+        "--title",
+        title,
+        "--notes",
+        refresh_release_notes(data),
+        "--latest",
+    ]
+    run(cmd)
+    print(f"✅ {tag}: {', '.join(p.name for p in paths)}")
+
+
 def publish_linux(data: dict) -> None:
     rel, paths = linux_assets(data)
     tag = v.github_release_tag(rel["id"])
@@ -167,7 +223,11 @@ def main() -> None:
         delete_release(BUNDLE_TAG)
 
     publish_channel(data, "stable", latest=False)
-    publish_channel(data, "beta", latest=True)
+    publish_channel(data, "beta", latest=False)
+    if data.get("refresh"):
+        publish_refresh(data)
+    else:
+        publish_channel(data, "beta", latest=True)
     publish_linux(data)
 
     stable = v.stable_release(data)

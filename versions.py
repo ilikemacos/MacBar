@@ -48,6 +48,11 @@ def beta_id(data: dict | None = None) -> str:
     return data["beta"]
 
 
+def refresh_id(data: dict | None = None) -> str:
+    data = data or load()
+    return data.get("refresh", "")
+
+
 def windows_id(data: dict | None = None) -> str:
     data = data or load()
     return data["windows"]
@@ -69,6 +74,13 @@ def beta_release(data: dict | None = None) -> dict:
     data = data or load()
     rel = dict(data["releases"]["beta"])
     rel["id"] = data["beta"]
+    return rel
+
+
+def refresh_release(data: dict | None = None) -> dict:
+    data = data or load()
+    rel = dict(data["releases"]["refresh"])
+    rel["id"] = data.get("refresh", rel.get("id", ""))
     return rel
 
 
@@ -177,6 +189,13 @@ def validate(data: dict) -> None:
         raise ValueError(
             f"releases.beta.zip ({beta['zip']}) must match rNitro-{data['beta']}.zip"
         )
+    if data.get("refresh"):
+        refresh = refresh_release(data)
+        rid = data["refresh"]
+        if f"{rid}.sh" != refresh["sh"]:
+            raise ValueError(
+                f"releases.refresh.sh ({refresh['sh']}) must match {rid}.sh"
+            )
 
 
 def macos_release_files(data: dict | None = None) -> list[str]:
@@ -185,6 +204,7 @@ def macos_release_files(data: dict | None = None) -> list[str]:
     beta = beta_release(data)
     win = windows_release(data)
     linux = linux_release(data)
+    refresh = refresh_release(data) if data.get("refresh") else None
     files = [
         stable["pkg"],
         beta["pkg"],
@@ -195,11 +215,21 @@ def macos_release_files(data: dict | None = None) -> list[str]:
         macos_apps_release(data)["zip"],
         stable["sh"],
         beta["sh"],
-        beta["source_sh"],
         win["exe"],
         win["ps1"],
         "install-rNitro-windows.ps1",
     ]
+    if refresh:
+        files.extend([
+            refresh["pkg"],
+            refresh["dmg"],
+            refresh["zip"],
+            refresh["sh"],
+            refresh.get("source_sh", ""),
+            refresh.get("cli_tar", ""),
+        ])
+    elif beta.get("source_sh"):
+        files.append(beta["source_sh"])
     if linux.get("tar"):
         files.extend([linux["tar"], linux["sh"]])
     return files

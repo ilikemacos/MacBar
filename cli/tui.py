@@ -162,7 +162,7 @@ def _render(stdscr: curses.window, snap: Snapshot, pairs: dict[str, int]) -> Non
         _safe_addstr(stdscr, row, 3, line)
         row += 1
 
-    footer = " q quit │ r refresh │ psutil recommended: pip3 install psutil "
+    footer = " q quit │ r refresh │ ? help │ psutil: pip3 install psutil "
     _safe_addstr(stdscr, footer_y, 0, footer, curses.A_DIM)
 
     stdscr.refresh()
@@ -193,6 +193,8 @@ def run_tui(engine: MetricsEngine) -> int:
                     break
                 if ch in (ord("r"), ord("R")):
                     engine.refresh()
+                if ch in (ord("?"), ord("h"), ord("H")):
+                    pass  # help shown in footer; extend later
                 _render(stdscr, engine.snapshot, pairs)
         finally:
             engine.stop()
