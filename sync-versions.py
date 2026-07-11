@@ -186,9 +186,13 @@ def hero_stable_card(data: dict) -> str:
             <button class="btn btn-secondary" onclick="copyCmd('stable')">⎘ Copy bash command</button>""",
         note="<strong>PKG</strong> needs admin password. <strong>DMG</strong> — drag to Applications. <strong>.sh</strong> compiles from readable source (~30s). PKG may trigger a macOS security prompt — use System Settings → Privacy &amp; Security → Open.",
     )
+    curl_block = hero_curl_recommended_block(
+        "stable", s["sh"], accent="var(--green)", accent_rgb="0,255,136"
+    )
     return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">{s["id"]}</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
+{curl_block}
 {recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136")}
 {other}
     </div>"""
@@ -211,6 +215,7 @@ def hero_beta_card(data: dict) -> str:
       <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Beta notice:</strong> Experimental AI features — report issues via Support. You must agree to Terms &amp; Conditions before download.
       </p>
+{hero_curl_recommended_block("beta", b["sh"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
 {recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
 {other}
     </div>"""
@@ -278,6 +283,26 @@ SITE_URL = "https://getrnitro.netlify.app"
 def curl_install_cmd(sh_name: str) -> str:
     """One-liner: download .sh to disk then run (installer blocks curl|bash)."""
     return f"curl -fsSL {SITE_URL}/{sh_name} -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+
+
+def hero_curl_recommended_block(
+    which: str,
+    sh_name: str,
+    *,
+    accent: str,
+    accent_rgb: str,
+    btn_style: str = "",
+) -> str:
+    cmd = curl_install_cmd(sh_name)
+    return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.45);">
+        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.5); background:rgba({accent_rgb},0.12);">Best first launch</div>
+        <div class="dl-recommended-title" style="color:{accent};">Terminal one-liner</div>
+        <p class="dl-recommended-steps">Paste in Terminal — compiles on your Mac (~30s). Usually <strong>does not</strong> trigger Gatekeeper like ZIP, PKG, or DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+        <div style="background:var(--card2); border:1px solid rgba({accent_rgb},0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:{accent}; word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
+          {cmd}
+        </div>
+        <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="copyCurlCmd('{which}')">⎘ Copy curl one-liner</button>
+      </div>"""
 
 
 def cli_curl_install_cmd(tar_name: str) -> str:
@@ -625,7 +650,7 @@ def hero_curl_install(data: dict) -> str:
     beta_curl = curl_install_cmd(b["sh"])
     return f"""  <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
     <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
-    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Best first launch: usually avoids Gatekeeper blocks from ZIP/PKG/DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
     <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable ({s["short"]})</div>
     <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
       {stable_curl}
