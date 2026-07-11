@@ -13,12 +13,23 @@
     },
     {
       "channel": "beta",
-      "title": "rNitro CLI v0.1",
+      "title": "v8.4.3 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Chat → API sub-tab",
+          "text": " — API keys and provider setup moved out of Settings into a dedicated API sub-tab under Chat. Settings now focuses on appearance, menubar, monitor, alerts, and general options."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
+      "title": "rNitro CLI v0.2",
       "accent": "cyan",
       "items": [
         {
           "strong": "Get rNitro CLI!",
-          "text": " — btop-style terminal monitor: live CPU, memory, disk, network, battery, and top processes. Run rnitro in any terminal (macOS + Linux, Python 3)."
+          "text": " — btop-style terminal monitor with Unicode borders, full process names on macOS, live CPU/RAM/disk/network/battery, and top processes. Run rnitro in any terminal (macOS + Linux, Python 3)."
         }
       ]
     },

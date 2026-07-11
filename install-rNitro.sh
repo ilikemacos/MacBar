@@ -2,6 +2,7 @@
 #
 # rNitro installer — hardened
 #
+# v8.4.3-Beta-arm64 — Chat tab: API keys moved to dedicated API sub-tab (out of Settings).
 # v8.4.2-Beta-arm64 — Traditional Chinese (繁體中文) + Extra Large body 22px.
 # v8.4.1-Beta-arm64 — top processes by CPU/RAM while popover open.
 # v8.4.0-Beta-arm64 — Settings: font size + language (EN/ZH/ES/DE).
@@ -212,7 +213,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="a85cbcf87ddab2ce8ff948e4b16ed2d2b0dda653bb674bb49998583f4a2ae504"
+EXPECTED_HASH="6becf64d031c710915e26148975d9a6f1b71f56b0a0293c02363927aa846a0b3"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -370,7 +371,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.4.2-Beta-arm64"
+let CURRENT_VERSION = "v8.4.3-Beta-arm64"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -4487,7 +4488,7 @@ final class AIChatModel: ObservableObject {
                 if AIKeyUtil.isAuthFailure(msg, status: code) {
                     let hint = provider.requiresApiKey
                         ? msg
-                        : "\(msg)\n\nThis server requires an API key — open the Settings tab and paste the key from your local server."
+                        : "\(msg)\n\nThis server requires an API key — open Chat → API and paste the key from your local server."
                     providerStatuses[provider] = AIProviderStatus(
                         state: provider.requiresApiKey ? .needsApiKey : .offlineError,
                         lastCheck: Date(),
@@ -4673,7 +4674,7 @@ final class AIChatModel: ObservableObject {
         let key = AIKeyUtil.sanitize(apiKey)
         if requireAuth && !AIKeyUtil.isUsableCloudKey(key) {
             throw NSError(domain: domain, code: 401,
-                          userInfo: [NSLocalizedDescriptionKey: "Missing API key — open Settings and paste your \(domain) key."])
+                          userInfo: [NSLocalizedDescriptionKey: "Missing API key — open Chat → API and paste your \(domain) key."])
         }
         var req = URLRequest(url: URL(string: url)!)
         req.httpMethod = "POST"
@@ -5039,14 +5040,34 @@ struct AIProviderPicker: View {
     }
 }
 
-enum SettingsSection: String, CaseIterable, Identifiable {
-    case ai, appearance, menubar, monitor, alerts, general
+enum ChatSection: String, CaseIterable, Identifiable {
+    case chat, api
     var id: String { rawValue }
 
     var label: String {
         let key: String
         switch self {
-        case .ai: key = "settings.ai"
+        case .chat: key = "chat.subtab.chat"
+        case .api: key = "chat.subtab.api"
+        }
+        return DisplayPreferencesStore.shared.tr(key)
+    }
+
+    var icon: String {
+        switch self {
+        case .chat: return "bubble.left.and.bubble.right"
+        case .api: return "key.fill"
+        }
+    }
+}
+
+enum SettingsSection: String, CaseIterable, Identifiable {
+    case appearance, menubar, monitor, alerts, general
+    var id: String { rawValue }
+
+    var label: String {
+        let key: String
+        switch self {
         case .appearance: key = "settings.appearance"
         case .menubar: key = "settings.menubar"
         case .monitor: key = "settings.monitor"
@@ -5058,7 +5079,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .ai: return "sparkles"
         case .appearance: return "paintbrush"
         case .menubar: return "menubar.rectangle"
         case .monitor: return "gauge"
@@ -5068,10 +5088,75 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     }
 }
 
+struct ChatTabView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
+    @State private var section: ChatSection = .chat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(display.tr("chat.title"))
+                    .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+                Text(display.tr("chat.subtitle"))
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, metrics.hPad)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(ChatSection.allCases) { s in
+                        Button(action: { section = s }) {
+                            HStack(spacing: 5) {
+                                Image(systemName: s.icon)
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text(s.label)
+                                    .font(rNitroFont(.caption, metrics: metrics, weight: section == s ? .semibold : .regular))
+                            }
+                            .foregroundColor(section == s ? .accent : .secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(section == s ? Color.accent.opacity(0.14) : Color.card.opacity(0.35))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(section == s ? Color.accent.opacity(0.45) : Color.border.opacity(0.35), lineWidth: 0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, metrics.hPad)
+            }
+            .padding(.bottom, 8)
+
+            MinimalDivider().padding(.horizontal, metrics.hPad)
+
+            Group {
+                switch section {
+                case .chat:
+                    AIChatView(compact: false, onOpenAPISetup: { section = .api })
+                case .api:
+                    ChatAPISection()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(Color.bg)
+        .onReceive(NotificationCenter.default.publisher(for: .rNitroOpenMainWindow)) { note in
+            if let raw = note.userInfo?["chatSection"] as? String,
+               let s = ChatSection(rawValue: raw) {
+                section = s
+            }
+        }
+    }
+}
+
 struct SettingsView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
-    @State private var section: SettingsSection = .ai
+    @State private var section: SettingsSection = .appearance
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -5114,7 +5199,6 @@ struct SettingsView: View {
 
             Group {
                 switch section {
-                case .ai: SettingsAISection()
                 case .appearance: SettingsAppearanceSection()
                 case .menubar: SettingsMenubarSection()
                 case .monitor: SettingsMonitorSection()
@@ -5135,7 +5219,7 @@ struct SettingsView: View {
     }
 }
 
-struct SettingsAISection: View {
+struct ChatAPISection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var chat = AIChatModel.shared
 
@@ -5469,6 +5553,7 @@ struct AIChatView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var chat = AIChatModel.shared
     var compact: Bool = false
+    var onOpenAPISetup: (() -> Void)? = nil
 
     var body: some View {
         Group {
@@ -5491,10 +5576,14 @@ struct AIChatView: View {
                 .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
             if compact {
                 popoverMiniKeySetup
-            } else {
-                Text("Open the Settings tab to save API keys and test connections.")
+            } else if let onOpenAPISetup {
+                Text("Open the API sub-tab to save keys and test connections.")
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
-                MinimalButton(title: "Open Settings", action: openSettingsTab)
+                MinimalButton(title: "Open API Setup", action: onOpenAPISetup)
+            } else {
+                Text("Open Chat → API to save keys and test connections.")
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
+                MinimalButton(title: "Open API Setup", action: openAPISetupInMainWindow)
             }
         }
         .padding(compact ? 12 : 20)
@@ -5514,17 +5603,13 @@ struct AIChatView: View {
                 title: chat.selectedProvider.requiresApiKey ? "Save Key" : "Enable",
                 action: { chat.saveApiKey() }
             )
-            Button("Open main window → Settings") { openSettingsInMainWindow() }
+            Button("Open main window → API") { openAPISetupInMainWindow() }
                 .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.accent).buttonStyle(.plain)
         }
     }
 
-    private func openSettingsTab() {
-        NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: ["tab": AppTab.settings.rawValue, "settingsSection": SettingsSection.ai.rawValue])
-    }
-
-    private func openSettingsInMainWindow() {
-        NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: ["tab": AppTab.settings.rawValue, "settingsSection": SettingsSection.ai.rawValue])
+    private func openAPISetupInMainWindow() {
+        NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: ["tab": AppTab.chat.rawValue, "chatSection": ChatSection.api.rawValue])
     }
 
     private var chatPanel: some View {
@@ -5545,7 +5630,7 @@ struct AIChatView: View {
             }
             .padding(.horizontal, compact ? 10 : 14).padding(.vertical, compact ? 6 : 8)
             if !compact {
-                Text("History is saved on this Mac. Messages go to \(chat.selectedProvider.rawValue) — manage keys in Settings.")
+                Text("History is saved on this Mac. Messages go to \(chat.selectedProvider.rawValue) — manage keys in the API sub-tab.")
                     .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                     .padding(.horizontal, 14).padding(.bottom, 6)
             }
@@ -6821,9 +6906,11 @@ final class DisplayPreferencesStore: ObservableObject {
     private static let enStrings: [String: String] = [
         "tab.monitor": "Monitor", "tab.advisor": "Advisor", "tab.chat": "Chat",
         "tab.cleaner": "Cleaner", "tab.settings": "Settings",
+        "chat.title": "AI Chat", "chat.subtitle": "Chat with your provider or manage API keys.",
+        "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
         "settings.title": "Settings",
-        "settings.subtitle": "AI keys, monitor layout, menubar, alerts, and startup options.",
-        "settings.ai": "AI", "settings.appearance": "Appearance", "settings.menubar": "Menubar",
+        "settings.subtitle": "Monitor layout, menubar, alerts, and startup options.",
+        "settings.appearance": "Appearance", "settings.menubar": "Menubar",
         "settings.monitor": "Monitor", "settings.alerts": "Alerts", "settings.general": "General",
         "appearance.title": "Display", "appearance.subtitle": "Font size, language, and monitor layout style.",
         "appearance.fontSize": "Font size", "appearance.language": "Language",
@@ -6871,8 +6958,10 @@ final class DisplayPreferencesStore: ObservableObject {
 
     private static let zhStrings: [String: String] = [
         "tab.monitor": "監控", "tab.advisor": "顧問", "tab.chat": "聊天", "tab.cleaner": "清理", "tab.settings": "設定",
-        "settings.title": "設定", "settings.subtitle": "AI 密鑰、監控版面、選單列、提醒與啟動選項。",
-        "settings.ai": "AI", "settings.appearance": "外觀", "settings.menubar": "選單列",
+        "chat.title": "AI 聊天", "chat.subtitle": "與 AI 對話或管理 API 密鑰。",
+        "chat.subtab.chat": "聊天", "chat.subtab.api": "API",
+        "settings.title": "設定", "settings.subtitle": "監控版面、選單列、提醒與啟動選項。",
+        "settings.appearance": "外觀", "settings.menubar": "選單列",
         "settings.monitor": "監控", "settings.alerts": "提醒", "settings.general": "一般",
         "appearance.title": "顯示", "appearance.subtitle": "字體大小、語言與監控介面樣式。",
         "appearance.fontSize": "字體大小", "appearance.language": "語言",
@@ -6920,8 +7009,10 @@ final class DisplayPreferencesStore: ObservableObject {
 
     private static let esStrings: [String: String] = [
         "tab.monitor": "Monitor", "tab.advisor": "Asesor", "tab.chat": "Chat", "tab.cleaner": "Limpiador", "tab.settings": "Ajustes",
-        "settings.title": "Ajustes", "settings.subtitle": "Claves de IA, diseño del monitor, barra de menú, alertas y opciones de inicio.",
-        "settings.ai": "IA", "settings.appearance": "Apariencia", "settings.menubar": "Barra de menú",
+        "chat.title": "Chat IA", "chat.subtitle": "Chatea con tu proveedor o gestiona claves API.",
+        "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
+        "settings.title": "Ajustes", "settings.subtitle": "Diseño del monitor, barra de menú, alertas y opciones de inicio.",
+        "settings.appearance": "Apariencia", "settings.menubar": "Barra de menú",
         "settings.monitor": "Monitor", "settings.alerts": "Alertas", "settings.general": "General",
         "appearance.title": "Pantalla", "appearance.subtitle": "Tamaño de fuente, idioma y estilo del monitor.",
         "appearance.fontSize": "Tamaño de fuente", "appearance.language": "Idioma",
@@ -6969,8 +7060,10 @@ final class DisplayPreferencesStore: ObservableObject {
 
     private static let deStrings: [String: String] = [
         "tab.monitor": "Monitor", "tab.advisor": "Berater", "tab.chat": "Chat", "tab.cleaner": "Reiniger", "tab.settings": "Einstellungen",
-        "settings.title": "Einstellungen", "settings.subtitle": "KI-Schlüssel, Monitor-Layout, Menüleiste, Warnungen und Startoptionen.",
-        "settings.ai": "KI", "settings.appearance": "Darstellung", "settings.menubar": "Menüleiste",
+        "chat.title": "KI-Chat", "chat.subtitle": "Mit deinem Anbieter chatten oder API-Schlüssel verwalten.",
+        "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
+        "settings.title": "Einstellungen", "settings.subtitle": "Monitor-Layout, Menüleiste, Warnungen und Startoptionen.",
+        "settings.appearance": "Darstellung", "settings.menubar": "Menüleiste",
         "settings.monitor": "Monitor", "settings.alerts": "Warnungen", "settings.general": "Allgemein",
         "appearance.title": "Anzeige", "appearance.subtitle": "Schriftgröße, Sprache und Monitor-Stil.",
         "appearance.fontSize": "Schriftgröße", "appearance.language": "Sprache",
@@ -8722,7 +8815,11 @@ struct ContentView: View {
         Group {
             switch tab {
             case .chat:
-                AIChatView(compact: layout == .popover)
+                if layout == .popover {
+                    AIChatView(compact: true)
+                } else {
+                    ChatTabView()
+                }
             case .advisor:
                 SystemAdvisorView(compact: layout == .popover)
             case .cleaner:
