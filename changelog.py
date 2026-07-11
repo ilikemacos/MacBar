@@ -12,6 +12,7 @@ ACCENT_COLORS = {
     "green": ("var(--green)", "rgba(0,255,136,0.35)"),
     "orange": ("var(--orange)", "rgba(255,140,26,0.35)"),
     "cyan": ("var(--cyan)", "rgba(0,217,255,0.35)"),
+    "pink": ("#f472b6", "rgba(244,114,182,0.35)"),
 }
 
 

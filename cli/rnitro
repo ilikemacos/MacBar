@@ -5,7 +5,6 @@ Usage:
   rnitro          Launch interactive TUI
   rnitro --help   Show help
   rnitro --once   Print one JSON snapshot (for scripts)
-  rnitro ask Q    Ask AI about live stats (needs OPENAI_API_KEY or GEMINI_API_KEY)
 
 Install:
   ./cli/install-cli.sh
@@ -23,7 +22,6 @@ CLI_DIR = Path(__file__).resolve().parent
 if str(CLI_DIR) not in sys.path:
     sys.path.insert(0, str(CLI_DIR))
 
-from ask import ask_with_context  # noqa: E402
 from monitor import MetricsEngine  # noqa: E402
 from tui import run_tui  # noqa: E402
 
@@ -54,17 +52,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--once", action="store_true", help="Print one JSON snapshot and exit")
     parser.add_argument("--interval", type=float, default=1.0, help="Poll interval seconds (default: 1.0)")
-    parser.add_argument("command", nargs="?", help="ask — query AI about live stats (Refresh)")
-    parser.add_argument("question", nargs="*", help="Question text for: rnitro ask …")
     args = parser.parse_args(argv)
 
     engine = MetricsEngine(poll_interval=args.interval)
     engine.refresh()
-
-    if args.command == "ask":
-        question = " ".join(args.question).strip()
-        print(ask_with_context(question, snapshot_to_dict(engine.snapshot)))
-        return 0
 
     if args.once:
         print(json.dumps(snapshot_to_dict(engine.snapshot), indent=2))

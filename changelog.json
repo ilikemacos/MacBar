@@ -13,28 +13,6 @@
     },
     {
       "channel": "beta",
-      "title": "Beta 0.1 Refresh",
-      "accent": "pink",
-      "items": [
-        {
-          "strong": "New Refresh channel",
-          "text": " — rNitro-Beta-0.1-Refresh: improved CLI (rnitro ask), Advisor → Chat AI handoff, Open CLI from Settings. v8.4.2 Beta stays on the macOS tab."
-        }
-      ]
-    },
-    {
-      "channel": "beta",
-      "title": "v8.4.3 Beta",
-      "accent": "orange",
-      "items": [
-        {
-          "strong": "Chat → API sub-tab",
-          "text": " — API keys and provider setup moved out of Settings into a dedicated API sub-tab under Chat. Settings now focuses on appearance, menubar, monitor, alerts, and general options."
-        }
-      ]
-    },
-    {
-      "channel": "beta",
       "title": "rNitro CLI v0.2",
       "accent": "cyan",
       "items": [
@@ -186,7 +164,7 @@
   ],
   "compare": {
     "title": "Stable vs Beta \u2014 which should I download?",
-    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v8.3.2 Final is production-ready with Settings subtabs; v8.3.4 Beta adds every AI provider and experimental features. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.",
+    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v8.3.6 Final is production-ready; v8.4.2 Beta adds every AI provider and experimental features. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.",
     "rows": [
       {
         "feature": "Best for",
