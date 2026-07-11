@@ -79,7 +79,7 @@ def other_downloads_panel(
 
 
 def sync_region(html: str, name: str, content: str) -> str:
-    if name in ("js-versions", "chat-whats-new", "chat-kb-platform"):
+    if name in ("js-versions", "js-settab", "chat-whats-new", "chat-kb-platform"):
         start = f"// @sync:{name}\n"
         end_token = f"// @end:{name}"
     else:
@@ -106,6 +106,7 @@ def js_versions_object(data: dict) -> str:
     beta = v.beta_release(data)
     win = v.windows_release(data)
     linux = v.linux_release(data)
+    cli = v.cli_release(data)
     payload = {
         "stable": {
             "id": stable["id"],
@@ -150,6 +151,14 @@ def js_versions_object(data: dict) -> str:
             "label": v.full_release(data)["label"],
             "zip": v.full_release(data)["zip"],
         },
+        "cli": {
+            "id": cli["id"],
+            "label": cli["label"],
+            "short": cli["short"],
+            "version": cli["version"],
+            "tar": cli["tar"],
+            "curlInstall": cli_curl_install_cmd(cli["tar"]),
+        },
     }
     body = json.dumps(payload, indent=2)
     indented = "\n".join("  " + line if line else line for line in body.splitlines())
@@ -162,7 +171,7 @@ def nav_right(data: dict) -> str:
     linux = v.linux_release(data)
     return f"""  <div class="nav-right">
     <a class="nav-link" href="/archives">Archives</a>
-    <div class="nav-badge">{stable["label"]} · {beta["label"]} · Linux {linux["short"]}</div>
+    <div class="nav-badge">{stable["label"]} · {beta["label"]} · CLI · Linux {linux["short"]}</div>
   </div>"""
 
 
@@ -271,6 +280,14 @@ def curl_install_cmd(sh_name: str) -> str:
     return f"curl -fsSL {SITE_URL}/{sh_name} -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
 
 
+def cli_curl_install_cmd(tar_name: str) -> str:
+    return (
+        f"curl -fsSL {SITE_URL}/{tar_name} -o /tmp/rnitro-cli.tar.gz && "
+        f"mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && "
+        f"bash /tmp/rnitro-cli/install-cli.sh"
+    )
+
+
 def hero_head(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
@@ -278,7 +295,7 @@ def hero_head(data: dict) -> str:
     desc = (
         f"rNitro — free menu bar system monitor for Apple Silicon Macs "
         f"({stable['short']} Stable / {beta['short']} Beta). CPU, temperature, MacBook battery %, "
-        f"GPU, RAM. Linux {linux['short']} pre-release. No account, no telemetry."
+        f"GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux {linux['short']} pre-release. No account, no telemetry."
     )
     og_image = f"{SITE_URL}/apple-touch-icon.png"
     ld_json = json.dumps(
@@ -316,14 +333,18 @@ def hero_copy(data: dict) -> str:
     return f"""  <p class="hero-eyebrow">System Monitor</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, and per-core stats for <strong>macOS</strong> ({stable["short"]} Stable + {beta["short"]} Beta), <strong>Linux</strong> ({linux["short"]} pre-release), and legacy <strong>Windows</strong> (deprecated — downloads remain).</p>"""
+  <p class="hero-sub">Real-time CPU, temperature, and per-core stats for <strong>macOS</strong> ({stable["short"]} Stable + {beta["short"]} Beta), <strong>rNitro CLI</strong> (terminal / btop-style), <strong>Linux</strong> ({linux["short"]} pre-release), and legacy <strong>Windows</strong> (deprecated — downloads remain).</p>"""
 
 
 def platform_tabs() -> str:
-    return """  <div role="tablist" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; margin-bottom:16px;">
+    return """  <div role="tablist" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
     <button id="tab-mac" role="tab" aria-selected="true" aria-controls="dl-mac" onclick="setTab('mac')"
       style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
       🍎 macOS
+    </button>
+    <button id="tab-cli" role="tab" aria-selected="false" aria-controls="dl-cli" onclick="setTab('cli')"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+      ⌨️ CLI
     </button>
     <button id="tab-linux" role="tab" aria-selected="false" aria-controls="dl-linux" onclick="setTab('linux')"
       style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
@@ -406,7 +427,7 @@ def hero_dl_note(data: dict) -> str:
     gh = v.github_releases_url()
     linux_gh = v.github_release_page_url(linux["id"])
     return f"""    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above. Same macOS builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> — {stable["short"]} Final and {beta["short"]} Beta (ZIP, PKG, DMG). Linux {linux["short"]} pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="{linux_gh}" style="color:var(--cyan);">GitHub</a>. Expand <strong style="color:var(--text);">Other download options</strong> for PKG, DMG, or shell installers. Older DMG builds: <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>.
+      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above — or the purple <strong style="color:#a78bfa;">CLI</strong> tab for terminal/btop-style monitoring. Same macOS builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> — {stable["short"]} Final and {beta["short"]} Beta (ZIP, PKG, DMG). Linux {linux["short"]} pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="{linux_gh}" style="color:var(--cyan);">GitHub</a>. Older DMG builds: <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>.
     </p>"""
 
 
@@ -458,6 +479,60 @@ def hero_linux_buttons(data: dict) -> str:
         </div>
       </div>
     </div>"""
+
+
+def hero_cli_card(data: dict) -> str:
+    cli = v.cli_release(data)
+    tar_size = file_size_label(cli["tar"])
+    curl_cmd = cli_curl_install_cmd(cli["tar"])
+    return f"""    <div style="width:100%; background:var(--card); border:1px solid #a78bfa; border-radius:12px; padding:24px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:22px; font-weight:800; color:#a78bfa; margin-bottom:8px; letter-spacing:0.02em;">Get rNitro CLI!</div>
+      <div style="font-family:var(--mono); font-size:14px; font-weight:600; color:var(--muted); margin-bottom:12px;">{cli["version"]} — btop-style terminal monitor</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0; line-height:1.55;">Live CPU, memory, disk I/O, network, battery, and <strong>top processes</strong> in your terminal. macOS + Linux · Python 3 · no GUI required.</div>
+      <div class="dl-recommended" style="border-color:rgba(167,139,250,0.45); margin-top:16px;">
+        <div class="dl-recommended-badge" style="color:#a78bfa; border-color:rgba(167,139,250,0.5); background:rgba(167,139,250,0.12);">Recommended Download</div>
+        <div class="dl-recommended-title" style="color:#a78bfa;">CLI tarball</div>
+        <p class="dl-recommended-steps">Extract → run <code>install-cli.sh</code> → type <code>rnitro</code> in any terminal. Optional: <code>pip3 install psutil</code> for smoother stats.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:#a78bfa; color:#000;" onclick="requestDownload('{cli["tar"]}')">⬇ Download CLI{tar_size}</button>
+      </div>
+      <div style="margin-top:16px; text-align:left; background:var(--card2); border:1px solid rgba(167,139,250,0.35); border-radius:8px; padding:12px 14px;">
+        <div style="font-family:var(--mono); font-size:12px; color:#a78bfa; margin-bottom:6px;">ONE-LINE INSTALL</div>
+        <div style="font-family:var(--mono); font-size:12px; color:var(--text); word-break:break-all; line-height:1.45;">{curl_cmd}</div>
+        <div style="margin-top:10px;">
+          <button type="button" class="btn btn-secondary" onclick="copyCliInstall()">⎘ Copy install command</button>
+        </div>
+      </div>
+      <p style="font-size:14px; color:var(--muted); margin-top:14px; line-height:1.5;">Keys in the TUI: <code>q</code> quit · <code>r</code> refresh · <code>rnitro --once</code> for JSON output.</p>
+    </div>"""
+
+
+def steps_cli(data: dict) -> str:
+    cli = v.cli_release(data)
+    curl_cmd = cli_curl_install_cmd(cli["tar"])
+    return f"""  <div id="steps-cli" class="steps" style="display:none;">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Download or curl-install</h3>
+        <p>Switch to the <strong>CLI</strong> tab and download <code>{cli["tar"]}</code>, or paste this one-liner in Terminal:</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid rgba(167,139,250,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:13px; color:#a78bfa; word-break:break-all; line-height:1.45;">{curl_cmd}</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Install to your PATH</h3>
+        <p>From the extracted folder: <code>bash install-cli.sh</code> — links <code>rnitro</code> to <code>~/bin</code> (or use <code>sudo ./install-cli.sh --system</code> for <code>/usr/local/bin</code>).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Run rNitro in the terminal</h3>
+        <p>Type <code>rnitro</code> for the live dashboard (like btop). Works over SSH. Same rNitro metrics — no menubar app required.</p>
+      </div>
+    </div>
+  </div>"""
 
 
 def download_card_linux(data: dict) -> str:
@@ -783,6 +858,7 @@ def how_it_works_section(data: dict) -> str:
     beta = v.beta_release(data)
     win = v.windows_release(data)
     linux = v.linux_release(data)
+    cli = v.cli_release(data)
     linux_gh = v.github_release_page_url(linux["id"])
     gh = v.github_releases_url()
 
@@ -804,6 +880,15 @@ def how_it_works_section(data: dict) -> str:
             "<code>~/Applications/rNitro.app</code>",
             "In-app updater on launch",
             "Everything in Stable plus all AI providers, temp banners, AES-256 key storage, first-launch tips",
+        ),
+        (
+            f'<strong style="color:#a78bfa;">CLI</strong> · Terminal',
+            cli["version"],
+            _status_pill("New", "active"),
+            f'<code>{cli["tar"]}</code>',
+            "<code>~/bin/rnitro</code> or <code>/usr/local/bin/rnitro</code>",
+            "Manual — re-download tarball or curl one-liner",
+            "btop-style TUI: CPU, RAM, disk, network, battery, top processes; macOS + Linux; Python 3",
         ),
         (
             f'<strong style="color:#e8a838;">Linux</strong> · Pre-release',
@@ -1051,6 +1136,71 @@ def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
         print(f"  EXPECTED_HASH updated: {path.name}")
 
 
+def js_settab_handlers() -> str:
+    return """  function detectPlatform() {
+    const ua = navigator.userAgent;
+    if (/Linux/i.test(ua) && !/Android/i.test(ua)) return 'linux';
+    if (/Win/i.test(ua)) return 'win';
+    return 'mac';
+  }
+
+  function initialTab() {
+    const params = new URLSearchParams(location.search);
+    const hash = location.hash.replace('#', '');
+    const fromQuery = params.get('tab');
+    const tabs = ['mac', 'cli', 'linux', 'win'];
+    if (tabs.includes(fromQuery)) return fromQuery;
+    if (tabs.includes(hash)) return hash;
+    try {
+      const saved = localStorage.getItem('rnitro-tab');
+      if (tabs.includes(saved)) return saved;
+    } catch (e) { /* private browsing */ }
+    return detectPlatform();
+  }
+
+  function setTabStyle(id, active, accent) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = active ? accent : 'transparent';
+    el.style.color = active ? '#000' : 'var(--text)';
+    el.style.borderColor = active ? accent : 'var(--border)';
+    el.setAttribute('aria-selected', active ? 'true' : 'false');
+  }
+
+  function setTab(platform) {
+    const isMac = platform === 'mac';
+    const isCli = platform === 'cli';
+    const isLinux = platform === 'linux';
+    const isWin = platform === 'win';
+    try { localStorage.setItem('rnitro-tab', platform); } catch (e) { /* ignore */ }
+    document.getElementById('dl-mac').style.display = isMac ? 'flex' : 'none';
+    document.getElementById('dl-cli').style.display = isCli ? 'flex' : 'none';
+    document.getElementById('dl-win').style.display = isWin ? 'flex' : 'none';
+    document.getElementById('dl-linux').style.display = isLinux ? 'flex' : 'none';
+    document.getElementById('steps-mac').style.display = isMac ? 'block' : 'none';
+    document.getElementById('steps-cli').style.display = isCli ? 'block' : 'none';
+    document.getElementById('steps-linux').style.display = isLinux ? 'block' : 'none';
+    document.getElementById('steps-win').style.display = isWin ? 'block' : 'none';
+    document.getElementById('cards-mac').style.display = isMac ? 'block' : 'none';
+    document.getElementById('card-win').style.display = isWin ? 'flex' : 'none';
+    document.getElementById('card-linux').style.display = isLinux ? 'flex' : 'none';
+    setTabStyle('tab-mac', isMac, 'var(--green)');
+    setTabStyle('tab-cli', isCli, '#a78bfa');
+    setTabStyle('tab-linux', isLinux, '#e8a838');
+    setTabStyle('tab-win', isWin, 'var(--cyan)');
+  }
+
+  function copyCliInstall() {
+    const cmd = RNITRO_VERSIONS.cli?.curlInstall || '';
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ CLI install command copied';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }"""
+
+
 def sync_index(data: dict) -> None:
     changelog = cl.load()
     html = INDEX.read_text(encoding="utf-8")
@@ -1065,6 +1215,9 @@ def sync_index(data: dict) -> None:
         "hero-more": hero_more_downloads(data),
         "hero-windows": hero_windows_buttons(data),
         "hero-linux": hero_linux_buttons(data),
+        "hero-cli": hero_cli_card(data),
+        "steps-cli": steps_cli(data),
+        "js-settab": js_settab_handlers(),
         "feature-ai-chat": feature_ai_chat(data),
         "how-it-works": how_it_works_section(data),
         "install-sh-commands": install_sh_commands(data),
@@ -1350,6 +1503,9 @@ def main() -> None:
     data = refresh_hashes(data)
     data = refresh_archive(data)
     v.save(data)
+
+    print("Building CLI tarball...")
+    subprocess.run([sys.executable, str(SITE / "build-cli-zip.py")], cwd=SITE, check=True)
 
     print("Syncing index.html...")
     sync_index(data)

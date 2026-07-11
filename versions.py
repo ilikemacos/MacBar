@@ -96,6 +96,13 @@ def macos_apps_release(data: dict | None = None) -> dict:
     return dict(data["releases"]["macos_apps"])
 
 
+def cli_release(data: dict | None = None) -> dict:
+    data = data or load()
+    rel = dict(data["releases"]["cli"])
+    rel["id"] = data.get("cli", rel.get("version", "v0.1-cli"))
+    return rel
+
+
 def installer_path(name: str) -> Path:
     return SITE / name
 
