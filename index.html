@@ -1357,7 +1357,7 @@
 <!-- @sync:hero-cli -->
     <div style="width:100%; background:var(--card); border:1px solid #a78bfa; border-radius:12px; padding:24px; text-align:center;">
       <div style="font-family:var(--mono); font-size:22px; font-weight:800; color:#a78bfa; margin-bottom:8px; letter-spacing:0.02em;">Get rNitro CLI!</div>
-      <div style="font-family:var(--mono); font-size:14px; font-weight:600; color:var(--muted); margin-bottom:12px;">v0.1-cli — btop-style terminal monitor</div>
+      <div style="font-family:var(--mono); font-size:14px; font-weight:600; color:var(--muted); margin-bottom:12px;">v0.2-cli — btop-style terminal monitor</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0; line-height:1.55;">Live CPU, memory, disk I/O, network, battery, and <strong>top processes</strong> in your terminal. macOS + Linux · Python 3 · no GUI required.</div>
       <div class="dl-recommended" style="border-color:rgba(167,139,250,0.45); margin-top:16px;">
         <div class="dl-recommended-badge" style="color:#a78bfa; border-color:rgba(167,139,250,0.5); background:rgba(167,139,250,0.12);">Recommended Download</div>
@@ -1454,7 +1454,7 @@
         <tbody>
           <tr><td><strong style="color:var(--green);">macOS</strong> · Stable</td><td>v8.3.6-Final-arm64</td><td><span class="status-pill status-pill--active">Active</span></td><td><code>rNitro-v8.3.6-Final-arm64.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>CPU monitor, benchmark, stress test, System Advisor, App Cleaner; AI chat: OpenAI + OpenRouter only</td></tr>
           <tr><td><strong style="color:var(--orange);">macOS</strong> · Beta</td><td>v8.4.2-Beta-arm64</td><td><span class="status-pill status-pill--beta">Experimental</span></td><td><code>rNitro-v8.4.2-Beta-arm64.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>Everything in Stable plus all AI providers, temp banners, AES-256 key storage, first-launch tips</td></tr>
-          <tr><td><strong style="color:#a78bfa;">CLI</strong> · Terminal</td><td>v0.1-cli</td><td><span class="status-pill status-pill--active">New</span></td><td><code>rNitro-CLI.tar.gz</code></td><td><code>~/bin/rnitro</code> or <code>/usr/local/bin/rnitro</code></td><td>Manual — re-download tarball or curl one-liner</td><td>btop-style TUI: CPU, RAM, disk, network, battery, top processes; macOS + Linux; Python 3</td></tr>
+          <tr><td><strong style="color:#a78bfa;">CLI</strong> · Terminal</td><td>v0.2-cli</td><td><span class="status-pill status-pill--active">New</span></td><td><code>rNitro-CLI.tar.gz</code></td><td><code>~/bin/rnitro</code> or <code>/usr/local/bin/rnitro</code></td><td>Manual — re-download tarball or curl one-liner</td><td>btop-style TUI: CPU, RAM, disk, network, battery, top processes; macOS + Linux; Python 3</td></tr>
           <tr><td><strong style="color:#e8a838;">Linux</strong> · Pre-release</td><td>v0.1-Linux-Beta-Pre-release-x64</td><td><span class="status-pill status-pill--prerelease">Pre-release</span></td><td><code>rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz</code> or <code>install-rNitro-linux.sh</code></td><td><code>~/.local/share/rnitro</code></td><td>Checks <code>version.json</code> on launch</td><td>GTK4 app: Monitor, Advisor, Chat, Cleaner; x86_64; needs Python 3.10+, GTK 4, libadwaita</td></tr>
           <tr><td><strong style="color:var(--cyan);">Windows</strong> · Legacy</td><td>v4.2.4-Windows-Final-x86</td><td><span class="status-pill status-pill--deprecated">Deprecated</span></td><td><code>rNitro-v4.2.4-Windows-Final-x86.exe</code></td><td><code>%LOCALAPPDATA%\rNitro</code></td><td>Manual — check website or GitHub</td><td>Tray monitor only (CPU, temp, RAM, BTC); no AI chat or Cleaner; .NET 8 runtime for EXE</td></tr>
         </tbody>
@@ -2219,10 +2219,10 @@
       "zip": "rnitro-netlify.zip"
     },
     "cli": {
-      "id": "v0.1-cli",
+      "id": "v0.2-cli",
       "label": "rNitro CLI",
       "short": "CLI",
-      "version": "v0.1-cli",
+      "version": "v0.2-cli",
       "tar": "rNitro-CLI.tar.gz",
       "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh"
     }

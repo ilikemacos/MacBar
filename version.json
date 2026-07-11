@@ -3,7 +3,7 @@
   "beta": "v8.4.2-Beta-arm64",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
-  "cli": "v0.1-cli",
+  "cli": "v0.2-cli",
   "releases": {
     "stable": {
       "label": "v8.3.6 Final",
@@ -43,7 +43,7 @@
     "cli": {
       "label": "rNitro CLI",
       "short": "CLI",
-      "version": "v0.1-cli",
+      "version": "v0.2-cli",
       "tar": "rNitro-CLI.tar.gz"
     }
   },
