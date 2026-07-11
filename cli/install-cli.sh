@@ -24,10 +24,29 @@ elif [[ "${1:-}" == "--system" ]]; then
   exit 1
 else
   install_to "$HOME/bin/$NAME"
-  if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
+  PATH_LINE='export PATH="$HOME/bin:$PATH"'
+  PROFILE=""
+  for candidate in "$HOME/.zshrc" "$HOME/.zprofile" "$HOME/.bash_profile"; do
+    if [[ -f "$candidate" ]] || [[ "$candidate" == "$HOME/.zshrc" ]]; then
+      PROFILE="$candidate"
+      break
+    fi
+  done
+  if [[ -n "$PROFILE" ]]; then
+    touch "$PROFILE"
+    if ! grep -qF '$HOME/bin' "$PROFILE" 2>/dev/null; then
+      {
+        echo ""
+        echo "# rNitro CLI"
+        echo "$PATH_LINE"
+      } >> "$PROFILE"
+      echo "✅ Added ~/bin to PATH in $PROFILE"
+      echo "   Restart Terminal or run: source $PROFILE"
+    fi
+  elif [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
     echo ""
     echo "Add to your shell profile:"
-    echo '  export PATH="$HOME/bin:$PATH"'
+    echo "  $PATH_LINE"
   fi
 fi
 
