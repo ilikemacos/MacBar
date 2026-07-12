@@ -255,8 +255,8 @@ renderer.shadowMap.enabled = false;
 document.getElementById('app').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x030304);
-scene.fog = new THREE.FogExp2(0x030304, 0.055);
+scene.background = new THREE.Color(0x08080b);
+scene.fog = new THREE.FogExp2(0x08080b, 0.04);
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 100);
 
@@ -268,15 +268,15 @@ yawObject.position.set(startCell[0] * CELL, EYE_H, startCell[1] * CELL);
 scene.add(yawObject);
 
 // ---------- Lighting (cheap: no shadows, flashlight is the real light) ----------
-const ambient = new THREE.AmbientLight(0x14161f, 0.55);
+const ambient = new THREE.AmbientLight(0x22242f, 0.95);
 scene.add(ambient);
-const hemi = new THREE.HemisphereLight(0x1a1c26, 0x000000, 0.25);
+const hemi = new THREE.HemisphereLight(0x2a2d3a, 0x0a0a0a, 0.45);
 scene.add(hemi);
 
 const flashTarget = new THREE.Object3D();
 flashTarget.position.set(0, 0, -1);
 camera.add(flashTarget);
-const flashlight = new THREE.SpotLight(0xfff2cf, 3.2, 20, 0.5, 0.45, 1.4);
+const flashlight = new THREE.SpotLight(0xfff2cf, 4.4, 25, 0.55, 0.4, 1.3);
 flashlight.castShadow = false;
 flashlight.position.set(0, 0, 0.1);
 flashlight.target = flashTarget;
@@ -288,12 +288,12 @@ let flashlightOn = true;
 function makeFloorTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#18181b'; ctx.fillRect(0, 0, 128, 128);
+  ctx.fillStyle = '#28282d'; ctx.fillRect(0, 0, 128, 128);
   for (let i = 0; i < 500; i++) {
-    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.035})`;
+    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
     ctx.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
   }
-  ctx.strokeStyle = 'rgba(255,190,0,0.10)'; ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,200,0,0.16)'; ctx.lineWidth = 3;
   ctx.strokeRect(5, 5, 118, 118);
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -303,10 +303,10 @@ function makeFloorTexture() {
 function makeShelfTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#34353c'; ctx.fillRect(0, 0, 64, 64);
-  ctx.fillStyle = '#24252b';
+  ctx.fillStyle = '#46474f'; ctx.fillRect(0, 0, 64, 64);
+  ctx.fillStyle = '#34353d';
   for (let y = 0; y < 64; y += 14) ctx.fillRect(0, y, 64, 3);
-  ctx.fillStyle = '#3f414a';
+  ctx.fillStyle = '#54565f';
   for (let x = 0; x < 64; x += 22) ctx.fillRect(x, 0, 2, 64);
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -322,7 +322,7 @@ floor.rotation.x = -Math.PI / 2;
 floor.position.set((MAZE_W * CELL) / 2 - CELL / 2, 0, (MAZE_H * CELL) / 2 - CELL / 2);
 scene.add(floor);
 
-const ceilMat = new THREE.MeshStandardMaterial({ color: 0x08080a, roughness: 1 });
+const ceilMat = new THREE.MeshStandardMaterial({ color: 0x121216, roughness: 1 });
 const ceiling = new THREE.Mesh(floorGeo, ceilMat);
 ceiling.rotation.x = Math.PI / 2;
 ceiling.position.set(floor.position.x, 7.5, floor.position.z);
@@ -347,17 +347,24 @@ const wallMesh = new THREE.InstancedMesh(wallGeo, wallMat, wallCount);
 }
 scene.add(wallMesh);
 
-// ---------- Flickering fixtures (visual only, no runtime light cost) ----------
+// ---------- Fixtures: mostly cheap emissive-only, a sparse few get a real light pool ----------
 const fixtures = [];
 const fixtureGeo = new THREE.PlaneGeometry(CELL * 0.6, 0.15);
 for (let i = 0; i < openCells.length; i += 6) {
   const [gx, gy] = openCells[i];
-  const mat = new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.85 });
+  const mat = new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.95 });
   const fx = new THREE.Mesh(fixtureGeo, mat);
   fx.rotation.x = Math.PI / 2;
   fx.position.set(gx * CELL, WALL_H + 0.05, gy * CELL);
   scene.add(fx);
-  fixtures.push({ mesh: fx, phase: Math.random() * 10, flickery: Math.random() < 0.3 });
+  const flickery = Math.random() < 0.3;
+  let light = null;
+  if (i % 12 === 0) {
+    light = new THREE.PointLight(0xfff2cf, 0.7, 5.5, 2);
+    light.position.set(gx * CELL, WALL_H - 0.3, gy * CELL);
+    scene.add(light);
+  }
+  fixtures.push({ mesh: fx, phase: Math.random() * 10, flickery, light });
 }
 
 // ---------- Exit marker ----------
@@ -374,6 +381,7 @@ scene.add(exitGroup);
 
 // ---------- Movable furniture ----------
 const props = [];
+const propRoots = [];
 const propBlockedCells = new Set();
 function cellKey(x, y) { return x + '_' + y; }
 
@@ -383,25 +391,142 @@ function pickPropCells() {
   shuffle(candidates);
   return candidates.slice(0, NUM_PROPS);
 }
-const propTypes = [
-  { color: 0x8a5a2e, size: [0.9, 0.9, 0.9], radius: 0.62, label: 'crate' },
-  { color: 0x6b6f76, size: [1.3, 0.35, 1.0], radius: 0.75, label: 'pallet' },
-  { color: 0xb23b3b, size: [0.7, 1.0, 0.9], radius: 0.6, label: 'cart' },
-];
+
+function makeCrateTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#a9713a'; ctx.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 40; i++) {
+    ctx.strokeStyle = `rgba(90,55,20,${0.05 + Math.random() * 0.15})`;
+    ctx.lineWidth = 1 + Math.random() * 2;
+    const y = Math.random() * 128;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(40, y + Math.random() * 8 - 4, 80, y + Math.random() * 8 - 4, 128, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(60,35,10,0.5)'; ctx.lineWidth = 3;
+  for (let x = 0; x < 128; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 128); ctx.stroke(); }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+const crateTex = makeCrateTexture();
+
+function buildCrate() {
+  const g = new THREE.Group();
+  const s = 0.9;
+  const bodyMat = new THREE.MeshStandardMaterial({ map: crateTex, roughness: 0.85 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), bodyMat);
+  body.position.y = s / 2;
+  g.add(body);
+  const beamMat = new THREE.MeshStandardMaterial({ color: 0x4a2f14, roughness: 0.8 });
+  const beamThick = 0.07;
+  for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(beamThick, s + 0.02, beamThick), beamMat);
+    beam.position.set(cx * (s / 2 - beamThick / 2), s / 2, cz * (s / 2 - beamThick / 2));
+    g.add(beam);
+  }
+  for (const y of [s * 0.25, s * 0.75]) {
+    const strapF = new THREE.Mesh(new THREE.BoxGeometry(s + 0.02, beamThick, beamThick), beamMat);
+    strapF.position.set(0, y, s / 2 - beamThick / 2 + 0.001);
+    g.add(strapF);
+    const strapB = strapF.clone();
+    strapB.position.z = -s / 2 + beamThick / 2 - 0.001;
+    g.add(strapB);
+  }
+  return { group: g, radius: 0.64, label: 'crate' };
+}
+
+function buildPallet() {
+  const g = new THREE.Group();
+  const w = 1.3, d = 1.0, deckH = 0.06, gap = 0.05, runnerH = 0.14;
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x9a7a4a, roughness: 0.9 });
+  for (const rx of [-w / 2 + 0.08, 0, w / 2 - 0.08]) {
+    const runner = new THREE.Mesh(new THREE.BoxGeometry(0.09, runnerH, d), woodMat);
+    runner.position.set(rx, runnerH / 2, 0);
+    g.add(runner);
+  }
+  const slatCount = 6;
+  const slatW = (w - gap) / slatCount - gap;
+  for (let i = 0; i < slatCount; i++) {
+    const sx = -w / 2 + gap + i * (slatW + gap) + slatW / 2;
+    const slat = new THREE.Mesh(new THREE.BoxGeometry(slatW, deckH, d), woodMat);
+    slat.position.set(sx, runnerH + deckH / 2, 0);
+    g.add(slat);
+  }
+  const boxMat = new THREE.MeshStandardMaterial({ color: 0xd4b06a, roughness: 0.8 });
+  const stackBox = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.45), boxMat);
+  stackBox.position.set(-0.1, runnerH + deckH + 0.2, 0.05);
+  g.add(stackBox);
+  return { group: g, radius: 0.78, label: 'pallet' };
+}
+
+function buildCart() {
+  const g = new THREE.Group();
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0xc3c8d0, roughness: 0.35, metalness: 0.75 });
+  const meshMat = new THREE.MeshStandardMaterial({ color: 0x9aa0aa, roughness: 0.6, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.6 });
+  const bw = 0.62, bd = 0.92, bh = 0.62, wt = 0.025;
+
+  for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(wt, bh, wt), metalMat);
+    post.position.set(cx * bw / 2, bh / 2 + 0.07, cz * bd / 2);
+    g.add(post);
+  }
+  for (const y of [bh * 0.5 + 0.07, bh * 0.98 + 0.07]) {
+    const barX = new THREE.Mesh(new THREE.BoxGeometry(bw, wt, wt), metalMat);
+    barX.position.set(0, y, bd / 2); g.add(barX);
+    const barX2 = barX.clone(); barX2.position.z = -bd / 2; g.add(barX2);
+    const barZ = new THREE.Mesh(new THREE.BoxGeometry(wt, wt, bd), metalMat);
+    barZ.position.set(bw / 2, y, 0); g.add(barZ);
+    const barZ2 = barZ.clone(); barZ2.position.x = -bw / 2; g.add(barZ2);
+  }
+  const sideLR = new THREE.PlaneGeometry(bd, bh * 0.85);
+  const left = new THREE.Mesh(sideLR, meshMat);
+  left.rotation.y = Math.PI / 2; left.position.set(-bw / 2, bh / 2 + 0.07, 0); g.add(left);
+  const right = left.clone(); right.position.x = bw / 2; right.rotation.y = -Math.PI / 2; g.add(right);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh * 0.85), meshMat);
+  back.position.set(0, bh / 2 + 0.07, -bd / 2); g.add(back);
+
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(bw * 0.9, wt * 1.4, wt * 1.4), metalMat);
+  handle.position.set(0, bh * 1.02 + 0.07, -bd / 2 - 0.05);
+  handle.rotation.x = 0.15;
+  g.add(handle);
+
+  const wheelGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.05, 8);
+  for (const [wx, wz] of [[-bw / 2 + 0.05, -bd / 2 + 0.08], [bw / 2 - 0.05, -bd / 2 + 0.08], [-bw / 2 + 0.05, bd / 2 - 0.08], [bw / 2 - 0.05, bd / 2 - 0.08]]) {
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(wx, 0.035, wz);
+    g.add(wheel);
+  }
+  return { group: g, radius: 0.58, label: 'cart' };
+}
+
+const builders = [buildCrate, buildPallet, buildCart];
 for (const [gx, gy] of pickPropCells()) {
-  const t = propTypes[Math.floor(Math.random() * propTypes.length)];
-  const geo = new THREE.BoxGeometry(...t.size);
-  const mat = new THREE.MeshStandardMaterial({ color: t.color, roughness: 0.9 });
-  const mesh = new THREE.Mesh(geo, mat);
+  const built = builders[Math.floor(Math.random() * builders.length)]();
   const ox = (Math.random() - 0.5) * 1.6, oz = (Math.random() - 0.5) * 1.6;
   const px = gx * CELL + ox, pz = gy * CELL + oz;
-  mesh.position.set(px, t.size[1] / 2, pz);
-  scene.add(mesh);
+  built.group.position.set(px, 0, pz);
+  built.group.userData.isProp = true;
+  built.group.userData.propIndex = props.length;
+  scene.add(built.group);
+  propRoots.push(built.group);
   props.push({
-    mesh, pos: new THREE.Vector3(px, t.size[1] / 2, pz), radius: t.radius,
-    halfH: t.size[1] / 2, held: false, label: t.label, cellKey: cellKey(gx, gy)
+    mesh: built.group, pos: new THREE.Vector3(px, 0, pz), radius: built.radius,
+    held: false, label: built.label, cellKey: cellKey(gx, gy)
   });
   propBlockedCells.add(cellKey(gx, gy));
+}
+function resolveProp(object) {
+  let o = object;
+  while (o) {
+    if (o.userData && o.userData.isProp) return props[o.userData.propIndex];
+    o = o.parent;
+  }
+  return null;
 }
 
 // ---------- Battery pickups ----------
@@ -546,10 +671,9 @@ function collideProps(pos, radius, exclude) {
 const interactRaycaster = new THREE.Raycaster();
 function findLookedAtProp() {
   interactRaycaster.setFromCamera({ x: 0, y: 0 }, camera);
-  const meshes = props.map(p => p.mesh);
-  const hits = interactRaycaster.intersectObjects(meshes);
+  const hits = interactRaycaster.intersectObjects(propRoots, true);
   if (hits.length && hits[0].distance < 3.2) {
-    return props.find(p => p.mesh === hits[0].object);
+    return resolveProp(hits[0].object);
   }
   return null;
 }
@@ -787,11 +911,14 @@ function animate() {
   // fixture flicker (cheap, cosmetic only)
   const t = clock.elapsedTime;
   for (const f of fixtures) {
+    let level;
     if (f.flickery) {
-      f.mesh.material.opacity = 0.4 + 0.5 * Math.abs(Math.sin(t * 9 + f.phase)) * (Math.random() > 0.05 ? 1 : 0.2);
+      level = 0.5 + 0.5 * Math.abs(Math.sin(t * 9 + f.phase)) * (Math.random() > 0.05 ? 1 : 0.2);
     } else {
-      f.mesh.material.opacity = 0.8 + 0.15 * Math.sin(t * 0.5 + f.phase);
+      level = 0.9 + 0.1 * Math.sin(t * 0.5 + f.phase);
     }
+    f.mesh.material.opacity = level;
+    if (f.light) f.light.intensity = 0.7 * level;
   }
   exitLight.intensity = 1.1 + 0.4 * Math.sin(t * 2);
 
@@ -849,7 +976,7 @@ function animate() {
       dir.y = 0; dir.normalize();
       const camWorld = new THREE.Vector3();
       camera.getWorldPosition(camWorld);
-      const targetPos = new THREE.Vector3(camWorld.x + dir.x * 1.5, heldProp.halfH, camWorld.z + dir.z * 1.5);
+      const targetPos = new THREE.Vector3(camWorld.x + dir.x * 1.5, 0, camWorld.z + dir.z * 1.5);
       heldProp.pos.lerp(targetPos, Math.min(1, dt * 10));
       collideWalls(heldProp.pos, heldProp.radius);
       heldProp.mesh.position.copy(heldProp.pos);
