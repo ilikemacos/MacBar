@@ -12,9 +12,9 @@
 curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.6-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 
-**Beta (v8.4.2 Beta):**
+**Beta (v8.4.3 Beta):**
 ```bash
-curl -fsSL https://getrnitro.netlify.app/rNitro-v8.4.2-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+curl -fsSL https://getrnitro.netlify.app/rNitro-v8.4.3-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 <!-- @end:readme-curl -->
 
@@ -42,13 +42,13 @@ Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
 | **PKG** | [rNitro-v8.3.6-Final-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.pkg) |
 | **DMG** | [rNitro-v8.3.6-Final-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.dmg) |
 
-### Beta — v8.4.2 Beta
+### Beta — v8.4.3 Beta
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v8.4.2-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.4.2-Beta/rNitro-v8.4.2-Beta-arm64.zip) |
-| **PKG** | [rNitro-v8.4.2-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.4.2-Beta/rNitro-v8.4.2-Beta-arm64.pkg) |
-| **DMG** | [rNitro-v8.4.2-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.4.2-Beta/rNitro-v8.4.2-Beta-arm64.dmg) |
+| **App ZIP** | [rNitro-v8.4.3-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.4.3-Beta/rNitro-v8.4.3-Beta-arm64.zip) |
+| **PKG** | [rNitro-v8.4.3-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.4.3-Beta/rNitro-v8.4.3-Beta-arm64.pkg) |
+| **DMG** | [rNitro-v8.4.3-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.4.3-Beta/rNitro-v8.4.3-Beta-arm64.dmg) |
 <!-- @end:readme-downloads -->
 
 [All releases →](https://github.com/ilikemacos/rNitro/releases)

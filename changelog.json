@@ -24,6 +24,21 @@
     },
     {
       "channel": "beta",
+      "title": "v8.4.3 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Menu bar stays visible",
+          "text": " — rNitro keeps its menu bar icon and stats when you switch to other apps (.accessory mode + on-demand main window)."
+        },
+        {
+          "strong": "Chat API sub-tab",
+          "text": " — API keys moved out of Settings into Chat → API."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
       "title": "v8.4.2 Beta",
       "accent": "orange",
       "items": [

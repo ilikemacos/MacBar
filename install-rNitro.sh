@@ -2,6 +2,7 @@
 #
 # rNitro installer — hardened
 #
+# v8.4.3-Beta-arm64 — menubar stays visible when other apps are focused (.accessory + on-demand main window).
 # v8.4.3-Beta-arm64 — Chat tab: API keys moved to dedicated API sub-tab (out of Settings).
 # v8.4.2-Beta-arm64 — Traditional Chinese (繁體中文) + Extra Large body 22px.
 # v8.4.1-Beta-arm64 — top processes by CPU/RAM while popover open.
@@ -213,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="6becf64d031c710915e26148975d9a6f1b71f56b0a0293c02363927aa846a0b3"
+EXPECTED_HASH="5ef86b46c30a92c8da22e44af2e8a5ce0e05993a81cca7012dcfc4b3142d48d8"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -8890,6 +8891,58 @@ struct OverlayHUDView: View {
     }
 }
 
+// Main window is created on demand so the menu bar icon stays visible while other apps have focus.
+final class MainWindowController: NSObject, NSWindowDelegate {
+    static let shared = MainWindowController()
+    private var window: NSWindow?
+    private var hosting: NSHostingController<AnyView>?
+
+    func show(userInfo: [AnyHashable: Any]? = nil) {
+        FontRegistrar.registerVarelaRound()
+        if hosting == nil {
+            let root = AnyView(
+                ContentView(tabs: AppTab.windowTabs, layout: .window)
+                    .frame(minWidth: 360, idealWidth: 520, maxWidth: .infinity, minHeight: 480, idealHeight: 700, maxHeight: .infinity)
+            )
+            let host = NSHostingController(rootView: root)
+            host.view.frame = NSRect(x: 0, y: 0, width: 520, height: 700)
+            hosting = host
+        }
+        if window == nil, let host = hosting {
+            let w = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 700),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            w.title = "rNitro"
+            w.contentViewController = host
+            w.center()
+            w.setFrameAutosaveName("rNitroMainWindow")
+            w.delegate = self
+            w.isReleasedWhenClosed = false
+            window = w
+        }
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+        if let userInfo, !userInfo.isEmpty {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: Self.shared, userInfo: userInfo)
+            }
+        }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        window?.orderOut(nil)
+        window = nil
+        hosting = nil
+        if NSApp.activationPolicy() == .regular {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+}
+
 final class OverlayWindowController {
     static let shared = OverlayWindowController()
     private var panel: NSPanel?
@@ -9013,17 +9066,28 @@ enum FontRegistrar {
 // window is open. Clicking it opens a compact popover with the same
 // real-time data (shares CPUMonitor.shared, so nothing is duplicated).
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        MainWindowController.shared.show()
+        return true
+    }
+
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var popoverHosting: NSHostingController<AnyView>?
+    private let popoverSize = NSSize(width: 360, height: 580)
     private var subscriptions = Set<AnyCancellable>()
     private let menuBarRefreshTrigger = PassthroughSubject<Void, Never>()
     private var hotkeyMonitor: Any?
     private var modeObserver: NSObjectProtocol?
     private var powerModeObserver: NSObjectProtocol?
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        denyDebugger()
+        verifyBinaryIntegrity()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        FontRegistrar.registerVarelaRound()
-        UpdateChecker.checkOnLaunch()
+        NSApp.setActivationPolicy(.accessory)
         MonitorActivity.setPopoverOpen(false)
         UNUserNotificationCenter.current().delegate = self
         AdvisorNotificationCenter.configure()
@@ -9054,19 +9118,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             CPUMonitor.shared.isLowPowerModeEnabled = lpm
             self?.updateStatusTitle()
         }
-        let popoverSize = NSSize(width: 360, height: 580)
-        let popoverView = ContentView(tabs: AppTab.popoverTabs, layout: .popover)
-            .frame(minWidth: 320, idealWidth: 360, maxWidth: 420, minHeight: 480, idealHeight: 580, maxHeight: 720)
-            .clipped()
-        let hosting = NSHostingController(rootView: popoverView)
-        hosting.view.wantsLayer = true
-        hosting.view.layer?.masksToBounds = true
-        hosting.preferredContentSize = popoverSize
 
         let pop = NSPopover()
         pop.behavior = .transient
         pop.contentSize = popoverSize
-        pop.contentViewController = hosting
         popover = pop
 
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -9077,6 +9132,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             if event.modifierFlags.contains([.option, .shift]) && event.charactersIgnoringModifiers == "o" {
                 OverlayWindowController.shared.toggle()
             }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .rNitroOpenMainWindow, object: nil, queue: .main
+        ) { note in
+            guard note.object == nil else { return }
+            MainWindowController.shared.show(userInfo: note.userInfo)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+            UpdateChecker.checkOnLaunch()
         }
     }
 
@@ -9131,11 +9197,37 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         if pop.isShown {
             pop.performClose(nil)
             MonitorActivity.setPopoverOpen(false)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                self?.releasePopoverContent()
+            }
         } else {
+            attachPopoverContentIfNeeded()
             pop.show(relativeTo: .zero, of: button, preferredEdge: .minY)
             pop.contentViewController?.view.window?.makeKey()
             MonitorActivity.setPopoverOpen(true)
         }
+    }
+
+    private func attachPopoverContentIfNeeded() {
+        guard popover?.contentViewController == nil else { return }
+        FontRegistrar.registerVarelaRound()
+        let popoverView = AnyView(
+            ContentView(tabs: AppTab.popoverTabs, layout: .popover)
+                .frame(minWidth: 320, idealWidth: 360, maxWidth: 420, minHeight: 480, idealHeight: 580, maxHeight: 720)
+                .clipped()
+        )
+        let hosting = NSHostingController(rootView: popoverView)
+        hosting.view.wantsLayer = true
+        hosting.view.layer?.masksToBounds = true
+        hosting.preferredContentSize = popoverSize
+        popoverHosting = hosting
+        popover?.contentViewController = hosting
+    }
+
+    private func releasePopoverContent() {
+        guard popover?.isShown != true else { return }
+        popover?.contentViewController = nil
+        popoverHosting = nil
     }
 
     @objc private func toggleOverlay() { OverlayWindowController.shared.toggle() }
@@ -9231,24 +9323,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         DiskActivityMonitor.shared.stop()
         SensorsMonitor.shared.stop()
         StressTester.shared.stop()
+        releasePopoverContent()
         OverlayWindowController.shared.hide()
     }
 }
 
+// Pure AppKit entry — menu bar stays visible when other apps are focused.
 @main
-struct rNitroApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    init() {
-        denyDebugger()          // refuse debugger attach
-        verifyBinaryIntegrity() // detect post-install binary tampering
-    }
-    var body: some Scene {
-        WindowGroup {
-            ContentView(tabs: AppTab.windowTabs, layout: .window)
-                .frame(minWidth:360,idealWidth:520,maxWidth:.infinity,minHeight:480,idealHeight:700,maxHeight:.infinity)
-        }
-        .windowStyle(.hiddenTitleBar)
-        .commands { CommandGroup(replacing:.newItem) {} }
+enum AppLauncher {
+    static func main() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.run()
     }
 }
 SWIFTEOF
