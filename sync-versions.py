@@ -1267,11 +1267,11 @@ def js_settab_handlers() -> str:
 def screenshots_section(data: dict) -> str:
     """Product shots from real macOS captures (screenshots/)."""
     items = [
-        ("screenshots/feature-advisors.png", "Advisors", "System + AI advice with live stats"),
+        ("screenshots/feature-advisor.png", "Advisor", "System Advisor with live stats and thresholds"),
         ("screenshots/feature-chat.png", "Chat", "Bring-your-own AI providers"),
-        ("screenshots/feature-cleaner.png", "Cleaner", "Find large files and free space"),
-        ("screenshots/feature-settings.png", "Settings", "Appearance, alerts, general"),
-        ("screenshots/feature-benchmark.png", "Benchmark", "CPU score + stress test"),
+        ("screenshots/feature-chat-config.png", "Chat Config", "API keys and chat provider setup"),
+        ("screenshots/feature-app-cleaner.png", "App cleaner", "Find large files and free space"),
+        ("screenshots/feature-settings.png", "Settings", "Appearance, menubar, alerts, general"),
     ]
     cards = []
     for src, title, sub in items:
@@ -1285,7 +1285,7 @@ def screenshots_section(data: dict) -> str:
     return f"""  <div class="shots">
     <p class="shots-kicker">macOS · Apple Silicon · Menu bar</p>
     <h2 class="shots-title">See rNitro on your Mac</h2>
-    <p class="shots-sub">Menu bar monitor with Advisors, Chat, Cleaner, Settings, and Benchmark — built for macOS 12+ on Apple Silicon.</p>
+    <p class="shots-sub">Menu bar monitor with Advisor, Chat, Chat Config, App cleaner, and Settings — built for macOS 12+ on Apple Silicon.</p>
     <figure class="shot-hero">
       <img src="screenshots/hero-monitor.png" alt="rNitro menu bar monitor showing CPU, temperature, memory, and battery" width="1200" height="800">
       <figcaption>Menu bar + Monitor — live CPU, temps, memory, battery, and more</figcaption>

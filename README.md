@@ -10,13 +10,13 @@
   <img src="screenshots/hero-monitor.png" alt="rNitro menu bar monitor — CPU, temperature, memory, battery" width="720">
 </p>
 
-| Advisors | Chat | Cleaner |
+| Advisor | Chat | Chat Config |
 |:---:|:---:|:---:|
-| <img src="screenshots/feature-advisors.png" alt="System Advisors" width="240"> | <img src="screenshots/feature-chat.png" alt="AI Chat" width="240"> | <img src="screenshots/feature-cleaner.png" alt="App Cleaner" width="240"> |
+| <img src="screenshots/feature-advisor.png" alt="Advisor" width="240"> | <img src="screenshots/feature-chat.png" alt="Chat" width="240"> | <img src="screenshots/feature-chat-config.png" alt="Chat Config" width="240"> |
 
-| Settings | Benchmark |
+| App cleaner | Settings |
 |:---:|:---:|
-| <img src="screenshots/feature-settings.png" alt="Settings" width="240"> | <img src="screenshots/feature-benchmark.png" alt="Benchmark" width="240"> |
+| <img src="screenshots/feature-app-cleaner.png" alt="App cleaner" width="240"> | <img src="screenshots/feature-settings.png" alt="Settings" width="240"> |
 
 ### Quick install (Terminal)
 
