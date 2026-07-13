@@ -44,8 +44,8 @@
     }
   },
   "hashes": {
-    "stable_sh": "33dab5874e95f842f0b5dd94da1fadcca53b56541b33e4de4a2e1fc47986a50c",
-    "beta_sh": "d9dab85dde2304ac43743b4f9c8525ced7e7d05989dacb1b1a2ef9881ffd8865"
+    "stable_sh": "e4ad802b2b686345952db0a0e92fa1156ff73730443d938140d41c48f9f9ae5b",
+    "beta_sh": "15f31523bf563320a692ee1065af554a94c0e4bebd7a1c00348e307f9e37ba83"
   },
   "archive": []
 }

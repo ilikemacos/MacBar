@@ -172,7 +172,8 @@ def nav_right(data: dict) -> str:
         else ""
     )
     return f"""  <div class="nav-right">
-{archives_link}    <div class="nav-badge">{stable["label"]} · {beta["label"]} · macOS arm64</div>
+{archives_link}    <a class="nav-link" href="/privacy.html">Privacy</a>
+    <div class="nav-badge">{stable["label"]} · {beta["label"]} · macOS arm64</div>
   </div>"""
 
 
