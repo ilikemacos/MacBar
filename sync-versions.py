@@ -815,13 +815,58 @@ def download_card_windows(data: dict) -> str:
 
 
 def whats_new_section(changelog: dict) -> str:
-    """Changelog / What's new removed from the public website."""
-    return ""
+    cards = []
+    for card in changelog.get("whats_new", []):
+        accent = card.get("accent", "green")
+        color, border = cl.ACCENT_COLORS.get(accent, cl.ACCENT_COLORS["green"])
+        items_html = []
+        for item in card.get("items", []):
+            if isinstance(item, dict):
+                items_html.append(
+                    f"            <li><strong>{item.get('strong', '')}</strong>{item.get('text', '')}</li>"
+                )
+            else:
+                items_html.append(f"            <li>{item}</li>")
+        cards.append(
+            f"""        <div class="whats-new-card" style="border-color:{border};">
+          <h3 style="color:{color};">{card.get('title', '')}</h3>
+          <ul>
+{chr(10).join(items_html)}
+          </ul>
+        </div>"""
+        )
+    if not cards:
+        return ""
+    grid = "\n".join(cards)
+    return f"""  <div id="whats-new-panel" class="whats-new-panel prev-versions-panel is-open">
+    <p class="prev-versions-note">Latest stable and beta highlights.</p>
+    <div class="whats-new-body prev-versions-body" style="display:block;">
+      <div class="whats-new-grid">
+{grid}
+      </div>
+    </div>
+  </div>"""
 
 
 def changelog_section(changelog: dict) -> str:
-    """Changelog section removed from the public website."""
-    return ""
+    blocks = []
+    for rel in changelog.get("releases", []):
+        title = rel.get("title", "")
+        body = rel.get("body_html", "")
+        blocks.append(
+            f"""    <div class="feature">
+      <div class="feature-title">{title}</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        {body}
+      </div>
+    </div>"""
+        )
+    if not blocks:
+        return ""
+    body = "\n".join(blocks)
+    return f"""  <div class="features" style="grid-template-columns:1fr;">
+{body}
+  </div>"""
 
 
 def _status_pill(label: str, kind: str) -> str:
