@@ -21,20 +21,24 @@
     },
     {
       "channel": "beta",
-      "title": "v1.1.1 Beta Reloaded",
+      "title": "v1.2.1 Beta",
       "accent": "orange",
       "items": [
         {
+          "strong": "Thermal weather + Whisper",
+          "text": " \u2014 Clear\u2192Storm weather chip; optional whisper menubar that stays quiet until load, heat, battery, or builds get interesting."
+        },
+        {
+          "strong": "Why hot? + Compile-farm",
+          "text": " \u2014 local detective narrative (no AI); detect swiftc/clang/xcodebuild, boost sampling while building, then cool down."
+        },
+        {
+          "strong": "Stress duel (LAN)",
+          "text": " \u2014 host/join a room code on your local network only; compare score + peak temp. No cloud."
+        },
+        {
           "strong": "All AI providers",
           "text": " \u2014 Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes."
-        },
-        {
-          "strong": "System Advisor",
-          "text": " \u2014 client-side specs assistant with customizable temp/CPU/RAM/GPU/battery thresholds."
-        },
-        {
-          "strong": "Security & UX",
-          "text": " \u2014 AES-256-GCM for keys/chat history, first-launch tips, critical temp banners."
         }
       ]
     },
@@ -60,8 +64,8 @@
   ],
   "releases": [
     {
-      "title": "v1.1.1 Beta Reloaded",
-      "body_html": "<strong style=\"color:var(--orange);\">Beta channel</strong> \u2014 full AI provider list, System Advisor, Cleaner, AES key storage, and experimental features. Download the orange App ZIP or see <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.1.1-Beta-Reloaded\" style=\"color:var(--cyan);\">GitHub</a>."
+      "title": "v1.2.1 Beta",
+      "body_html": "<strong style=\"color:var(--orange);\">Beta channel</strong> \u2014 Thermal weather, Whisper menubar, Why hot? detective, Compile-farm mode, Stress duel (LAN), full AI providers. Download the orange App ZIP or see <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.1\" style=\"color:var(--cyan);\">GitHub</a>."
     },
     {
       "title": "v1.1.0 Final Reloaded",
@@ -74,7 +78,7 @@
   ],
   "compare": {
     "title": "Stable vs Beta \u2014 which should I download?",
-    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.1.1 Beta Reloaded adds every AI provider. See the Linux and Windows pages for other platforms.",
+    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.2.1 Beta adds every AI provider. See the Linux and Windows pages for other platforms.",
     "rows": [
       {
         "feature": "Best for",

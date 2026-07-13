@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="febe005bec162c0485326561728668184e46ab0e32a4228baa855891ed55ae21"
+EXPECTED_HASH="5b8689c080fe7b0e9e2476ccde70fad2276b8a13a74507ce6144e47d1341f616"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -278,6 +278,8 @@ import Security
 import CryptoKit
 import ServiceManagement
 import UserNotifications
+import Network
+import Darwin
 
 // ── Security hardening ───────────────────────────────────────────────────────
 
@@ -372,7 +374,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v1.1.1-Beta-Reloaded"
+let CURRENT_VERSION = "v1.2.1"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -3378,14 +3380,14 @@ enum MonitorActivity {
     static var enabledSlots: [MenuBarSlot] { MenuBarConfig.enabledSlots }
 
     static var tier: SamplingTier {
-        if popoverOpen { return .full }
+        if popoverOpen || CompileFarmDetector.shared.shouldForceSampling { return .full }
         let slots = enabledSlots
         if slots.isEmpty || slots == [.cpu] { return .minimal }
         return .slotAware
     }
 
     static var cpuInterval: TimeInterval {
-        if popoverOpen { return 1.0 }
+        if popoverOpen || CompileFarmDetector.shared.shouldForceSampling { return 1.0 }
         return idleProfile == .aggressive ? 4.0 : 2.0
     }
 
@@ -3406,7 +3408,7 @@ enum MonitorActivity {
     }
     static var smcCacheTTL: TimeInterval { popoverOpen ? 1.0 : 3.0 }
     static var includeSmcSample: Bool {
-        popoverOpen || enabledSlots.contains(.temp)
+        popoverOpen || enabledSlots.contains(.temp) || enabledSlots.contains(.weather) || CompileFarmDetector.shared.shouldForceSampling
     }
     static var samplesMemory: Bool {
         popoverOpen || enabledSlots.contains(.ram)
@@ -5380,7 +5382,10 @@ struct SettingsMenubarSection: View {
                         MenuBarConfig.setLayout(layout)
                     }
                 }
-                ForEach(MenuBarSlot.allCases) { slot in
+                ForEach(MenuBarSlot.allCases.filter { slot in
+                    if slot == .weather { return RNITRO_FEATURE_BETA_UI }
+                    return true
+                }) { slot in
                     Toggle(isOn: Binding(
                         get: { MenuBarConfig.isSlotEnabled(slot) },
                         set: { MenuBarConfig.setSlot(slot, enabled: $0) }
@@ -5388,6 +5393,29 @@ struct SettingsMenubarSection: View {
                         Text(slot.label).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
+                }
+                if RNITRO_FEATURE_BETA_UI {
+                    Divider().padding(.vertical, 4)
+                    Text(display.tr("menubar.whisper"))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    Toggle(isOn: Binding(
+                        get: { UserDefaults.standard.bool(forKey: MonitorPreferences.whisperModeKey) },
+                        set: { UserDefaults.standard.set($0, forKey: MonitorPreferences.whisperModeKey) }
+                    )) {
+                        Text(display.tr("menubar.whisper.toggle")).font(rNitroFont(.label, metrics: metrics))
+                    }
+                    .toggleStyle(.switch)
+                    Text(display.tr("menubar.whisper.hint"))
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    Picker(display.tr("menubar.whisper.sensitivity"), selection: Binding(
+                        get: { UserDefaults.standard.string(forKey: MonitorPreferences.whisperSensitivityKey) ?? WhisperSensitivity.normal.rawValue },
+                        set: { UserDefaults.standard.set($0, forKey: MonitorPreferences.whisperSensitivityKey) }
+                    )) {
+                        ForEach(WhisperSensitivity.allCases) { s in
+                            Text(s.label).tag(s.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
@@ -5555,6 +5583,23 @@ struct SettingsGeneralSection: View {
                 .pickerStyle(.segmented)
                 Text(display.tr("general.idleHint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                if RNITRO_FEATURE_BETA_UI {
+                    Toggle(isOn: Binding(
+                        get: {
+                            if UserDefaults.standard.object(forKey: MonitorPreferences.compileFarmKey) == nil { return true }
+                            return UserDefaults.standard.bool(forKey: MonitorPreferences.compileFarmKey)
+                        },
+                        set: {
+                            UserDefaults.standard.set($0, forKey: MonitorPreferences.compileFarmKey)
+                            CompileFarmDetector.shared.applyPreferenceChange()
+                        }
+                    )) {
+                        Text(display.tr("general.compileFarm")).font(rNitroFont(.label, metrics: metrics))
+                    }
+                    .toggleStyle(.switch)
+                    Text(display.tr("general.compileFarm.hint"))
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                }
                 MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
                 MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
                 MinimalButton(title: display.tr("general.checkUpdates"), action: { UpdateChecker.checkManually() })
@@ -6245,6 +6290,7 @@ final class SystemAdvisorModel: ObservableObject {
 struct SystemAdvisorView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var advisor = SystemAdvisorModel.shared
+    @State private var showDetective = false
     var compact: Bool = false
 
     var body: some View {
@@ -6278,6 +6324,10 @@ struct SystemAdvisorView: View {
                 Button("Clear") { advisor.clearHistory() }
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).buttonStyle(.plain)
             }
+            if RNITRO_FEATURE_BETA_UI {
+                Button("Why hot?") { showDetective = true }
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.nOrange).buttonStyle(.plain)
+            }
             if !compact {
                 Button("Alert settings") { openAlertsSettings() }
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.accent).buttonStyle(.plain)
@@ -6285,6 +6335,7 @@ struct SystemAdvisorView: View {
         }
         .padding(.horizontal, compact ? 10 : 14)
         .padding(.vertical, compact ? 6 : 8)
+        .sheet(isPresented: $showDetective) { DetectiveSheet() }
     }
 
     private func openAlertsSettings() {
@@ -6853,6 +6904,11 @@ enum MonitorPreferences {
     static let idleProfileKey = "rnitro.idleProfile"
     static let fontSizeKey = "rnitro.fontSize"
     static let languageKey = "rnitro.language"
+    // Beta experimental features (1·2·3·4·6)
+    static let whisperModeKey = "rnitro.whisperMode"
+    static let whisperSensitivityKey = "rnitro.whisperSensitivity"
+    static let compileFarmKey = "rnitro.compileFarmMode"
+    static let thermalWeatherSlotHintKey = "rnitro.thermalWeatherEnabled"
 }
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -6937,7 +6993,13 @@ final class DisplayPreferencesStore: ObservableObject {
         "menubar.title": "Menu bar icon", "menubar.subtitle": "Choose layout and which stats appear in the top-right menubar.",
         "menubar.layout": "Menu Bar Layout", "layout.compact": "Compact", "layout.inline": "Inline", "layout.minimal": "Minimal",
         "slot.cpu": "CPU", "slot.temp": "Temp", "slot.ram": "RAM", "slot.power": "Power",
-        "slot.network": "Network", "slot.battery": "Battery", "slot.btc": "Bitcoin",
+        "slot.network": "Network", "slot.battery": "Battery", "slot.btc": "Bitcoin", "slot.weather": "Thermal weather",
+        "menubar.whisper": "Whisper mode", "menubar.whisper.toggle": "Whisper when calm",
+        "menubar.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "menubar.whisper.sensitivity": "Sensitivity",
+        "general.compileFarm": "Compile-farm mode",
+        "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
+        "detective.whyHot": "Why hot?",
         "monitor.title": "Monitor sections", "monitor.subtitle": "Control which panels and tools appear on the Monitor tab.",
         "monitor.stress": "Show Stress Test", "monitor.benchmark": "Show Benchmark", "monitor.network": "Show Network",
         "monitor.solo": "Solo Mode (one panel open)", "monitor.weather": "Show weather on Network",
@@ -7251,7 +7313,7 @@ enum LaunchAtLoginManager {
 }
 
 enum MenuBarSlot: String, CaseIterable, Identifiable {
-    case cpu, temp, ram, power, network, battery, btc
+    case cpu, temp, ram, power, network, battery, btc, weather
 
     var id: String { rawValue }
 
@@ -7264,6 +7326,7 @@ enum MenuBarSlot: String, CaseIterable, Identifiable {
         case .network: return DisplayPreferencesStore.shared.tr("slot.network")
         case .battery: return DisplayPreferencesStore.shared.tr("slot.battery")
         case .btc: return DisplayPreferencesStore.shared.tr("slot.btc")
+        case .weather: return DisplayPreferencesStore.shared.tr("slot.weather")
         }
     }
 
@@ -7276,6 +7339,7 @@ enum MenuBarSlot: String, CaseIterable, Identifiable {
         case .network: return "NET"
         case .battery: return "BAT"
         case .btc: return "BTC"
+        case .weather: return "WX"
         }
     }
 }
@@ -7370,6 +7434,8 @@ enum MenuBarStatusFormatter {
                 return String(format: "$%.0fk", p / 1000)
             }
             return "…"
+        case .weather:
+            return ThermalWeather.current().shortLabel
         }
     }
 
@@ -7385,7 +7451,801 @@ enum MenuBarStatusFormatter {
             return slots.map { slotLabel($0) }.joined(separator: " · ")
         }
     }
+
+    /// Full menubar title including whisper / compile-farm / weather chips (beta).
+    static func renderStatusTitle() -> String {
+        let layout = MenuBarConfig.layout
+        let farm = CompileFarmDetector.shared
+        let weather = ThermalWeather.current()
+        var base = render(layout: layout)
+
+        if RNITRO_FEATURE_BETA_UI {
+            if farm.isBuilding {
+                base = "Build · " + base
+            } else if farm.isCoolingDown {
+                base = "Cool · " + base
+            }
+            let whisperOn = UserDefaults.standard.bool(forKey: MonitorPreferences.whisperModeKey)
+            if whisperOn {
+                let state = WhisperEngine.shared.evaluate(
+                    usage: CPUMonitor.shared.totalUsage,
+                    temp: CPUMonitor.shared.temperature,
+                    weather: weather,
+                    farmActive: farm.isBuilding || farm.forceSpeaking,
+                    dischargeHigh: BatteryMonitor.shared.isPresent
+                        && !BatteryMonitor.shared.isCharging
+                        && BatteryMonitor.shared.levelPercent < 25
+                )
+                switch state {
+                case .silent:
+                    // Always show a discreet glyph so the item stays clickable.
+                    return weather.emoji
+                case .speaking(let reason):
+                    if !base.contains(weather.shortLabel), MenuBarConfig.isSlotEnabled(.weather) == false {
+                        base = "\(weather.shortLabel) · \(base)"
+                    }
+                    _ = reason
+                    return base
+                }
+            }
+        }
+        return base
+    }
 }
+
+
+// ── Beta original features: ThermalWeather · Whisper · CompileFarm · Detective · Duel ──
+
+enum ThermalWeatherKind: String, CaseIterable, Identifiable {
+    case clear, breezy, humid, heatwave, storm
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .clear: return "Clear"
+        case .breezy: return "Breezy"
+        case .humid: return "Humid"
+        case .heatwave: return "Heatwave"
+        case .storm: return "Storm"
+        }
+    }
+
+    var shortLabel: String {
+        switch self {
+        case .clear: return "Clear"
+        case .breezy: return "Breezy"
+        case .humid: return "Humid"
+        case .heatwave: return "Heat"
+        case .storm: return "Storm"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .clear: return "○"
+        case .breezy: return "◔"
+        case .humid: return "◑"
+        case .heatwave: return "◕"
+        case .storm: return "●"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .clear: return "sun.min"
+        case .breezy: return "wind"
+        case .humid: return "humidity"
+        case .heatwave: return "thermometer.sun"
+        case .storm: return "cloud.bolt"
+        }
+    }
+}
+
+enum ThermalWeather {
+    static func evaluate(
+        temp: Double,
+        usage: Double,
+        thermalState: ProcessInfo.ThermalState,
+        stressing: Bool,
+        building: Bool
+    ) -> ThermalWeatherKind {
+        if stressing || thermalState == .critical { return .storm }
+        if building && temp >= 75 { return .heatwave }
+        if thermalState == .serious || temp >= 90 || usage >= 92 { return .heatwave }
+        if temp >= 78 || usage >= 70 || thermalState == .fair { return .humid }
+        if temp >= 55 || usage >= 35 { return .breezy }
+        return .clear
+    }
+
+    static func current() -> ThermalWeatherKind {
+        let cpu = CPUMonitor.shared
+        return evaluate(
+            temp: cpu.temperature,
+            usage: cpu.totalUsage,
+            thermalState: cpu.thermalState,
+            stressing: StressTester.shared.isRunning || BenchmarkRunner.shared.isRunning,
+            building: CompileFarmDetector.shared.isBuilding
+        )
+    }
+}
+
+enum WhisperSensitivity: String, CaseIterable, Identifiable {
+    case chill, normal, paranoid
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .chill: return "Chill"
+        case .normal: return "Normal"
+        case .paranoid: return "Paranoid"
+        }
+    }
+    var speakSeconds: TimeInterval {
+        switch self {
+        case .chill: return 15
+        case .normal: return 30
+        case .paranoid: return 45
+        }
+    }
+    var cpuThreshold: Double {
+        switch self {
+        case .chill: return 80
+        case .normal: return 55
+        case .paranoid: return 35
+        }
+    }
+    var tempSlopeHint: Double {
+        switch self {
+        case .chill: return 8
+        case .normal: return 4
+        case .paranoid: return 2
+        }
+    }
+}
+
+enum WhisperState: Equatable {
+    case silent
+    case speaking(reason: String)
+}
+
+final class WhisperEngine {
+    static let shared = WhisperEngine()
+    private var speakUntil = Date.distantPast
+    private var lastTemp: Double = 0
+    private var lastTempAt = Date.distantPast
+    private init() {}
+
+    var sensitivity: WhisperSensitivity {
+        WhisperSensitivity(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.whisperSensitivityKey) ?? "") ?? .normal
+    }
+
+    func evaluate(
+        usage: Double,
+        temp: Double,
+        weather: ThermalWeatherKind,
+        farmActive: Bool,
+        dischargeHigh: Bool
+    ) -> WhisperState {
+        let sens = sensitivity
+        let now = Date()
+        var reason: String? = nil
+
+        if farmActive { reason = "build" }
+        else if weather == .heatwave || weather == .storm { reason = weather.shortLabel }
+        else if usage >= sens.cpuThreshold { reason = "CPU" }
+        else if dischargeHigh { reason = "battery" }
+        else if lastTempAt.timeIntervalSince1970 > 0 {
+            let dt = now.timeIntervalSince(lastTempAt)
+            if dt > 5, dt < 120 {
+                let slope = (temp - lastTemp) / max(dt / 60.0, 0.01) // °C per minute
+                if slope >= sens.tempSlopeHint { reason = "rising" }
+            }
+        }
+
+        if lastTempAt == Date.distantPast || now.timeIntervalSince(lastTempAt) > 3 {
+            lastTemp = temp
+            lastTempAt = now
+        }
+
+        if let reason {
+            speakUntil = now.addingTimeInterval(sens.speakSeconds)
+            return .speaking(reason: reason)
+        }
+        if now < speakUntil {
+            return .speaking(reason: "linger")
+        }
+        return .silent
+    }
+}
+
+final class CompileFarmDetector: ObservableObject {
+    static let shared = CompileFarmDetector()
+
+    @Published private(set) var isBuilding = false
+    @Published private(set) var isCoolingDown = false
+    @Published private(set) var matchedNames: [String] = []
+    @Published private(set) var forceSpeaking = false
+
+    private var timer: Timer?
+    private var buildSince: Date?
+    private var clearSince: Date?
+    private var coolUntil = Date.distantPast
+
+    private let buildNames: Set<String> = [
+        "swiftc", "clang", "clang++", "ld", "ld-classic", "xcodebuild",
+        "swift-frontend", "swift-driver", "metal", "metal-ac", "llc", "opt",
+        "CompileAssetCatalog", "ibtool", "codesign", "dsymutil", "lipo"
+    ]
+
+    private init() {}
+
+    var isEnabled: Bool {
+        guard RNITRO_FEATURE_BETA_UI else { return false }
+        if UserDefaults.standard.object(forKey: MonitorPreferences.compileFarmKey) == nil {
+            return true // default on for beta
+        }
+        return UserDefaults.standard.bool(forKey: MonitorPreferences.compileFarmKey)
+    }
+
+    var shouldForceSampling: Bool {
+        isEnabled && (isBuilding || isCoolingDown)
+    }
+
+    func startIfNeeded() {
+        guard RNITRO_FEATURE_BETA_UI else { return }
+        stop()
+        guard isEnabled else { return }
+        let t = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { [weak self] _ in
+            self?.scan()
+        }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+        scan()
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    func applyPreferenceChange() {
+        if isEnabled { startIfNeeded() } else {
+            stop()
+            isBuilding = false
+            isCoolingDown = false
+            matchedNames = []
+            forceSpeaking = false
+            MonitorActivity.applyIdleProfileChange()
+        }
+    }
+
+    private func scan() {
+        guard isEnabled else { return }
+        let names = Self.collectMatchingNames(buildNames)
+        let now = Date()
+        let found = !names.isEmpty
+
+        if found {
+            clearSince = nil
+            if buildSince == nil { buildSince = now }
+            let sustained = now.timeIntervalSince(buildSince ?? now) >= 15
+            let wasBuilding = isBuilding
+            matchedNames = names
+            isBuilding = sustained
+            forceSpeaking = sustained
+            if sustained {
+                isCoolingDown = false
+                coolUntil = Date.distantPast
+                if !wasBuilding {
+                    MonitorActivity.applyIdleProfileChange()
+                }
+            }
+        } else {
+            buildSince = nil
+            matchedNames = []
+            if isBuilding {
+                if clearSince == nil { clearSince = now }
+                if now.timeIntervalSince(clearSince ?? now) >= 30 {
+                    isBuilding = false
+                    forceSpeaking = false
+                    coolUntil = now.addingTimeInterval(180) // 3 min cool-down
+                    isCoolingDown = true
+                    clearSince = nil
+                    MonitorActivity.applyIdleProfileChange()
+                }
+            } else if isCoolingDown {
+                if now >= coolUntil {
+                    isCoolingDown = false
+                    MonitorActivity.applyIdleProfileChange()
+                }
+            }
+        }
+    }
+
+    private static func collectMatchingNames(_ targets: Set<String>) -> [String] {
+        let cap = 4096
+        var buf = [pid_t](repeating: 0, count: cap)
+        let bytes = buf.withUnsafeMutableBufferPointer { ptr -> Int in
+            guard let base = ptr.baseAddress else { return 0 }
+            return Int(proc_listallpids(base, Int32(MemoryLayout<pid_t>.size * cap)))
+        }
+        guard bytes > 0 else { return [] }
+        let count = bytes / MemoryLayout<pid_t>.size
+        var found = Set<String>()
+        for pid in buf.prefix(count) where pid > 0 {
+            var nameBuf = [CChar](repeating: 0, count: 256)
+            guard proc_name(pid, &nameBuf, UInt32(nameBuf.count)) > 0 else { continue }
+            let raw = String(cString: nameBuf)
+            let base = (raw as NSString).lastPathComponent
+            if targets.contains(base) || targets.contains(raw) {
+                found.insert(base)
+            }
+        }
+        return Array(found).sorted()
+    }
+}
+
+struct DetectiveReport: Identifiable {
+    let id = UUID()
+    let headline: String
+    let bullets: [String]
+    let suggestion: String
+    let weather: ThermalWeatherKind
+}
+
+enum ThermalDetective {
+    static func analyze(
+        cpu: CPUMonitor = .shared,
+        bat: BatteryMonitor = .shared,
+        processes: [ProcessSnapshot] = ProcessMonitor.shared.topByCPU
+    ) -> DetectiveReport {
+        let weather = ThermalWeather.current()
+        let top = Array(processes.prefix(3))
+        var bullets: [String] = []
+
+        if let first = top.first, first.cpuPercent >= 8 {
+            bullets.append(String(format: "Top CPU: %@ (%.0f%%)", first.name, first.cpuPercent))
+        }
+        for p in top.dropFirst() where p.cpuPercent >= 3 {
+            bullets.append(String(format: "%@ · %.0f%%", p.name, p.cpuPercent))
+        }
+
+        if bat.isPresent {
+            if bat.isCharging {
+                bullets.append("Power: charging (\(bat.levelPercent)%)")
+            } else if bat.isOnAC {
+                bullets.append("Power: on AC (\(bat.levelPercent)%)")
+            } else {
+                bullets.append("Power: on battery (\(bat.levelPercent)%)")
+            }
+        } else {
+            bullets.append("Power: desktop / no battery")
+        }
+
+        if cpu.isLowPowerModeEnabled {
+            bullets.append("Low Power Mode is ON")
+        }
+
+        bullets.append("Thermal weather: \(weather.label) · \(String(format: "%.0f°C", cpu.temperature)) · CPU \(String(format: "%.0f%%", cpu.totalUsage))")
+        bullets.append("macOS thermal: \(CPUMonitor.thermalLabel(cpu.thermalState))")
+
+        if CompileFarmDetector.shared.isBuilding {
+            let names = CompileFarmDetector.shared.matchedNames.joined(separator: ", ")
+            bullets.append("Compile farm active\(names.isEmpty ? "" : ": \(names)")")
+        }
+
+        let headline: String
+        if let first = top.first, first.cpuPercent >= 15 {
+            headline = "Warm because \(first.name) is busy"
+        } else if CompileFarmDetector.shared.isBuilding {
+            headline = "Warm because a compile farm is running"
+        } else if weather == .heatwave || weather == .storm {
+            headline = "Warm — thermal pressure is elevated"
+        } else if cpu.totalUsage >= 50 {
+            headline = "Warm because overall CPU load is high"
+        } else {
+            headline = "Not especially hot right now"
+        }
+
+        let suggestion: String
+        if let first = top.first, first.cpuPercent >= 40 {
+            suggestion = "Quit or pause \(first.name) if you don't need it, then wait a minute for temps to fall."
+        } else if !bat.isOnAC && bat.isPresent && !bat.isCharging {
+            suggestion = "Plug in AC or enable Low Power Mode to reduce heat while on battery."
+        } else if CompileFarmDetector.shared.isBuilding {
+            suggestion = "Let the build finish — compile-farm cool-down will lower sampling after tools exit."
+        } else if weather == .clear || weather == .breezy {
+            suggestion = "You're fine. Keep an eye on top processes if heat returns."
+        } else {
+            suggestion = "Close heavy apps, unplug accessories if needed, and give the chassis a minute to cool."
+        }
+
+        if bullets.isEmpty {
+            bullets.append("No strong process signal yet — open Monitor a few seconds so process sampling warms up.")
+        }
+
+        return DetectiveReport(headline: headline, bullets: bullets, suggestion: suggestion, weather: weather)
+    }
+}
+
+struct DetectiveSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.uiMetrics) private var metrics
+    @State private var report = ThermalDetective.analyze()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Why is my Mac hot?")
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
+                Spacer()
+                Text(report.weather.emoji + " " + report.weather.label)
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+            Text(report.headline)
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                .foregroundColor(.nOrange)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(report.bullets.enumerated()), id: \.offset) { _, line in
+                    HStack(alignment: .top, spacing: 6) {
+                        Text("•").foregroundColor(.secondary)
+                        Text(line).font(rNitroFont(.caption, metrics: metrics))
+                    }
+                }
+            }
+            Text("Suggestion")
+                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+            Text(report.suggestion)
+                .font(rNitroFont(.caption, metrics: metrics))
+            HStack {
+                MinimalButton(title: "Refresh", action: { report = ThermalDetective.analyze() })
+                Spacer()
+                MinimalButton(title: "Close", action: { dismiss() })
+            }
+            .padding(.top, 8)
+        }
+        .padding(16)
+        .frame(minWidth: 320, minHeight: 220)
+        .onAppear {
+            if ProcessMonitor.shared.topByCPU.isEmpty {
+                ProcessMonitor.shared.start()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    report = ThermalDetective.analyze()
+                }
+            }
+        }
+    }
+}
+
+// Stress duel — LAN only (Network.framework), no internet relay.
+struct DuelResultPayload: Codable {
+    var type: String
+    var code: String
+    var hostName: String
+    var score: Double
+    var peakTemp: Double
+    var avgCPU: Double
+    var duration: Double
+}
+
+final class StressDuelService: ObservableObject {
+    static let shared = StressDuelService()
+
+    enum Phase: String {
+        case idle, hosting, joining, racing, done, failed
+    }
+
+    @Published var phase: Phase = .idle
+    @Published var roomCode: String = ""
+    @Published var statusText: String = "Idle"
+    @Published var localResult: DuelResultPayload?
+    @Published var peerResult: DuelResultPayload?
+    @Published var winnerText: String = ""
+
+    private var listener: NWListener?
+    private var connection: NWConnection?
+    private var browser: NWBrowser?
+    private var raceTask: DispatchWorkItem?
+    private let duelPort: UInt16 = 7382
+    private let serviceType = "_rnitro-duel._tcp"
+
+    private init() {}
+
+    func reset() {
+        stopNetworking()
+        phase = .idle
+        roomCode = ""
+        statusText = "Idle"
+        localResult = nil
+        peerResult = nil
+        winnerText = ""
+        raceTask?.cancel()
+        raceTask = nil
+    }
+
+    func host() {
+        reset()
+        guard RNITRO_FEATURE_BETA_UI else { return }
+        roomCode = Self.makeCode()
+        phase = .hosting
+        statusText = "Hosting \(roomCode) — waiting for peer on LAN…"
+        do {
+            let params = NWParameters.tcp
+            params.includePeerToPeer = true
+            let listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: duelPort)!)
+            listener.service = NWListener.Service(name: "rnitro-duel-\(roomCode)", type: serviceType)
+            listener.stateUpdateHandler = { [weak self] state in
+                DispatchQueue.main.async {
+                    switch state {
+                    case .ready:
+                        self?.statusText = "Hosting \(self?.roomCode ?? "") · port \(self?.duelPort ?? 0)"
+                    case .failed(let err):
+                        self?.phase = .failed
+                        self?.statusText = "Host failed: \(err.localizedDescription)"
+                    default: break
+                    }
+                }
+            }
+            listener.newConnectionHandler = { [weak self] conn in
+                DispatchQueue.main.async {
+                    self?.attach(connection: conn, asHost: true)
+                }
+            }
+            listener.start(queue: .main)
+            self.listener = listener
+        } catch {
+            phase = .failed
+            statusText = "Could not listen: \(error.localizedDescription)"
+        }
+    }
+
+    func join(code: String) {
+        let code = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard code.count >= 4 else {
+            statusText = "Enter the 6-character room code"
+            return
+        }
+        reset()
+        roomCode = code
+        phase = .joining
+        statusText = "Looking for \(code) on LAN…"
+
+        let desc = NWBrowser.Descriptor.bonjour(type: serviceType, domain: nil)
+        let browser = NWBrowser(for: desc, using: .tcp)
+        browser.stateUpdateHandler = { (_: NWBrowser.State) in }
+        browser.browseResultsChangedHandler = { [weak self] (results: Set<NWBrowser.Result>, _: Set<NWBrowser.Result.Change>) in
+            guard let self else { return }
+            for result in results {
+                if case .service(let name, _, _, _) = result.endpoint {
+                    if name.contains(code) || name.uppercased().contains(code) {
+                        DispatchQueue.main.async {
+                            self.browser?.cancel()
+                            self.browser = nil
+                            self.connect(to: result.endpoint)
+                        }
+                        return
+                    }
+                }
+            }
+        }
+        browser.start(queue: .main)
+        self.browser = browser
+
+        // Fallback: try localhost (same-Mac test) after 1.5s if still joining
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            guard let self, self.phase == .joining, self.connection == nil else { return }
+            self.statusText = "Trying localhost:\(self.duelPort)…"
+            let host = NWEndpoint.Host("127.0.0.1")
+            let port = NWEndpoint.Port(rawValue: self.duelPort)!
+            self.connect(to: NWEndpoint.hostPort(host: host, port: port))
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in
+            guard let self, self.phase == .joining || self.phase == .hosting else { return }
+            self.phase = .failed
+            self.statusText = "Timed out waiting for peer (firewall / different LAN?)"
+            self.stopNetworking()
+        }
+    }
+
+    private func connect(to endpoint: NWEndpoint) {
+        let conn = NWConnection(to: endpoint, using: .tcp)
+        attach(connection: conn, asHost: false)
+    }
+
+    private func attach(connection conn: NWConnection, asHost: Bool) {
+        if connection != nil { conn.cancel(); return }
+        connection = conn
+        conn.stateUpdateHandler = { [weak self] state in
+            DispatchQueue.main.async {
+                switch state {
+                case .ready:
+                    self?.statusText = asHost ? "Peer connected — racing…" : "Connected — racing…"
+                    self?.startRace()
+                case .failed(let err):
+                    self?.phase = .failed
+                    self?.statusText = "Connection failed: \(err.localizedDescription)"
+                case .cancelled:
+                    break
+                default:
+                    break
+                }
+            }
+        }
+        conn.start(queue: .main)
+        receiveLoop(conn)
+        if asHost {
+            listener?.cancel()
+        }
+    }
+
+    private func startRace() {
+        guard phase == .hosting || phase == .joining || phase == .idle else { return }
+        phase = .racing
+        statusText = "Duel running (8s)…"
+        localResult = nil
+        peerResult = nil
+        winnerText = ""
+
+        let duration: TimeInterval = 8
+        let startTemp = CPUMonitor.shared.temperature
+        var peakTemp = startTemp
+        var cpuSum = 0.0
+        var cpuSamples = 0
+
+        // Light stress via existing StressTester
+        if !StressTester.shared.isRunning && !BenchmarkRunner.shared.isRunning {
+            StressTester.shared.start()
+        }
+
+        let sample = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            peakTemp = max(peakTemp, CPUMonitor.shared.temperature)
+            cpuSum += CPUMonitor.shared.totalUsage
+            cpuSamples += 1
+        }
+
+        let work = DispatchWorkItem { [weak self] in
+            sample.invalidate()
+            StressTester.shared.stop()
+            guard let self else { return }
+            let avg = cpuSamples > 0 ? cpuSum / Double(cpuSamples) : CPUMonitor.shared.totalUsage
+            // Higher score = stronger sustained work; cooler Mac is separate.
+            let score = avg * 10.0 + max(0, 100 - peakTemp)
+            let payload = DuelResultPayload(
+                type: "result",
+                code: self.roomCode,
+                hostName: Host.current().localizedName ?? "Mac",
+                score: score,
+                peakTemp: peakTemp,
+                avgCPU: avg,
+                duration: duration
+            )
+            self.localResult = payload
+            self.send(payload)
+            self.statusText = "Waiting for peer result…"
+            self.tryFinish()
+            // If peer already sent, finish; else wait a bit
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+                self?.tryFinish(force: true)
+            }
+        }
+        raceTask = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
+    }
+
+    private func send(_ payload: DuelResultPayload) {
+        guard let conn = connection else { return }
+        guard let data = try? JSONEncoder().encode(payload) else { return }
+        var frame = data
+        frame.append(0x0A) // newline delimited
+        conn.send(content: frame, completion: .contentProcessed { _ in })
+    }
+
+    private func receiveLoop(_ conn: NWConnection) {
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
+            if let data, !data.isEmpty {
+                let parts = data.split(separator: 0x0A)
+                for part in parts {
+                    if let payload = try? JSONDecoder().decode(DuelResultPayload.self, from: Data(part)),
+                       payload.type == "result" {
+                        DispatchQueue.main.async {
+                            self?.peerResult = payload
+                            self?.tryFinish()
+                        }
+                    }
+                }
+            }
+            if error == nil && !isComplete {
+                self?.receiveLoop(conn)
+            }
+        }
+    }
+
+    private func tryFinish(force: Bool = false) {
+        guard let local = localResult else { return }
+        if let peer = peerResult {
+            phase = .done
+            let cooler: String
+            if local.peakTemp < peer.peakTemp - 0.5 {
+                cooler = "You stayed cooler (\(String(format: "%.0f", local.peakTemp))° vs \(String(format: "%.0f", peer.peakTemp))°)"
+            } else if peer.peakTemp < local.peakTemp - 0.5 {
+                cooler = "Peer stayed cooler (\(String(format: "%.0f", peer.peakTemp))° vs \(String(format: "%.0f", local.peakTemp))°)"
+            } else {
+                cooler = "Temps tied"
+            }
+            if local.score > peer.score + 1 {
+                winnerText = "You win · \(cooler)"
+            } else if peer.score > local.score + 1 {
+                winnerText = "Peer wins · \(cooler)"
+            } else {
+                winnerText = "Draw · \(cooler)"
+            }
+            statusText = winnerText
+            stopNetworking()
+        } else if force {
+            phase = .done
+            winnerText = "No peer result (solo score \(String(format: "%.0f", local.score)))"
+            statusText = winnerText
+            stopNetworking()
+        }
+    }
+
+    private func stopNetworking() {
+        listener?.cancel(); listener = nil
+        browser?.cancel(); browser = nil
+        connection?.cancel(); connection = nil
+    }
+
+    private static func makeCode() -> String {
+        let chars = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+        return String((0..<6).map { _ in chars.randomElement()! })
+    }
+}
+
+struct StressDuelPanel: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var duel = StressDuelService.shared
+    @State private var joinCode = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Stress duel (LAN)")
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text("Local network only — no cloud. Host on one Mac, join with the code on another.")
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Text(duel.statusText)
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(duel.phase == .failed ? .nRed : .secondary)
+            HStack(spacing: 8) {
+                MinimalButton(title: "Host", disabled: duel.phase == .racing || duel.phase == .hosting, action: { duel.host() })
+                TextField("Room code", text: $joinCode)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 120)
+                MinimalButton(title: "Join", disabled: duel.phase == .racing, action: { duel.join(code: joinCode) })
+                MinimalButton(title: "Reset", action: { duel.reset() })
+            }
+            if !duel.roomCode.isEmpty {
+                MonitorRow(label: "Room", value: duel.roomCode)
+            }
+            if let local = duel.localResult {
+                MonitorRow(label: "You", value: String(format: "score %.0f · peak %.0f° · CPU %.0f%%", local.score, local.peakTemp, local.avgCPU))
+            }
+            if let peer = duel.peerResult {
+                MonitorRow(label: "Peer", value: String(format: "%@ · score %.0f · peak %.0f°", peer.hostName, peer.score, peer.peakTemp))
+            }
+            if !duel.winnerText.isEmpty {
+                Text(duel.winnerText)
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nOrange)
+            }
+        }
+        .padding(.top, 6)
+    }
+}
+
 
 // ── CPU stress test ──────────────────────────────────────────────────────────
 // Spins up one busy-loop thread per logical core to genuinely max out CPU
@@ -8183,23 +9043,105 @@ struct ProcessUsageRow: View {
 struct MonitorModernHeaderView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var m = CPUMonitor.shared
+    @ObservedObject private var farm = CompileFarmDetector.shared
+    @State private var showDetective = false
 
     var body: some View {
-        HStack(spacing: 6) {
-            Text(m.cpuName)
-                .font(rNitroFont(.caption, metrics: metrics))
-                .foregroundColor(.secondary)
-                .lineLimit(1).truncationMode(.tail)
-            Spacer()
-            if m.isLowPowerModeEnabled {
-                LowPowerModeBadge(compact: true)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text(m.cpuName)
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1).truncationMode(.tail)
+                Spacer()
+                if m.isLowPowerModeEnabled {
+                    LowPowerModeBadge(compact: true)
+                }
+                Text(CURRENT_VERSION)
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary.opacity(0.7))
             }
-            Text(CURRENT_VERSION)
-                .font(rNitroFont(.micro, metrics: metrics))
-                .foregroundColor(.secondary.opacity(0.7))
+            if RNITRO_FEATURE_BETA_UI {
+                BetaLabBar(showDetective: $showDetective, farm: farm)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, metrics.hPad).padding(.top, 10).padding(.bottom, 6)
+        .sheet(isPresented: $showDetective) { DetectiveSheet() }
+    }
+}
+
+/// Always-visible beta feature strip so Whisper / weather / detective / farm are hard to miss.
+struct BetaLabBar: View {
+    @Environment(\.uiMetrics) private var metrics
+    @Binding var showDetective: Bool
+    @ObservedObject var farm: CompileFarmDetector
+    @ObservedObject private var m = CPUMonitor.shared
+    @AppStorage(MonitorPreferences.whisperModeKey) private var whisperOn = false
+
+    var body: some View {
+        let wx = ThermalWeather.current()
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text("BETA LAB")
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
+                    .foregroundColor(.nOrange)
+                Text("\(wx.emoji) \(wx.label)")
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(wx == .heatwave || wx == .storm ? .nOrange : .primary)
+                if farm.isBuilding {
+                    Text("· Build active")
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        .foregroundColor(.nOrange)
+                } else if farm.isCoolingDown {
+                    Text("· Cool-down")
+                        .font(rNitroFont(.caption, metrics: metrics))
+                        .foregroundColor(.secondary)
+                }
+                Spacer(minLength: 4)
+                if whisperOn {
+                    Text("Whisper on")
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.secondary)
+                }
+            }
+            HStack(spacing: 8) {
+                Button(action: { showDetective = true }) {
+                    Text("Why hot?")
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Color.nOrange))
+                }
+                .buttonStyle(.plain)
+                Button(action: {
+                    whisperOn.toggle()
+                    NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+                }) {
+                    Text(whisperOn ? "Whisper: ON" : "Whisper: off")
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
+                        .foregroundColor(whisperOn ? .nOrange : .secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().stroke(whisperOn ? Color.nOrange.opacity(0.6) : Color.border, lineWidth: 0.8))
+                }
+                .buttonStyle(.plain)
+                Text(String(format: "%.0f° · %.0f%%", m.temperature, m.totalUsage))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+            Text("Settings → Menubar (Whisper + weather slot) · General (Compile-farm) · scroll to Stress for LAN Duel")
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary.opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.nOrange.opacity(0.08))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.nOrange.opacity(0.35), lineWidth: 1))
+        )
     }
 }
 
@@ -8506,6 +9448,9 @@ struct MonitorToolsSectionView: View {
                     action: { bench.run() }
                 )
             }
+            if RNITRO_FEATURE_BETA_UI {
+                StressDuelPanel()
+            }
         }
         .padding(.bottom, 12)
     }
@@ -8573,6 +9518,8 @@ struct MonitorTabContent: View {
         }
     }
 
+    @State private var showLegacyDetective = false
+
     private var legacyMonitorTab: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -8592,7 +9539,14 @@ struct MonitorTabContent: View {
                         Text("Live").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                     }
                 }
-                .padding(.horizontal, metrics.hPad).padding(.top, 12).padding(.bottom, 14)
+                .padding(.horizontal, metrics.hPad).padding(.top, 12).padding(.bottom, 8)
+
+                if RNITRO_FEATURE_BETA_UI {
+                    BetaLabBar(showDetective: $showLegacyDetective, farm: CompileFarmDetector.shared)
+                        .padding(.horizontal, metrics.hPad)
+                        .padding(.bottom, 10)
+                        .sheet(isPresented: $showLegacyDetective) { DetectiveSheet() }
+                }
 
                 MinimalDivider().padding(.horizontal, 16)
 
@@ -8682,6 +9636,11 @@ struct MonitorTabContent: View {
                         )
                     }
                     .padding(.horizontal, 16).padding(.vertical, 12)
+                    if RNITRO_FEATURE_BETA_UI {
+                        StressDuelPanel()
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                    }
                 }
 
                 if showBenchmarkUI {
@@ -9107,6 +10066,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().delegate = self
         AdvisorNotificationCenter.configure()
         BatteryMonitor.shared.startMonitoring()
+        if RNITRO_FEATURE_BETA_UI {
+            CompileFarmDetector.shared.startIfNeeded()
+        }
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self
@@ -9309,6 +10271,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         if slots.contains(.btc) {
             monitors.append(BTCPriceMonitor.shared.$priceUSD.map { _ in () }.eraseToAnyPublisher())
         }
+        if slots.contains(.weather) || UserDefaults.standard.bool(forKey: MonitorPreferences.whisperModeKey) {
+            monitors.append(CPUMonitor.shared.$temperature.map { _ in () }.eraseToAnyPublisher())
+            monitors.append(CompileFarmDetector.shared.$isBuilding.map { _ in () }.eraseToAnyPublisher())
+        }
         for publisher in monitors {
             publisher.receive(on: DispatchQueue.main).sink { _ in scheduleRefresh() }.store(in: &subscriptions)
         }
@@ -9317,7 +10283,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func updateStatusTitle() {
         guard let button = statusItem?.button else { return }
         MenuBarIconManager.shared.refresh(for: button)
-        button.title = MenuBarStatusFormatter.render(layout: MenuBarConfig.layout)
+        button.title = MenuBarStatusFormatter.renderStatusTitle()
         if button.image != nil {
             button.imagePosition = .imageLeading
         }
@@ -9338,6 +10304,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         DiskActivityMonitor.shared.stop()
         SensorsMonitor.shared.stop()
         StressTester.shared.stop()
+        CompileFarmDetector.shared.stop()
+        StressDuelService.shared.reset()
         releasePopoverContent()
         OverlayWindowController.shared.hide()
     }
@@ -9365,6 +10333,7 @@ swiftc "$WORK_DIR/main.swift" \
     -framework IOKit \
     -framework Security \
     -framework CryptoKit \
+    -framework Network \
     -lIOReport \
     -parse-as-library \
     -O
@@ -9414,13 +10383,19 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.1.1-Beta-Reloaded</string>
-    <key>CFBundleShortVersionString</key><string>v1.1.1-Beta-Reloaded</string>
+    <key>CFBundleVersion</key><string>v1.2.1</string>
+    <key>CFBundleShortVersionString</key><string>v1.2.1</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>LSMinimumSystemVersion</key><string>12.0</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>rNitro uses the local network only for optional Stress Duel between Macs on your LAN. No data leaves your network.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_rnitro-duel._tcp</string>
+    </array>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSExceptionDomains</key>
