@@ -1129,6 +1129,18 @@
   }
   .shot-card { margin: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 </style>
+<script>
+/* legacy-tab-redirect */
+(function(){
+  try {
+    var p=new URLSearchParams(location.search).get('tab');
+    var h=(location.hash||'').replace('#','');
+    var m={cli:'/cli.html',linux:'/linux.html',win:'/windows.html'};
+    if(m[p]) location.replace(m[p]);
+    else if(m[h]) location.replace(m[h]);
+  } catch(e) {}
+})();
+</script>
 </head>
 <body>
 
@@ -1193,8 +1205,8 @@
       🐧 Linux
     </a>
     <a id="tab-win" href="/windows.html"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
-      🪟 Windows
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none; opacity:0.8;">
+      🪟 Windows (legacy)
     </a>
   </div>
 <!-- @end:platform-tabs -->
@@ -1704,7 +1716,7 @@
 <!-- @sync:stable-beta-compare -->
   <div class="channel-compare">
     <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Stable vs Beta — which should I download?</h2>
-    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.1.1 Beta Reloaded adds every AI provider and experimental features. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.</p>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.1.1 Beta Reloaded adds every AI provider. See the Linux and Windows pages for other platforms.</p>
     <div class="channel-compare-scroll">
       <table class="channel-compare-table">
         <thead>
@@ -1977,6 +1989,17 @@
 </footer>
 
 <!-- Terms & Conditions modal (required before any download) -->
+
+<footer class="site-footer" style="max-width:980px; margin:48px auto 32px; padding:0 16px; text-align:center; font-family:var(--mono); font-size:13px; color:var(--muted); line-height:1.9;">
+  <a href="/" style="color:var(--cyan); margin:0 8px; text-decoration:none;">macOS</a>
+  <a href="/cli.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">CLI</a>
+  <a href="/linux.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Linux</a>
+  <a href="/windows.html" style="color:var(--muted); margin:0 8px; text-decoration:none;">Windows</a>
+  <a href="/privacy.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Privacy</a>
+  <a href="terms-and-conditions.txt" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Terms</a>
+  <a href="https://github.com/ilikemacos/rNitro" style="color:var(--cyan); margin:0 8px; text-decoration:none;">GitHub</a>
+</footer>
+
 <div id="tc-overlay" class="tc-overlay" role="dialog" aria-modal="true" aria-labelledby="tc-title">
   <div class="tc-modal">
     <div class="tc-modal-header">
@@ -2428,9 +2451,9 @@
     const params = new URLSearchParams(location.search);
     const hash = location.hash.replace('#', '');
     const fromQuery = params.get('tab');
-    const tabs = ['mac', 'cli', 'linux', 'win'];
-    if (tabs.includes(fromQuery)) return fromQuery;
-    if (tabs.includes(hash)) return hash;
+    const map = { cli: '/cli.html', linux: '/linux.html', win: '/windows.html' };
+    if (map[fromQuery]) { location.replace(map[fromQuery]); return 'mac'; }
+    if (map[hash]) { location.replace(map[hash]); return 'mac'; }
     return 'mac';
   }
 
@@ -2619,9 +2642,9 @@
     { label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
       a: "Scroll to **How everything works** on [getrnitro.netlify.app](https://getrnitro.netlify.app/) for tables covering macOS Stable (v1.1.0), macOS Beta (v1.1.1), Linux (v0.1), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." },
     { label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
-      a: `Windows is no longer actively supported. The last build (${RNITRO_VERSIONS.windows.id}) remains on the Windows tab — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` },
+      a: `Windows is no longer actively supported. The last build (${RNITRO_VERSIONS.windows.id}) remains on the Windows page — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` },
     { label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
-      a: `Linux pre-release (${RNITRO_VERSIONS.linux.id}): switch to the Linux tab, download the tarball or install-rNitro-linux.sh, then run bash install-rNitro-linux.sh. Requires Python 3.10+, GTK 4, and libadwaita. Also on GitHub: https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64` },
+      a: `Linux pre-release (${RNITRO_VERSIONS.linux.id}): switch to the Linux page, download the tarball or install-rNitro-linux.sh, then run bash install-rNitro-linux.sh. Requires Python 3.10+, GTK 4, and libadwaita. Also on GitHub: https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64` },
     { label: 'How do updates work?', kws: ['update', 'new version', 'upgrade'],
       a: "macOS: rNitro checks getrnitro.netlify.app on launch. If a newer Final or Beta build exists, you get a choice: Install Final (stable) or Install Beta — then it downloads the ZIP in-app and restarts. Linux v0.1 checks the same version.json for Linux updates." },
     // @end:chat-kb-platform

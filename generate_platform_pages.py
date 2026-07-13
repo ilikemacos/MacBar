@@ -83,8 +83,33 @@ _CSS = """
   .platform-banner--deprecated {
     color: var(--orange); background: rgba(255,140,26,0.08); border: 1px solid rgba(255,140,26,0.35);
   }
-  .footer { margin-top: 36px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .footer { margin-top: 36px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted); line-height: 1.8; }
   .footer a { margin: 0 8px; }
+  .steps { margin-top: 28px; text-align: left; }
+  .steps h2 { font-family: var(--mono); font-size: 16px; margin: 0 0 14px; color: var(--text); }
+  .step {
+    display: flex; gap: 14px; margin-bottom: 14px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+  }
+  .step-num {
+    flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--card2);
+    border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; color: var(--cyan);
+  }
+  .step-content h3 { font-size: 15px; margin: 0 0 6px; }
+  .step-content p { font-size: 14px; color: var(--muted); line-height: 1.55; margin: 0; }
+  .code-block {
+    margin-top: 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 12px; color: var(--green);
+    word-break: break-all; line-height: 1.45; text-align: left; white-space: pre-wrap;
+  }
+  .code-block.purple { color: #a78bfa; border-color: rgba(167,139,250,0.35); }
+  .code-block.gold { color: #e8a838; border-color: rgba(232,168,56,0.35); }
+  .tui-preview {
+    margin-top: 12px; background: #0c0c12; border: 1px solid #2a2a40; border-radius: 8px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 11px; color: #8f8; line-height: 1.4;
+    white-space: pre; overflow-x: auto;
+  }
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
     background: var(--card); border: 1px solid var(--green); color: var(--green);
@@ -112,17 +137,31 @@ def _nav(active: str) -> str:
         ("mac", "/", "🍎 macOS", "var(--green)"),
         ("cli", "/cli.html", "⌨️ CLI", "#a78bfa"),
         ("linux", "/linux.html", "🐧 Linux", "#e8a838"),
-        ("win", "/windows.html", "🪟 Windows", "var(--cyan)"),
+        ("win", "/windows.html", "🪟 Windows (legacy)", "var(--cyan)"),
     ]
     links = []
     for key, href, label, accent in items:
         if key == active:
-            links.append(
-                f'<a class="active" href="{href}" style="background:{accent}; border-color:{accent}; color:#000;">{label}</a>'
-            )
+            style = f"background:{accent}; border-color:{accent}; color:#000;"
+            if key == "win":
+                style += " opacity:0.9;"
+            links.append(f'<a class="active" href="{href}" style="{style}">{label}</a>')
         else:
-            links.append(f'<a href="{href}">{label}</a>')
+            extra = ' style="opacity:0.75; color:var(--muted);"' if key == "win" else ""
+            links.append(f'<a href="{href}"{extra}>{label}</a>')
     return f'<nav class="nav" aria-label="Platform">{chr(10).join(links)}</nav>'
+
+
+def _site_footer() -> str:
+    return """    <div class="footer">
+      <a href="/">macOS</a>
+      <a href="/cli.html">CLI</a>
+      <a href="/linux.html">Linux</a>
+      <a href="/windows.html">Windows</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="terms-and-conditions.txt">Terms</a>
+      <a href="https://github.com/ilikemacos/rNitro">GitHub</a>
+    </div>"""
 
 
 def _terms_overlay() -> str:
@@ -234,6 +273,22 @@ def _download_js(data: dict) -> str:
 """
 
 
+def _json_ld(name: str, os_list: str, version: str, description: str) -> str:
+    payload = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": name,
+        "operatingSystem": os_list,
+        "applicationCategory": "UtilitiesApplication",
+        "softwareVersion": version,
+        "description": description,
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+        "downloadUrl": SITE_URL,
+        "url": SITE_URL,
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
 def _page(
     *,
     data: dict,
@@ -246,7 +301,12 @@ def _page(
     lead: str,
     desc_html: str,
     download_html: str,
+    steps_html: str = "",
+    json_ld: str = "",
 ) -> str:
+    h1 = title.split("—")[0].strip() if "—" in title else title
+    ld = f'<script type="application/ld+json">{json_ld}</script>\n' if json_ld else ""
+    steps_block = f"\n    {steps_html}\n" if steps_html else ""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -255,11 +315,15 @@ def _page(
 <title>{title}</title>
 <meta name="description" content="{description}">
 <link rel="canonical" href="{SITE_URL}/{slug}">
+<meta property="og:type" content="website">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{description}">
 <meta property="og:url" content="{SITE_URL}/{slug}">
 <meta property="og:image" content="{SITE_URL}/screenshots/hero-monitor.png">
-<link rel="icon" href="favicon.ico" sizes="any">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{description}">
+{ld}<link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>{_CSS}</style>
 </head>
@@ -267,19 +331,15 @@ def _page(
   <div class="wrap">
     {_nav(active)}
     <p class="eyebrow" style="color:{accent};">{eyebrow}</p>
-    <h1>{title.split("—")[0].strip() if "—" in title else title}</h1>
+    <h1>{h1}</h1>
     <p class="lead">{lead}</p>
     <div class="desc">
 {desc_html}
     </div>
     <div style="max-width:640px; margin:0 auto;">
 {download_html}
-    </div>
-    <div class="footer">
-      <a href="/">macOS downloads</a>
-      <a href="/privacy.html">Privacy</a>
-      <a href="https://github.com/ilikemacos/rNitro/releases">GitHub Releases</a>
-    </div>
+    </div>{steps_block}
+{_site_footer()}
   </div>
   {_terms_overlay()}
   {_download_js(data)}
@@ -305,6 +365,7 @@ def build_cli_page(data: dict) -> str:
 
     cli = v.cli_release(data)
     download = sv.hero_cli_card(data)
+    curl_cmd = sv.cli_curl_install_cmd(cli["tar"])
     desc = f"""      <h2>About rNitro CLI</h2>
       <p><strong>rNitro CLI ({cli["version"]})</strong> is a terminal dashboard in the spirit of btop — for when you want the same rNitro metrics over SSH or without a menu bar.</p>
       <ul>
@@ -313,18 +374,56 @@ def build_cli_page(data: dict) -> str:
         <li><strong>Keys</strong> — <code>q</code> quit · <code>r</code> refresh · <code>rnitro --once</code> for one-shot JSON</li>
         <li><strong>Install</strong> — tarball + <code>install-cli.sh</code>, or the one-line curl install below</li>
       </ul>
+      <p style="margin-top:14px;"><strong style="color:var(--text);">Sample TUI</strong></p>
+      <div class="tui-preview">┌─ rNitro CLI ─────────────────────────┐
+│ CPU  23% ████░░░░  Temp 48°C         │
+│ MEM  9.2/16 GB    DISK 412 GB free   │
+│ NET  ↓1.2 MB/s ↑180 KB/s             │
+│ TOP  WindowServer 12% · kernel_task  │
+└──────────────────────────────────────┘
+ q quit · r refresh · --once for JSON</div>
+      <p style="margin-top:14px;"><strong style="color:var(--text);">Sample <code>rnitro --once</code></strong></p>
+      <div class="code-block purple">{{
+  "cpu_percent": 23.4,
+  "mem_used_gb": 9.2,
+  "mem_total_gb": 16.0,
+  "temp_c": 48.1,
+  "version": "{cli["version"]}"
+}}</div>
       <p style="margin-top:12px; color:var(--muted);">Prefer the menu bar app? Go back to <a href="/">macOS downloads</a>.</p>"""
+    steps = f"""    <div class="steps">
+      <h2>How to install</h2>
+      <div class="step"><div class="step-num">1</div><div class="step-content">
+        <h3>Download or curl-install</h3>
+        <p>Use the CLI tarball above, or paste this one-liner in Terminal:</p>
+        <div class="code-block purple">{curl_cmd}</div>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content">
+        <h3>Install to your PATH</h3>
+        <p>From the extracted folder: <code>bash install-cli.sh</code> — links <code>rnitro</code> to <code>~/bin</code> (or <code>sudo ./install-cli.sh --system</code> for <code>/usr/local/bin</code>).</p>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content">
+        <h3>Run rNitro in the terminal</h3>
+        <p>Type <code>rnitro</code> for the live dashboard. Works over SSH. Optional: <code>pip3 install psutil</code> for smoother stats.</p>
+      </div></div>
+    </div>"""
+    desc_seo = (
+        "rNitro CLI — free btop-style terminal system monitor for macOS and Linux. "
+        "Live CPU, RAM, disk, network, battery, top processes. Open source, no account."
+    )
     return _page(
         data=data,
         slug="cli.html",
         active="cli",
-        title="rNitro CLI — Terminal system monitor",
-        description="rNitro CLI: btop-style terminal monitor for macOS and Linux. Live CPU, RAM, disk, network, battery, and top processes. Free, open source.",
+        title="rNitro CLI — Terminal system monitor (macOS & Linux)",
+        description=desc_seo,
         eyebrow="Terminal · macOS + Linux · Python 3",
         accent="#a78bfa",
         lead="A lightweight TUI for the same rNitro-style metrics — perfect for SSH, headless boxes, and keyboard-driven workflows.",
         desc_html=desc,
         download_html=download,
+        steps_html=steps,
+        json_ld=_json_ld("rNitro CLI", "macOS, Linux", cli["version"], desc_seo),
     )
 
 
@@ -341,18 +440,44 @@ def build_linux_page(data: dict) -> str:
         <li><strong>Install path</strong> — <code>~/.local/share/rnitro</code> with a desktop entry after running the installer</li>
         <li><strong>Metrics</strong> — Apple-only sensors (SMC, Mac Low Power Mode) show as N/A on Linux</li>
       </ul>
+      <p style="margin-top:14px;"><strong style="color:var(--text);">Dependencies</strong></p>
+      <p style="color:var(--muted); font-size:13px; margin-top:6px;">Ubuntu / Debian</p>
+      <div class="code-block gold">sudo apt install python3-gi python3-venv gir1.2-adw-1 gir1.2-gtk-4.0 lm-sensors</div>
+      <p style="color:var(--muted); font-size:13px; margin-top:10px;">Fedora</p>
+      <div class="code-block gold">sudo dnf install python3-gobject gtk4 libadwaita</div>
       <p style="margin-top:12px; color:var(--muted);">Also on <a href="{v.github_release_page_url(lin["id"])}">GitHub Releases</a>. For the polished daily driver, use <a href="/">macOS</a>.</p>"""
+    steps = f"""    <div class="steps">
+      <h2>How to install</h2>
+      <div class="step"><div class="step-num">1</div><div class="step-content">
+        <h3>Install dependencies</h3>
+        <p>Use the apt or dnf one-liners above for your distro.</p>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content">
+        <h3>Download and install</h3>
+        <p>Download <code>{lin["tar"]}</code> or <code>{lin["sh"]}</code>, extract if needed, then run <code>bash {lin["sh"]}</code>.</p>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content">
+        <h3>Use rNitro</h3>
+        <p>Launch from your app menu or system tray. Monitor, Advisor, Chat, and Cleaner tabs mirror the macOS beta feature set where metrics exist.</p>
+      </div></div>
+    </div>"""
+    desc_seo = (
+        "rNitro for Linux (pre-release) — free GTK4 system monitor with Advisor, Chat, and Cleaner "
+        "for Ubuntu, Fedora, Debian. Open source."
+    )
     return _page(
         data=data,
         slug="linux.html",
         active="linux",
-        title="rNitro for Linux — GTK system monitor",
-        description="rNitro Linux pre-release: GTK4 system monitor with Advisor, Chat, and Cleaner for Ubuntu, Fedora, and Debian. Free, open source.",
+        title="rNitro for Linux — GTK system monitor (pre-release)",
+        description=desc_seo,
         eyebrow="Linux x86_64 · Pre-release · GTK 4",
         accent="#e8a838",
         lead="Desktop monitor for Linux with tabs that mirror the macOS beta feature set — still early, best for testers and power users.",
         desc_html=desc,
         download_html=download,
+        steps_html=steps,
+        json_ld=_json_ld("rNitro for Linux", "Linux", lin["id"], desc_seo),
     )
 
 
@@ -370,17 +495,39 @@ def build_windows_page(data: dict) -> str:
         <li><strong>Install path</strong> — typically <code>%LOCALAPPDATA%\\rNitro</code></li>
       </ul>
       <p style="margin-top:12px; color:var(--muted);">For new installs we recommend <a href="/">macOS</a> or <a href="/linux.html">Linux</a>.</p>"""
+    steps = f"""    <div class="steps">
+      <h2>How to install (legacy)</h2>
+      <div class="step"><div class="step-num">1</div><div class="step-content">
+        <h3>Download the EXE (easiest)</h3>
+        <p>Download <strong>{win["exe"]}</strong>. If Windows asks for a runtime, install .NET 8 Desktop Runtime x64 first.</p>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content">
+        <h3>Or compile from source</h3>
+        <p>Download <code>{win["ps1"]}</code>, open PowerShell, and run:</p>
+        <div class="code-block">powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\\Downloads\\{win["ps1"]}</div>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content">
+        <h3>Use rNitro</h3>
+        <p>rNitro runs in the system tray. Click for live stats; right-click to quit.</p>
+      </div></div>
+    </div>"""
+    desc_seo = (
+        "rNitro for Windows (legacy) — last tray build with CPU, temperature, and RAM. "
+        "Deprecated; prefer macOS or Linux for new installs."
+    )
     return _page(
         data=data,
         slug="windows.html",
         active="win",
         title="rNitro for Windows — tray monitor (legacy)",
-        description="rNitro Windows legacy tray monitor (last build). CPU, temperature, RAM. Deprecated — macOS and Linux recommended for new installs.",
+        description=desc_seo,
         eyebrow="Windows 10/11 · Legacy · Deprecated",
         accent="var(--cyan)",
         lead="Final Windows tray build kept for download only. No new features or active support — use macOS or Linux for current rNitro.",
         desc_html=desc,
         download_html=download,
+        steps_html=steps,
+        json_ld=_json_ld("rNitro for Windows", "Windows", win["id"], desc_seo),
     )
 
 

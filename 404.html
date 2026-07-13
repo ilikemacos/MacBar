@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="refresh" content="0;url=/index.html">
-<title>rNitro — Redirecting…</title>
+<title>rNitro — Page not found</title>
 <link rel="icon" href="/favicon.ico">
 <style>
   body {
@@ -15,18 +14,30 @@
     justify-content: center;
     background: #0A0A0F;
     color: #E8E8F0;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Varela Round', sans-serif;
     text-align: center;
     padding: 24px;
   }
-  a { color: #00D9FF; }
+  a { color: #00D9FF; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1 { font-size: 28px; margin: 0 0 10px; }
+  p { color: #6B6B8A; margin: 0 0 20px; line-height: 1.5; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: center; font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+  .muted { opacity: 0.75; }
 </style>
 </head>
 <body>
   <div>
     <h1>Page not found</h1>
-    <p>Taking you to the <a href="/index.html">rNitro download page</a>…</p>
+    <p>That URL isn’t on getrnitro. Pick a platform:</p>
+    <div class="links">
+      <a href="/">🍎 macOS</a>
+      <a href="/cli.html">⌨️ CLI</a>
+      <a href="/linux.html">🐧 Linux</a>
+      <a href="/windows.html" class="muted">🪟 Windows (legacy)</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="https://github.com/ilikemacos/rNitro">GitHub</a>
+    </div>
   </div>
-  <script>location.replace('/index.html');</script>
 </body>
 </html>

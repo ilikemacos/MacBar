@@ -377,8 +377,8 @@ def platform_tabs() -> str:
       🐧 Linux
     </a>
     <a id="tab-win" href="/windows.html"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
-      🪟 Windows
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none; opacity:0.8;">
+      🪟 Windows (legacy)
     </a>
   </div>"""
 
@@ -1061,7 +1061,7 @@ def stable_beta_compare_section(changelog: dict, data: dict) -> str:
         "subtitle",
         f"New here? Start with the green Recommended Download (App ZIP). "
         f"{stable['label']} is production-ready; {beta['label']} adds every AI provider and experimental features. "
-        f"Linux pre-release is on the Linux tab; Windows is deprecated but downloads remain.",
+        f"Linux pre-release is on the Linux page; Windows is deprecated but downloads remain.",
     )
     rows_html = []
     for row in meta.get("rows", []):
@@ -1100,9 +1100,9 @@ def chat_kb_platform(data: dict) -> str:
     return f"""    {{ label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
       a: "Scroll to **How everything works** on [getrnitro.netlify.app](https://getrnitro.netlify.app/) for tables covering macOS Stable ({stable['short']}), macOS Beta ({beta['short']}), Linux ({linux['short']}), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." }},
     {{ label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
-      a: `Windows is no longer actively supported. The last build (${{RNITRO_VERSIONS.windows.id}}) remains on the Windows tab — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` }},
+      a: `Windows is no longer actively supported. The last build (${{RNITRO_VERSIONS.windows.id}}) remains on the Windows page — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` }},
     {{ label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
-      a: `Linux pre-release (${{RNITRO_VERSIONS.linux.id}}): switch to the Linux tab, download the tarball or install-rNitro-linux.sh, then run bash install-rNitro-linux.sh. Requires Python 3.10+, GTK 4, and libadwaita. Also on GitHub: {linux_gh}` }},
+      a: `Linux pre-release (${{RNITRO_VERSIONS.linux.id}}): switch to the Linux page, download the tarball or install-rNitro-linux.sh, then run bash install-rNitro-linux.sh. Requires Python 3.10+, GTK 4, and libadwaita. Also on GitHub: {linux_gh}` }},
     {{ label: 'How do updates work?', kws: ['update', 'new version', 'upgrade'],
       a: "macOS: rNitro checks getrnitro.netlify.app on launch. If a newer Final or Beta build exists, you get a choice: Install Final (stable) or Install Beta — then it downloads the ZIP in-app and restarts. Linux v0.1 checks the same version.json for Linux updates." }},"""
 
@@ -1214,9 +1214,9 @@ def js_settab_handlers() -> str:
     const params = new URLSearchParams(location.search);
     const hash = location.hash.replace('#', '');
     const fromQuery = params.get('tab');
-    const tabs = ['mac', 'cli', 'linux', 'win'];
-    if (tabs.includes(fromQuery)) return fromQuery;
-    if (tabs.includes(hash)) return hash;
+    const map = { cli: '/cli.html', linux: '/linux.html', win: '/windows.html' };
+    if (map[fromQuery]) { location.replace(map[fromQuery]); return 'mac'; }
+    if (map[hash]) { location.replace(map[hash]); return 'mac'; }
     return 'mac';
   }
 

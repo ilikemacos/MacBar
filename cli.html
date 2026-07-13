@@ -3,13 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>rNitro CLI — Terminal system monitor</title>
-<meta name="description" content="rNitro CLI: btop-style terminal monitor for macOS and Linux. Live CPU, RAM, disk, network, battery, and top processes. Free, open source.">
+<title>rNitro CLI — Terminal system monitor (macOS & Linux)</title>
+<meta name="description" content="rNitro CLI — free btop-style terminal system monitor for macOS and Linux. Live CPU, RAM, disk, network, battery, top processes. Open source, no account.">
 <link rel="canonical" href="https://getrnitro.netlify.app/cli.html">
-<meta property="og:title" content="rNitro CLI — Terminal system monitor">
-<meta property="og:description" content="rNitro CLI: btop-style terminal monitor for macOS and Linux. Live CPU, RAM, disk, network, battery, and top processes. Free, open source.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="rNitro CLI — Terminal system monitor (macOS & Linux)">
+<meta property="og:description" content="rNitro CLI — free btop-style terminal system monitor for macOS and Linux. Live CPU, RAM, disk, network, battery, top processes. Open source, no account.">
 <meta property="og:url" content="https://getrnitro.netlify.app/cli.html">
 <meta property="og:image" content="https://getrnitro.netlify.app/screenshots/hero-monitor.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="rNitro CLI — Terminal system monitor (macOS & Linux)">
+<meta name="twitter:description" content="rNitro CLI — free btop-style terminal system monitor for macOS and Linux. Live CPU, RAM, disk, network, battery, top processes. Open source, no account.">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "rNitro CLI", "operatingSystem": "macOS, Linux", "applicationCategory": "UtilitiesApplication", "softwareVersion": "v0.2-cli", "description": "rNitro CLI — free btop-style terminal system monitor for macOS and Linux. Live CPU, RAM, disk, network, battery, top processes. Open source, no account.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://getrnitro.netlify.app", "url": "https://getrnitro.netlify.app"}</script>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
@@ -84,8 +89,33 @@
   .platform-banner--deprecated {
     color: var(--orange); background: rgba(255,140,26,0.08); border: 1px solid rgba(255,140,26,0.35);
   }
-  .footer { margin-top: 36px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .footer { margin-top: 36px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted); line-height: 1.8; }
   .footer a { margin: 0 8px; }
+  .steps { margin-top: 28px; text-align: left; }
+  .steps h2 { font-family: var(--mono); font-size: 16px; margin: 0 0 14px; color: var(--text); }
+  .step {
+    display: flex; gap: 14px; margin-bottom: 14px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+  }
+  .step-num {
+    flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--card2);
+    border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; color: var(--cyan);
+  }
+  .step-content h3 { font-size: 15px; margin: 0 0 6px; }
+  .step-content p { font-size: 14px; color: var(--muted); line-height: 1.55; margin: 0; }
+  .code-block {
+    margin-top: 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 12px; color: var(--green);
+    word-break: break-all; line-height: 1.45; text-align: left; white-space: pre-wrap;
+  }
+  .code-block.purple { color: #a78bfa; border-color: rgba(167,139,250,0.35); }
+  .code-block.gold { color: #e8a838; border-color: rgba(232,168,56,0.35); }
+  .tui-preview {
+    margin-top: 12px; background: #0c0c12; border: 1px solid #2a2a40; border-radius: 8px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 11px; color: #8f8; line-height: 1.4;
+    white-space: pre; overflow-x: auto;
+  }
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
     background: var(--card); border: 1px solid var(--green); color: var(--green);
@@ -112,7 +142,7 @@
     <nav class="nav" aria-label="Platform"><a href="/">🍎 macOS</a>
 <a class="active" href="/cli.html" style="background:#a78bfa; border-color:#a78bfa; color:#000;">⌨️ CLI</a>
 <a href="/linux.html">🐧 Linux</a>
-<a href="/windows.html">🪟 Windows</a></nav>
+<a href="/windows.html" style="opacity:0.75; color:var(--muted);">🪟 Windows (legacy)</a></nav>
     <p class="eyebrow" style="color:#a78bfa;">Terminal · macOS + Linux · Python 3</p>
     <h1>rNitro CLI</h1>
     <p class="lead">A lightweight TUI for the same rNitro-style metrics — perfect for SSH, headless boxes, and keyboard-driven workflows.</p>
@@ -125,6 +155,22 @@
         <li><strong>Keys</strong> — <code>q</code> quit · <code>r</code> refresh · <code>rnitro --once</code> for one-shot JSON</li>
         <li><strong>Install</strong> — tarball + <code>install-cli.sh</code>, or the one-line curl install below</li>
       </ul>
+      <p style="margin-top:14px;"><strong style="color:var(--text);">Sample TUI</strong></p>
+      <div class="tui-preview">┌─ rNitro CLI ─────────────────────────┐
+│ CPU  23% ████░░░░  Temp 48°C         │
+│ MEM  9.2/16 GB    DISK 412 GB free   │
+│ NET  ↓1.2 MB/s ↑180 KB/s             │
+│ TOP  WindowServer 12% · kernel_task  │
+└──────────────────────────────────────┘
+ q quit · r refresh · --once for JSON</div>
+      <p style="margin-top:14px;"><strong style="color:var(--text);">Sample <code>rnitro --once</code></strong></p>
+      <div class="code-block purple">{
+  "cpu_percent": 23.4,
+  "mem_used_gb": 9.2,
+  "mem_total_gb": 16.0,
+  "temp_c": 48.1,
+  "version": "v0.2-cli"
+}</div>
       <p style="margin-top:12px; color:var(--muted);">Prefer the menu bar app? Go back to <a href="/">macOS downloads</a>.</p>
     </div>
     <div style="max-width:640px; margin:0 auto;">
@@ -148,10 +194,31 @@
       <p style="font-size:14px; color:var(--muted); margin-top:14px; line-height:1.5;">Keys in the TUI: <code>q</code> quit · <code>r</code> refresh · <code>rnitro --once</code> for JSON output.</p>
     </div>
     </div>
+        <div class="steps">
+      <h2>How to install</h2>
+      <div class="step"><div class="step-num">1</div><div class="step-content">
+        <h3>Download or curl-install</h3>
+        <p>Use the CLI tarball above, or paste this one-liner in Terminal:</p>
+        <div class="code-block purple">curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh</div>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content">
+        <h3>Install to your PATH</h3>
+        <p>From the extracted folder: <code>bash install-cli.sh</code> — links <code>rnitro</code> to <code>~/bin</code> (or <code>sudo ./install-cli.sh --system</code> for <code>/usr/local/bin</code>).</p>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content">
+        <h3>Run rNitro in the terminal</h3>
+        <p>Type <code>rnitro</code> for the live dashboard. Works over SSH. Optional: <code>pip3 install psutil</code> for smoother stats.</p>
+      </div></div>
+    </div>
+
     <div class="footer">
-      <a href="/">macOS downloads</a>
+      <a href="/">macOS</a>
+      <a href="/cli.html">CLI</a>
+      <a href="/linux.html">Linux</a>
+      <a href="/windows.html">Windows</a>
       <a href="/privacy.html">Privacy</a>
-      <a href="https://github.com/ilikemacos/rNitro/releases">GitHub Releases</a>
+      <a href="terms-and-conditions.txt">Terms</a>
+      <a href="https://github.com/ilikemacos/rNitro">GitHub</a>
     </div>
   </div>
   

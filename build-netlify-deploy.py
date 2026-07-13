@@ -251,6 +251,10 @@ AI support chat (optional):
 
     _inject_file_manifest(OUT_DIR)
 
+    for required in ("cli.html", "linux.html", "windows.html", "privacy.html", "sitemap.xml", "robots.txt"):
+        if not (OUT_DIR / required).is_file():
+            raise FileNotFoundError(f"Missing staged page: {required}")
+
     return OUT_DIR
 
 

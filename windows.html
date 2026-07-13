@@ -4,12 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>rNitro for Windows — tray monitor (legacy)</title>
-<meta name="description" content="rNitro Windows legacy tray monitor (last build). CPU, temperature, RAM. Deprecated — macOS and Linux recommended for new installs.">
+<meta name="description" content="rNitro for Windows (legacy) — last tray build with CPU, temperature, and RAM. Deprecated; prefer macOS or Linux for new installs.">
 <link rel="canonical" href="https://getrnitro.netlify.app/windows.html">
+<meta property="og:type" content="website">
 <meta property="og:title" content="rNitro for Windows — tray monitor (legacy)">
-<meta property="og:description" content="rNitro Windows legacy tray monitor (last build). CPU, temperature, RAM. Deprecated — macOS and Linux recommended for new installs.">
+<meta property="og:description" content="rNitro for Windows (legacy) — last tray build with CPU, temperature, and RAM. Deprecated; prefer macOS or Linux for new installs.">
 <meta property="og:url" content="https://getrnitro.netlify.app/windows.html">
 <meta property="og:image" content="https://getrnitro.netlify.app/screenshots/hero-monitor.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="rNitro for Windows — tray monitor (legacy)">
+<meta name="twitter:description" content="rNitro for Windows (legacy) — last tray build with CPU, temperature, and RAM. Deprecated; prefer macOS or Linux for new installs.">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "rNitro for Windows", "operatingSystem": "Windows", "applicationCategory": "UtilitiesApplication", "softwareVersion": "v4.2.4-Windows-Final-x86", "description": "rNitro for Windows (legacy) — last tray build with CPU, temperature, and RAM. Deprecated; prefer macOS or Linux for new installs.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://getrnitro.netlify.app", "url": "https://getrnitro.netlify.app"}</script>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
@@ -84,8 +89,33 @@
   .platform-banner--deprecated {
     color: var(--orange); background: rgba(255,140,26,0.08); border: 1px solid rgba(255,140,26,0.35);
   }
-  .footer { margin-top: 36px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .footer { margin-top: 36px; text-align: center; font-family: var(--mono); font-size: 13px; color: var(--muted); line-height: 1.8; }
   .footer a { margin: 0 8px; }
+  .steps { margin-top: 28px; text-align: left; }
+  .steps h2 { font-family: var(--mono); font-size: 16px; margin: 0 0 14px; color: var(--text); }
+  .step {
+    display: flex; gap: 14px; margin-bottom: 14px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+  }
+  .step-num {
+    flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--card2);
+    border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; color: var(--cyan);
+  }
+  .step-content h3 { font-size: 15px; margin: 0 0 6px; }
+  .step-content p { font-size: 14px; color: var(--muted); line-height: 1.55; margin: 0; }
+  .code-block {
+    margin-top: 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 12px; color: var(--green);
+    word-break: break-all; line-height: 1.45; text-align: left; white-space: pre-wrap;
+  }
+  .code-block.purple { color: #a78bfa; border-color: rgba(167,139,250,0.35); }
+  .code-block.gold { color: #e8a838; border-color: rgba(232,168,56,0.35); }
+  .tui-preview {
+    margin-top: 12px; background: #0c0c12; border: 1px solid #2a2a40; border-radius: 8px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 11px; color: #8f8; line-height: 1.4;
+    white-space: pre; overflow-x: auto;
+  }
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
     background: var(--card); border: 1px solid var(--green); color: var(--green);
@@ -112,7 +142,7 @@
     <nav class="nav" aria-label="Platform"><a href="/">🍎 macOS</a>
 <a href="/cli.html">⌨️ CLI</a>
 <a href="/linux.html">🐧 Linux</a>
-<a class="active" href="/windows.html" style="background:var(--cyan); border-color:var(--cyan); color:#000;">🪟 Windows</a></nav>
+<a class="active" href="/windows.html" style="background:var(--cyan); border-color:var(--cyan); color:#000; opacity:0.9;">🪟 Windows (legacy)</a></nav>
     <p class="eyebrow" style="color:var(--cyan);">Windows 10/11 · Legacy · Deprecated</p>
     <h1>rNitro for Windows</h1>
     <p class="lead">Final Windows tray build kept for download only. No new features or active support — use macOS or Linux for current rNitro.</p>
@@ -155,10 +185,31 @@
       </div>
     </div>
     </div>
+        <div class="steps">
+      <h2>How to install (legacy)</h2>
+      <div class="step"><div class="step-num">1</div><div class="step-content">
+        <h3>Download the EXE (easiest)</h3>
+        <p>Download <strong>rNitro-v4.2.4-Windows-Final-x86.exe</strong>. If Windows asks for a runtime, install .NET 8 Desktop Runtime x64 first.</p>
+      </div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content">
+        <h3>Or compile from source</h3>
+        <p>Download <code>rNitro-v4.2.4-Windows-Final-x86.ps1</code>, open PowerShell, and run:</p>
+        <div class="code-block">powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\Downloads\rNitro-v4.2.4-Windows-Final-x86.ps1</div>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content">
+        <h3>Use rNitro</h3>
+        <p>rNitro runs in the system tray. Click for live stats; right-click to quit.</p>
+      </div></div>
+    </div>
+
     <div class="footer">
-      <a href="/">macOS downloads</a>
+      <a href="/">macOS</a>
+      <a href="/cli.html">CLI</a>
+      <a href="/linux.html">Linux</a>
+      <a href="/windows.html">Windows</a>
       <a href="/privacy.html">Privacy</a>
-      <a href="https://github.com/ilikemacos/rNitro/releases">GitHub Releases</a>
+      <a href="terms-and-conditions.txt">Terms</a>
+      <a href="https://github.com/ilikemacos/rNitro">GitHub</a>
     </div>
   </div>
   
