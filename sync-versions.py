@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import changelog as cl
+import generate_platform_pages as gpp
 import previous_versions as pv
 import versions as v
 
@@ -361,23 +362,24 @@ def hero_copy(data: dict) -> str:
 
 
 def platform_tabs() -> str:
-    return """  <div role="tablist" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
-    <button id="tab-mac" role="tab" aria-selected="true" aria-controls="dl-mac" onclick="setTab('mac')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+    """Platform switcher — macOS stays on home; others have dedicated pages."""
+    return """  <div role="navigation" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
+    <a id="tab-mac" href="/" aria-current="page"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       🍎 macOS
-    </button>
-    <button id="tab-cli" role="tab" aria-selected="false" aria-controls="dl-cli" onclick="setTab('cli')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+    </a>
+    <a id="tab-cli" href="/cli.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       ⌨️ CLI
-    </button>
-    <button id="tab-linux" role="tab" aria-selected="false" aria-controls="dl-linux" onclick="setTab('linux')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+    </a>
+    <a id="tab-linux" href="/linux.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       🐧 Linux
-    </button>
-    <button id="tab-win" role="tab" aria-selected="false" aria-controls="dl-win" onclick="setTab('win')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+    </a>
+    <a id="tab-win" href="/windows.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       🪟 Windows
-    </button>
+    </a>
   </div>"""
 
 
@@ -396,7 +398,7 @@ def steps_linux(data: dict) -> str:
       <div class="step-num">2</div>
       <div class="step-content">
         <h3>Download and install</h3>
-        <p>Switch to the <strong>Linux</strong> tab, download <code>{lin["tar"]}</code> or <code>{lin["sh"]}</code>, extract if needed, and run <code>bash {lin["sh"]}</code>. Also on <a href="{linux_gh}" style="color:var(--cyan);">GitHub Releases</a>. Installs to <code>~/.local/share/rnitro</code> with a desktop entry.</p>
+        <p>Open the <a href="/linux.html" style="color:var(--cyan);">Linux page</a>, download <code>{lin["tar"]}</code> or <code>{lin["sh"]}</code>, extract if needed, and run <code>bash {lin["sh"]}</code>. Also on <a href="{linux_gh}" style="color:var(--cyan);">GitHub Releases</a>. Installs to <code>~/.local/share/rnitro</code> with a desktop entry.</p>
       </div>
     </div>
     <div class="step">
@@ -419,7 +421,7 @@ def steps_win(data: dict) -> str:
       <div class="step-num">1</div>
       <div class="step-content">
         <h3>Download the EXE (easiest)</h3>
-        <p>Switch to the <strong>Windows</strong> tab and download <strong>{win["exe"]}</strong>. If Windows asks for a runtime, install the <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime (x64)</a> first, then run the EXE again.</p>
+        <p>Open the <a href="/windows.html" style="color:var(--cyan);">Windows page</a> and download <strong>{win["exe"]}</strong>. If Windows asks for a runtime, install the <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime (x64)</a> first, then run the EXE again.</p>
       </div>
     </div>
     <div class="step">
@@ -438,7 +440,7 @@ def steps_win(data: dict) -> str:
       <div class="step-content">
         <h3>Use rNitro</h3>
         <p>rNitro runs in the <strong>system tray</strong> (bottom-right). Click the icon for live CPU%, temperature, RAM, BTC price, and 60-second history graphs. Right-click the tray icon to quit.</p>
-        <p style="margin-top:8px;">For new installs we recommend <strong>macOS</strong> or the <strong>Linux</strong> tab instead.</p>
+        <p style="margin-top:8px;">For new installs we recommend <strong>macOS</strong> or <a href="/linux.html" style="color:var(--cyan);">Linux</a> instead.</p>
       </div>
     </div>
   </div>"""
@@ -472,6 +474,7 @@ def install_step_sh(data: dict) -> str:
 
 
 def hero_linux_buttons(data: dict) -> str:
+    """Used on linux.html (standalone page)."""
     lin = v.linux_release(data)
     tar_size = file_size_label(lin["tar"])
     sh_size = file_size_label(lin["sh"])
@@ -536,7 +539,7 @@ def steps_cli(data: dict) -> str:
       <div class="step-num">1</div>
       <div class="step-content">
         <h3>Download or curl-install</h3>
-        <p>Switch to the <strong>CLI</strong> tab and download <code>{cli["tar"]}</code>, or paste this one-liner in Terminal:</p>
+        <p>Open the <a href="/cli.html" style="color:var(--cyan);">CLI page</a> and download <code>{cli["tar"]}</code>, or paste this one-liner in Terminal:</p>
         <div style="margin-top:10px; background:var(--card2); border:1px solid rgba(167,139,250,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:13px; color:#a78bfa; word-break:break-all; line-height:1.45;">{curl_cmd}</div>
       </div>
     </div>
@@ -1199,6 +1202,7 @@ def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
 
 
 def js_settab_handlers() -> str:
+    """Redirect legacy ?tab= / #hash platform switches to dedicated pages."""
     return """  function detectPlatform() {
     const ua = navigator.userAgent;
     if (/Linux/i.test(ua) && !/Android/i.test(ua)) return 'linux';
@@ -1213,43 +1217,24 @@ def js_settab_handlers() -> str:
     const tabs = ['mac', 'cli', 'linux', 'win'];
     if (tabs.includes(fromQuery)) return fromQuery;
     if (tabs.includes(hash)) return hash;
-    try {
-      const saved = localStorage.getItem('rnitro-tab');
-      if (tabs.includes(saved)) return saved;
-    } catch (e) { /* private browsing */ }
-    return detectPlatform();
-  }
-
-  function setTabStyle(id, active, accent) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.background = active ? accent : 'transparent';
-    el.style.color = active ? '#000' : 'var(--text)';
-    el.style.borderColor = active ? accent : 'var(--border)';
-    el.setAttribute('aria-selected', active ? 'true' : 'false');
+    return 'mac';
   }
 
   function setTab(platform) {
-    const isMac = platform === 'mac';
-    const isCli = platform === 'cli';
-    const isLinux = platform === 'linux';
-    const isWin = platform === 'win';
-    try { localStorage.setItem('rnitro-tab', platform); } catch (e) { /* ignore */ }
-    document.getElementById('dl-mac').style.display = isMac ? 'flex' : 'none';
-    document.getElementById('dl-cli').style.display = isCli ? 'flex' : 'none';
-    document.getElementById('dl-win').style.display = isWin ? 'flex' : 'none';
-    document.getElementById('dl-linux').style.display = isLinux ? 'flex' : 'none';
-    document.getElementById('steps-mac').style.display = isMac ? 'block' : 'none';
-    document.getElementById('steps-cli').style.display = isCli ? 'block' : 'none';
-    document.getElementById('steps-linux').style.display = isLinux ? 'block' : 'none';
-    document.getElementById('steps-win').style.display = isWin ? 'block' : 'none';
-    document.getElementById('cards-mac').style.display = isMac ? 'block' : 'none';
-    document.getElementById('card-win').style.display = isWin ? 'flex' : 'none';
-    document.getElementById('card-linux').style.display = isLinux ? 'flex' : 'none';
-    setTabStyle('tab-mac', isMac, 'var(--green)');
-    setTabStyle('tab-cli', isCli, '#a78bfa');
-    setTabStyle('tab-linux', isLinux, '#e8a838');
-    setTabStyle('tab-win', isWin, 'var(--cyan)');
+    if (platform === 'cli') { location.href = '/cli.html'; return; }
+    if (platform === 'linux') { location.href = '/linux.html'; return; }
+    if (platform === 'win') { location.href = '/windows.html'; return; }
+    // macOS is this page — show mac panels only
+    const mac = document.getElementById('dl-mac');
+    if (mac) mac.style.display = 'flex';
+    ['dl-cli','dl-win','dl-linux','steps-cli','steps-linux','steps-win','card-win','card-linux'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    const stepsMac = document.getElementById('steps-mac');
+    if (stepsMac) stepsMac.style.display = 'block';
+    const cardsMac = document.getElementById('cards-mac');
+    if (cardsMac) cardsMac.style.display = 'block';
   }
 
   function copyCliInstall() {
@@ -1308,11 +1293,7 @@ def sync_index(data: dict) -> None:
         "hero-stable": hero_stable_card(data),
         "hero-beta": hero_beta_card(data),
         "hero-more": hero_more_downloads(data),
-        "hero-windows": hero_windows_buttons(data),
-        "hero-linux": hero_linux_buttons(data),
-        "hero-cli": hero_cli_card(data),
         "screenshots": screenshots_section(data),
-        "steps-cli": steps_cli(data),
         "js-settab": js_settab_handlers(),
         "feature-ai-chat": feature_ai_chat(data),
         "how-it-works": how_it_works_section(data),
@@ -1320,14 +1301,12 @@ def sync_index(data: dict) -> None:
         "hero-dl-note": hero_dl_note(data),
         "install-step-pkg": install_step_pkg(data),
         "install-step-sh": install_step_sh(data),
-        "steps-linux": steps_linux(data),
-        "steps-win": steps_win(data),
         "download-stable": download_card_stable(data),
         "download-beta": download_card_beta(data),
         "download-more": download_more_section(data),
-        "download-previous": download_previous_section(data),
         "download-windows": download_card_windows(data),
         "download-linux": download_card_linux(data),
+        "download-previous": download_previous_section(data),
         "stable-beta-compare": stable_beta_compare_section(changelog, data),
         "whats-new": whats_new_section(changelog),
         "changelog": changelog_section(changelog),
@@ -1609,6 +1588,7 @@ def main() -> None:
 
     print("Syncing index.html...")
     sync_index(data)
+    gpp.write_platform_pages(data)
     sync_archives_html(data)
     sync_readme(data)
 

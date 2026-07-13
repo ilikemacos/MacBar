@@ -1179,23 +1179,23 @@
 
 
 <!-- @sync:platform-tabs -->
-  <div role="tablist" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
-    <button id="tab-mac" role="tab" aria-selected="true" aria-controls="dl-mac" onclick="setTab('mac')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+  <div role="navigation" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
+    <a id="tab-mac" href="/" aria-current="page"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       🍎 macOS
-    </button>
-    <button id="tab-cli" role="tab" aria-selected="false" aria-controls="dl-cli" onclick="setTab('cli')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+    </a>
+    <a id="tab-cli" href="/cli.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       ⌨️ CLI
-    </button>
-    <button id="tab-linux" role="tab" aria-selected="false" aria-controls="dl-linux" onclick="setTab('linux')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+    </a>
+    <a id="tab-linux" href="/linux.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       🐧 Linux
-    </button>
-    <button id="tab-win" role="tab" aria-selected="false" aria-controls="dl-win" onclick="setTab('win')"
-      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; cursor:pointer;">
+    </a>
+    <a id="tab-win" href="/windows.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
       🪟 Windows
-    </button>
+    </a>
   </div>
 <!-- @end:platform-tabs -->
 
@@ -1323,93 +1323,10 @@
   </div>
 
   <!-- Windows download -->
-  <div id="dl-win" class="dl-win-wrap" role="tabpanel" aria-labelledby="tab-win" style="display:none;">
-<!-- @sync:hero-windows -->
-    <div style="width:100%; background:var(--card); border:1px solid var(--cyan); border-radius:12px; padding:20px; text-align:center;">
-      <div class="platform-banner platform-banner--deprecated">
-        Windows is no longer actively supported. Existing builds remain available for download.
-      </div>
-      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">v4.2.4-Windows-Final-x86</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Windows 10/11 tray monitor — CPU, temp, RAM, and BTC stats.</div>
-      <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4); margin-top:14px;">
-        <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:var(--cyan);">Windows EXE</div>
-        <p class="dl-recommended-steps">Double-click to run. Install <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime x64</a> first if Windows prompts you.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="requestDownload('rNitro-v4.2.4-Windows-Final-x86.exe')">⬇ Download EXE · 495 KB</button>
-      </div>
-      <div id="hero-win-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
-        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-win-other')" aria-expanded="false">
-          <span>Other download options</span>
-          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
-        </button>
-        <div class="dl-other-body prev-versions-body">
-          <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v4.2.4-Windows-Final-x86.ps1')">PowerShell installer (.ps1) · 45 KB</button>
-            <button class="btn btn-secondary" onclick="copyWinCmd()">⎘ Copy PowerShell command</button>
-          </div>
-          <div class="dl-other-note">The .ps1 compiles from source with built-in csc.exe — no SDK needed.</div>
-        </div>
-      </div>
-    </div>
-<!-- @end:hero-windows -->
-  </div>
 
   <!-- Linux download -->
-  <div id="dl-linux" class="dl-linux-wrap" role="tabpanel" aria-labelledby="tab-linux" style="display:none;">
-<!-- @sync:hero-linux -->
-    <div style="width:100%; background:var(--card); border:1px solid #e8a838; border-radius:12px; padding:20px; text-align:center;">
-      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:#e8a838; margin-bottom:4px;">v0.1-Linux-Beta-Pre-release-x64</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Linux Beta — Monitor, Advisor, Chat, and App Cleaner with GTK4 + system tray. Pre-release for x86_64.</div>
-      <p style="font-size:16px; color:#e8a838; background:rgba(232,168,56,0.08); border:1px solid rgba(232,168,56,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
-        <strong>Pre-release:</strong> Requires Python 3.10+, GTK 4, and libadwaita. Apple-only metrics (SMC, Low Power Mode) show as N/A.
-      </p>
-      <div class="dl-recommended" style="border-color:rgba(232,168,56,0.4); margin-top:14px;">
-        <div class="dl-recommended-badge" style="color:#e8a838; border-color:rgba(232,168,56,0.45); background:rgba(232,168,56,0.1);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:#e8a838;">Linux tarball</div>
-        <p class="dl-recommended-steps">Extract → run <code>install-rNitro-linux.sh</code> → launches from <code>~/.local/share/rnitro</code> with a desktop entry.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:#e8a838; color:#000;" onclick="requestDownload('rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz')">⬇ Download tarball · 18 KB</button>
-      </div>
-      <div id="hero-linux-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
-        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-linux-other')" aria-expanded="false">
-          <span>Other download options</span>
-          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
-        </button>
-        <div class="dl-other-body prev-versions-body">
-          <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('install-rNitro-linux.sh')">Shell installer (.sh) · 3 KB</button>
-            <button class="btn btn-secondary" onclick="copyLinuxCmd()">⎘ Copy bash command</button>
-          </div>
-          <div class="dl-other-note">Installer checks dependencies (python3-gi, GTK 4, libadwaita) and sets up a venv automatically. Also on <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub Releases</a>.</div>
-        </div>
-      </div>
-    </div>
-<!-- @end:hero-linux -->
-  </div>
 
   <!-- CLI download -->
-  <div id="dl-cli" class="dl-cli-wrap" role="tabpanel" aria-labelledby="tab-cli" style="display:none; flex-direction:column; gap:20px; align-items:center; width:100%; max-width:640px;">
-<!-- @sync:hero-cli -->
-    <div style="width:100%; background:var(--card); border:1px solid #a78bfa; border-radius:12px; padding:24px; text-align:center;">
-      <div style="font-family:var(--mono); font-size:22px; font-weight:800; color:#a78bfa; margin-bottom:8px; letter-spacing:0.02em;">Get rNitro CLI!</div>
-      <div style="font-family:var(--mono); font-size:14px; font-weight:600; color:var(--muted); margin-bottom:12px;">v0.2-cli — btop-style terminal monitor</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0; line-height:1.55;">Live CPU, memory, disk I/O, network, battery, and <strong>top processes</strong> in your terminal. macOS + Linux · Python 3 · no GUI required.</div>
-      <div class="dl-recommended" style="border-color:rgba(167,139,250,0.45); margin-top:16px;">
-        <div class="dl-recommended-badge" style="color:#a78bfa; border-color:rgba(167,139,250,0.5); background:rgba(167,139,250,0.12);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:#a78bfa;">CLI tarball</div>
-        <p class="dl-recommended-steps">Extract → run <code>install-cli.sh</code> → type <code>rnitro</code> in any terminal. Optional: <code>pip3 install psutil</code> for smoother stats.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:#a78bfa; color:#000;" onclick="requestDownload('rNitro-CLI.tar.gz')">⬇ Download CLI · 8 KB</button>
-      </div>
-      <div style="margin-top:16px; text-align:left; background:var(--card2); border:1px solid rgba(167,139,250,0.35); border-radius:8px; padding:12px 14px;">
-        <div style="font-family:var(--mono); font-size:12px; color:#a78bfa; margin-bottom:6px;">ONE-LINE INSTALL</div>
-        <div style="font-family:var(--mono); font-size:12px; color:var(--text); word-break:break-all; line-height:1.45;">curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh</div>
-        <div style="margin-top:10px;">
-          <button type="button" class="btn btn-secondary" onclick="copyCliInstall()">⎘ Copy install command</button>
-        </div>
-      </div>
-      <p style="font-size:14px; color:var(--muted); margin-top:14px; line-height:1.5;">Keys in the TUI: <code>q</code> quit · <code>r</code> refresh · <code>rnitro --once</code> for JSON output.</p>
-    </div>
-<!-- @end:hero-cli -->
-  </div>
 </section>
 
 
@@ -2514,43 +2431,24 @@
     const tabs = ['mac', 'cli', 'linux', 'win'];
     if (tabs.includes(fromQuery)) return fromQuery;
     if (tabs.includes(hash)) return hash;
-    try {
-      const saved = localStorage.getItem('rnitro-tab');
-      if (tabs.includes(saved)) return saved;
-    } catch (e) { /* private browsing */ }
-    return detectPlatform();
-  }
-
-  function setTabStyle(id, active, accent) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.background = active ? accent : 'transparent';
-    el.style.color = active ? '#000' : 'var(--text)';
-    el.style.borderColor = active ? accent : 'var(--border)';
-    el.setAttribute('aria-selected', active ? 'true' : 'false');
+    return 'mac';
   }
 
   function setTab(platform) {
-    const isMac = platform === 'mac';
-    const isCli = platform === 'cli';
-    const isLinux = platform === 'linux';
-    const isWin = platform === 'win';
-    try { localStorage.setItem('rnitro-tab', platform); } catch (e) { /* ignore */ }
-    document.getElementById('dl-mac').style.display = isMac ? 'flex' : 'none';
-    document.getElementById('dl-cli').style.display = isCli ? 'flex' : 'none';
-    document.getElementById('dl-win').style.display = isWin ? 'flex' : 'none';
-    document.getElementById('dl-linux').style.display = isLinux ? 'flex' : 'none';
-    document.getElementById('steps-mac').style.display = isMac ? 'block' : 'none';
-    document.getElementById('steps-cli').style.display = isCli ? 'block' : 'none';
-    document.getElementById('steps-linux').style.display = isLinux ? 'block' : 'none';
-    document.getElementById('steps-win').style.display = isWin ? 'block' : 'none';
-    document.getElementById('cards-mac').style.display = isMac ? 'block' : 'none';
-    document.getElementById('card-win').style.display = isWin ? 'flex' : 'none';
-    document.getElementById('card-linux').style.display = isLinux ? 'flex' : 'none';
-    setTabStyle('tab-mac', isMac, 'var(--green)');
-    setTabStyle('tab-cli', isCli, '#a78bfa');
-    setTabStyle('tab-linux', isLinux, '#e8a838');
-    setTabStyle('tab-win', isWin, 'var(--cyan)');
+    if (platform === 'cli') { location.href = '/cli.html'; return; }
+    if (platform === 'linux') { location.href = '/linux.html'; return; }
+    if (platform === 'win') { location.href = '/windows.html'; return; }
+    // macOS is this page — show mac panels only
+    const mac = document.getElementById('dl-mac');
+    if (mac) mac.style.display = 'flex';
+    ['dl-cli','dl-win','dl-linux','steps-cli','steps-linux','steps-win','card-win','card-linux'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    const stepsMac = document.getElementById('steps-mac');
+    if (stepsMac) stepsMac.style.display = 'block';
+    const cardsMac = document.getElementById('cards-mac');
+    if (cardsMac) cardsMac.style.display = 'block';
   }
 
   function copyCliInstall() {
