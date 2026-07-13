@@ -34,7 +34,7 @@ def channel_assets(data: dict, channel: str) -> tuple[dict, list[Path]]:
 def release_notes(data: dict, channel: str) -> str:
     rel = v.stable_release(data) if channel == "stable" else v.beta_release(data)
     other = v.beta_release(data) if channel == "stable" else v.stable_release(data)
-    channel_label = "Stable (Final)" if channel == "stable" else "Beta"
+    channel_label = "Stable (Release)" if channel == "stable" else "Beta"
     lines = [
         f"## rNitro {rel['label']} — {channel_label}",
         "",
@@ -149,6 +149,46 @@ def publish_linux(data: dict) -> None:
     print(f"✅ {tag}: {', '.join(p.name for p in paths)}")
 
 
+def delete_all_releases_and_tags() -> None:
+    """Remove every GitHub Release and matching tag (clean-slate launch)."""
+    list_cmd = [
+        "gh",
+        "release",
+        "list",
+        "-R",
+        REPO,
+        "--limit",
+        "200",
+        "--json",
+        "tagName",
+        "-q",
+        ".[].tagName",
+    ]
+    print("\n→ listing releases…")
+    out = subprocess.check_output(list_cmd, cwd=SITE, text=True)
+    tags = [t.strip() for t in out.splitlines() if t.strip()]
+    for tag in tags:
+        print(f"Deleting release {tag}…")
+        subprocess.run(
+            ["gh", "release", "delete", tag, "-R", REPO, "--yes", "--cleanup-tag"],
+            cwd=SITE,
+            check=False,
+        )
+    # Leftover tags without releases
+    tags_out = subprocess.check_output(
+        ["gh", "api", f"repos/{REPO}/tags", "--paginate", "-q", ".[].name"],
+        cwd=SITE,
+        text=True,
+    )
+    for tag in [t.strip() for t in tags_out.splitlines() if t.strip()]:
+        print(f"Deleting tag {tag}…")
+        subprocess.run(
+            ["gh", "api", "-X", "DELETE", f"repos/{REPO}/git/refs/tags/{tag}"],
+            cwd=SITE,
+            check=False,
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Publish Stable, Beta, and Linux assets to GitHub Releases",
@@ -159,15 +199,23 @@ def main() -> None:
         default=True,
         help="Delete old full-bundle release tag (default: yes)",
     )
+    parser.add_argument(
+        "--delete-all",
+        action="store_true",
+        help="Delete every existing GitHub release and tag before publishing",
+    )
     args = parser.parse_args()
 
     data = v.load()
-    if args.replace_bundle:
+    if args.delete_all:
+        delete_all_releases_and_tags()
+    elif args.replace_bundle:
         print(f"Removing old bundle release {BUNDLE_TAG}…")
         delete_release(BUNDLE_TAG)
 
-    publish_channel(data, "stable", latest=False)
-    publish_channel(data, "beta", latest=True)
+    # Stable is the latest public Release (v1.0.0-Release).
+    publish_channel(data, "stable", latest=True)
+    publish_channel(data, "beta", latest=False)
     publish_linux(data)
 
     stable = v.stable_release(data)

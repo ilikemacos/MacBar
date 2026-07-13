@@ -47,13 +47,13 @@ def netlify_files(data: dict, *, include_bundle_zip: bool = False, website_zip: 
             files.append(beta["source_sh"])
     if include_bundle_zip:
         files.append(v.full_release(data)["zip"])
-    archive = data.get("archive") or pv.build_archive(data)
+    # Only ship current channel artifacts — do not auto-include every historical DMG.
+    archive = data.get("archive") or []
+    if not archive:
+        archive = []
     for name in pv.deploy_files(archive, website=website_zip):
         if name not in files:
             files.append(name)
-    for dmg in SITE.glob("rNitro-v*-arm64.dmg"):
-        if dmg.name not in files:
-            files.append(dmg.name)
     return files
 
 
@@ -86,10 +86,26 @@ def stage(data: dict, *, include_bundle_zip: bool | None = None) -> Path:
         "  functions = \"netlify/functions\"\n"
         "\n"
         "[[headers]]\n"
+        "  for = \"/version.json\"\n"
+        "  [headers.values]\n"
+        "    Cache-Control = \"public, max-age=0, must-revalidate\"\n"
+        "\n"
+        "[[headers]]\n"
+        "  for = \"/index.html\"\n"
+        "  [headers.values]\n"
+        "    Cache-Control = \"public, max-age=0, must-revalidate\"\n"
+        "\n"
+        "[[headers]]\n"
+        "  for = \"/screenshots/*\"\n"
+        "  [headers.values]\n"
+        "    Cache-Control = \"public, max-age=604800\"\n"
+        "\n"
+        "[[headers]]\n"
         "  for = \"/*.ttf\"\n"
         "  [headers.values]\n"
         "    Content-Type = \"font/ttf\"\n"
         "    Access-Control-Allow-Origin = \"*\"\n"
+        "    Cache-Control = \"public, max-age=604800\"\n"
         "\n"
         "[[headers]]\n"
         "  for = \"/*.otf\"\n"
@@ -204,14 +220,27 @@ AI support chat (optional):
         encoding="utf-8",
     )
 
+    # Never ship rnitro-netlify.zip inside the Netlify publish tree — that caused
+    # recursive self-zip bloat (hundreds of MB of nested copies).
     if include_bundle_zip is None:
-        include_bundle_zip = (SITE / v.full_release(data)["zip"]).is_file()
+        include_bundle_zip = False
     for name in netlify_files(data, website_zip=True, include_bundle_zip=include_bundle_zip):
         src = SITE / name
         if not src.is_file():
             raise FileNotFoundError(f"Missing deploy file: {src}")
+        if name == "rnitro-netlify.zip" or name.endswith("rnitro-netlify.zip"):
+            print(f"  skip nested full zip: {name}")
+            continue
         shutil.copy2(src, OUT_DIR / name)
         print(f"  + {name}")
+
+    shots = SITE / "screenshots"
+    if shots.is_dir():
+        dest_shots = OUT_DIR / "screenshots"
+        if dest_shots.exists():
+            shutil.rmtree(dest_shots)
+        shutil.copytree(shots, dest_shots)
+        print("  + screenshots/")
 
     _inject_file_manifest(OUT_DIR)
 

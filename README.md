@@ -7,14 +7,14 @@
 ### Quick install (Terminal)
 
 <!-- @sync:readme-curl -->
-**Stable (v8.3.6 Final):**
+**Stable (v1.1.0 Final Reloaded):**
 ```bash
-curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.6-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 
-**Beta (v8.4.3 Beta):**
+**Beta (v1.1.1 Beta Reloaded):**
 ```bash
-curl -fsSL https://getrnitro.netlify.app/rNitro-v8.4.3-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.1-Beta-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 <!-- @end:readme-curl -->
 
@@ -34,21 +34,21 @@ If Homebrew reports permission errors on `/opt/homebrew`, run `sudo chown -R "$(
 Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
 
 <!-- @sync:readme-downloads -->
-### Stable — v8.3.6 Final
+### Stable — v1.1.0 Final Reloaded
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v8.3.6-Final-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.zip) |
-| **PKG** | [rNitro-v8.3.6-Final-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.pkg) |
-| **DMG** | [rNitro-v8.3.6-Final-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.3.6-Final/rNitro-v8.3.6-Final-arm64.dmg) |
+| **App ZIP** | [rNitro-v1.1.0-Final-Reloaded.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.zip) |
+| **PKG** | [rNitro-v1.1.0-Final-Reloaded.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.pkg) |
+| **DMG** | [rNitro-v1.1.0-Final-Reloaded.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.dmg) |
 
-### Beta — v8.4.3 Beta
+### Beta — v1.1.1 Beta Reloaded
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v8.4.3-Beta-arm64.zip](https://github.com/ilikemacos/rNitro/releases/download/v8.4.3-Beta/rNitro-v8.4.3-Beta-arm64.zip) |
-| **PKG** | [rNitro-v8.4.3-Beta-arm64.pkg](https://github.com/ilikemacos/rNitro/releases/download/v8.4.3-Beta/rNitro-v8.4.3-Beta-arm64.pkg) |
-| **DMG** | [rNitro-v8.4.3-Beta-arm64.dmg](https://github.com/ilikemacos/rNitro/releases/download/v8.4.3-Beta/rNitro-v8.4.3-Beta-arm64.dmg) |
+| **App ZIP** | [rNitro-v1.1.1-Beta-Reloaded.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.1.1-Beta-Reloaded/rNitro-v1.1.1-Beta-Reloaded.zip) |
+| **PKG** | [rNitro-v1.1.1-Beta-Reloaded.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.1-Beta-Reloaded/rNitro-v1.1.1-Beta-Reloaded.pkg) |
+| **DMG** | [rNitro-v1.1.1-Beta-Reloaded.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.1-Beta-Reloaded/rNitro-v1.1.1-Beta-Reloaded.dmg) |
 <!-- @end:readme-downloads -->
 
 [All releases →](https://github.com/ilikemacos/rNitro/releases)

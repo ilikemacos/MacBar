@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- @sync:hero-head -->
 <title>rNitro — CPU Monitor for macOS, Linux &amp; Windows</title>
-<meta name="description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v8.3.6 Stable / v8.4.3 Beta). CPU, temperature, MacBook battery %, GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux v0.1 pre-release. No account, no telemetry.">
+<meta name="description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v1.1.0 Stable / v1.1.1 Beta). CPU, temperature, MacBook battery %, GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux v0.1 pre-release. No account, no telemetry.">
 <link rel="canonical" href="https://getrnitro.netlify.app/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="rNitro — Menu Bar System Monitor">
-<meta property="og:description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v8.3.6 Stable / v8.4.3 Beta). CPU, temperature, MacBook battery %, GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux v0.1 pre-release. No account, no telemetry.">
+<meta property="og:description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v1.1.0 Stable / v1.1.1 Beta). CPU, temperature, MacBook battery %, GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux v0.1 pre-release. No account, no telemetry.">
 <meta property="og:url" content="https://getrnitro.netlify.app/">
-<meta property="og:image" content="https://getrnitro.netlify.app/apple-touch-icon.png">
+<meta property="og:image" content="https://getrnitro.netlify.app/screenshots/hero-monitor.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="rNitro — Menu Bar System Monitor">
-<meta name="twitter:description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v8.3.6 Stable / v8.4.3 Beta). CPU, temperature, MacBook battery %, GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux v0.1 pre-release. No account, no telemetry.">
-<meta name="twitter:image" content="https://getrnitro.netlify.app/apple-touch-icon.png">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "rNitro", "operatingSystem": "macOS, Linux, Windows", "applicationCategory": "UtilitiesApplication", "softwareVersion": "v8.4.3", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://getrnitro.netlify.app"}</script>
+<meta name="twitter:description" content="rNitro — free menu bar system monitor for Apple Silicon Macs (v1.1.0 Stable / v1.1.1 Beta). CPU, temperature, MacBook battery %, GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux v0.1 pre-release. No account, no telemetry.">
+<meta name="twitter:image" content="https://getrnitro.netlify.app/screenshots/hero-monitor.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "rNitro", "operatingSystem": "macOS, Linux, Windows", "applicationCategory": "UtilitiesApplication", "softwareVersion": "v1.1.0-Final-Reloaded", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://getrnitro.netlify.app"}</script>
 <!-- @end:hero-head -->
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
@@ -1111,6 +1111,23 @@
     .download-card .req { justify-content: center; }
     .tc-modal-actions { flex-direction: column; }
   }
+
+  .shots { max-width: 980px; margin: 0 auto; padding: 8px 16px 48px; text-align: center; }
+  .shots-kicker { font-family: var(--mono); font-size: 12px; color: var(--cyan); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .shots-title { font-family: var(--mono); font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+  .shots-sub { color: var(--muted); font-size: 15px; line-height: 1.55; max-width: 640px; margin: 0 auto 20px; }
+  .shot-hero { margin: 0 auto 20px; max-width: 920px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+  .shot-hero img, .shot-card img { display: block; width: 100%; height: auto; }
+  .shot-hero figcaption, .shot-card figcaption { font-family: var(--mono); font-size: 12px; color: var(--muted); padding: 10px 14px 12px; text-align: left; border-top: 1px solid var(--border); }
+  .shot-hero figcaption strong, .shot-card figcaption strong { color: var(--text); }
+  .shot-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 720px) {
+    .shot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 980px) {
+    .shot-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  .shot-card { margin: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 </style>
 </head>
 <body>
@@ -1128,8 +1145,7 @@
   <div class="nav-logo">rNitro</div>
 <!-- @sync:nav-right -->
   <div class="nav-right">
-    <a class="nav-link" href="/archives">Archives</a>
-    <div class="nav-badge">v8.3.6 Final · v8.4.3 Beta · CLI · Linux v0.1</div>
+    <div class="nav-badge">v1.1.0 Final Reloaded · v1.1.1 Beta Reloaded · macOS arm64</div>
   </div>
 <!-- @end:nav-right -->
 </nav>
@@ -1137,10 +1153,10 @@
 <!-- Hero -->
 <section class="hero">
 <!-- @sync:hero-copy -->
-  <p class="hero-eyebrow">System Monitor</p>
+  <p class="hero-eyebrow">Menu bar · Apple Silicon · macOS 12+</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, and per-core stats for <strong>macOS</strong> (v8.3.6 Stable + v8.4.3 Beta), <strong>rNitro CLI</strong> (terminal / btop-style), <strong>Linux</strong> (v0.1 pre-release), and legacy <strong>Windows</strong> (deprecated — downloads remain).</p>
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>v1.1.0 Final Reloaded</strong> for daily use · <strong>v1.1.1 Beta Reloaded</strong> for every AI provider. <strong>Intel Macs not supported.</strong> Free · no account · no telemetry.</p>
 <!-- @end:hero-copy -->
 
   <!-- Animated terminal -->
@@ -1186,14 +1202,14 @@
   <div id="dl-mac" role="tabpanel" aria-labelledby="tab-mac" style="display:flex; flex-direction:column; gap:20px; align-items:center; width:100%; max-width:640px;">
 <!-- @sync:hero-stable -->
     <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
-      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">v8.3.6-Final-arm64</div>
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">v1.1.0-Final-Reloaded</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
       <div class="dl-recommended" style="border-color:rgba(0,255,136,0.45);">
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.5); background:rgba(0,255,136,0.12);">Best first launch</div>
         <div class="dl-recommended-title" style="color:var(--green);">Terminal one-liner</div>
         <p class="dl-recommended-steps">Paste in Terminal — compiles on your Mac (~30s). Usually <strong>does not</strong> trigger Gatekeeper like ZIP, PKG, or DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
         <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--green); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
-          curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.6-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+          curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
         <button type="button" class="btn btn-primary btn-recommended" style="" onclick="copyCurlCmd('stable')">⎘ Copy curl one-liner</button>
       </div>
@@ -1201,7 +1217,7 @@
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.zip')">⬇ Download App ZIP · 1.8 MB</button>
       </div>
       <div id="hero-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-stable-other')" aria-expanded="false">
@@ -1210,9 +1226,9 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.pkg')">PKG installer · 1.8 MB</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.dmg')">DMG disk image · 2.3 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.sh')">Shell installer (.sh) · 406 KB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.dmg')">DMG disk image · 2.2 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.sh')">Shell installer (.sh) · 410 KB</button>
             <button class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('stable')">⎘ Copy bash command</button>
           </div>
@@ -1223,7 +1239,7 @@
 <!-- @end:hero-stable -->
 <!-- @sync:hero-beta -->
     <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
-      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">v8.4.3-Beta-arm64</div>
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">v1.1.1-Beta-Reloaded</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Beta — stable features plus AI chat API: Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes.</div>
       <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Beta notice:</strong> Experimental AI features — report issues via Support. You must agree to Terms &amp; Conditions before download.
@@ -1233,7 +1249,7 @@
         <div class="dl-recommended-title" style="color:var(--orange);">Terminal one-liner</div>
         <p class="dl-recommended-steps">Paste in Terminal — compiles on your Mac (~30s). Usually <strong>does not</strong> trigger Gatekeeper like ZIP, PKG, or DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
         <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--orange); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
-          curl -fsSL https://getrnitro.netlify.app/rNitro-v8.4.3-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+          curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.1-Beta-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
         <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="copyCurlCmd('beta')">⎘ Copy curl one-liner</button>
       </div>
@@ -1241,7 +1257,7 @@
         <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.zip')">⬇ Download App ZIP · 1.8 MB</button>
       </div>
       <div id="hero-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-beta-other')" aria-expanded="false">
@@ -1250,9 +1266,9 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.pkg')">PKG installer · 1.8 MB</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.dmg')">DMG disk image · 2.4 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.sh')">Shell installer (.sh) · 419 KB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.dmg')">DMG disk image · 2.4 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.sh')">Shell installer (.sh) · 419 KB</button>
             <button class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('beta')">⎘ Copy bash command</button>
           </div>
@@ -1266,16 +1282,16 @@
   <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
     <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
     <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Best first launch: usually avoids Gatekeeper blocks from ZIP/PKG/DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
-    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable (v8.3.6)</div>
+    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable (v1.1.0)</div>
     <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
-      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.6-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+      curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
     </div>
     <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
       <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy stable curl</button>
     </div>
-    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta (v8.4.3) — all AI providers</div>
+    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta (v1.1.1) — all AI providers</div>
     <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--orange); word-break:break-all; line-height:1.45;">
-      curl -fsSL https://getrnitro.netlify.app/rNitro-v8.4.3-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+      curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.1-Beta-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
     </div>
     <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
       <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy beta curl</button>
@@ -1293,15 +1309,14 @@
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
             <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-macOS-Apps.zip')">macOS Apps ZIP (Stable + Beta) · 3.6 MB</button>
-            <button type="button" class="btn btn-secondary" data-dl-full-zip style="background:var(--cyan); color:#000;" onclick="requestDownload('rnitro-netlify.zip')">Full Release ZIP · 891.5 MB</button>
           </div>
-          <div class="dl-other-note"><strong>macOS Apps ZIP</strong> — rNitro-Stable.app (v8.3.6) + rNitro-Beta.app (v8.4.3). <strong>Full Release</strong> — entire website + all builds for developers.</div>
+          <div class="dl-other-note"><strong>macOS Apps ZIP</strong> — rNitro-Stable.app (v1.1.0-Final-Reloaded) + rNitro-Beta.app (v1.1.1-Beta-Reloaded). Apple Silicon only.</div>
         </div>
       </div>
 <!-- @end:hero-more -->
 <!-- @sync:hero-dl-note -->
     <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above — or the purple <strong style="color:#a78bfa;">CLI</strong> tab for terminal/btop-style monitoring. Same macOS builds on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a> — v8.3.6 Final and v8.4.3 Beta (ZIP, PKG, DMG). Linux v0.1 pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub</a>. Older DMG builds: <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>.
+      New on Mac? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) — unzip, drag to Applications, right-click → Open once. Same builds on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a> (v1.1.0-Final-Reloaded · v1.1.1-Beta-Reloaded). Apple Silicon only.
     </p>
 <!-- @end:hero-dl-note -->
   </div>
@@ -1396,6 +1411,44 @@
   </div>
 </section>
 
+
+<section class="section" style="padding-top:24px; padding-bottom:0;">
+  <div class="section-label">Product</div>
+<!-- @sync:screenshots -->
+  <div class="shots">
+    <p class="shots-kicker">macOS · Apple Silicon · Menu bar</p>
+    <h2 class="shots-title">See rNitro on your Mac</h2>
+    <p class="shots-sub">Menu bar monitor with Advisors, Chat, Cleaner, Settings, and Benchmark — built for macOS 12+ on Apple Silicon.</p>
+    <figure class="shot-hero">
+      <img src="screenshots/hero-monitor.png" alt="rNitro menu bar monitor showing CPU, temperature, memory, and battery" width="1200" height="800">
+      <figcaption>Menu bar + Monitor — live CPU, temps, memory, battery, and more</figcaption>
+    </figure>
+    <div class="shot-grid">
+      <figure class="shot-card">
+        <img src="screenshots/feature-advisors.png" alt="rNitro Advisors" loading="lazy" width="720" height="480">
+        <figcaption><strong>Advisors</strong> — System + AI advice with live stats</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-chat.png" alt="rNitro Chat" loading="lazy" width="720" height="480">
+        <figcaption><strong>Chat</strong> — Bring-your-own AI providers</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-cleaner.png" alt="rNitro Cleaner" loading="lazy" width="720" height="480">
+        <figcaption><strong>Cleaner</strong> — Find large files and free space</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-settings.png" alt="rNitro Settings" loading="lazy" width="720" height="480">
+        <figcaption><strong>Settings</strong> — Appearance, alerts, general</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-benchmark.png" alt="rNitro Benchmark" loading="lazy" width="720" height="480">
+        <figcaption><strong>Benchmark</strong> — CPU score + stress test</figcaption>
+      </figure>
+    </div>
+  </div>
+<!-- @end:screenshots -->
+</section>
+
 <!-- Minecraft server — not rNitro-related -->
 <section class="mc-section" style="padding-top:40px;">
   <div class="section-label">Community</div>
@@ -1442,8 +1495,8 @@
 <!-- @sync:feature-ai-chat -->
     <div class="feature">
       <span class="feature-icon">💬</span>
-      <div class="feature-title">AI Chat <span style="color:var(--orange); font-size:16px;">(v8.4.3 Beta)</span></div>
-      <div class="feature-desc">Available in v8.4.3-Beta-arm64 — Chat tab with Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes (Keychain for cloud keys; local providers need no key).</div>
+      <div class="feature-title">AI Chat <span style="color:var(--orange); font-size:16px;">(v1.1.1 Beta Reloaded)</span></div>
+      <div class="feature-desc">Available in v1.1.1-Beta-Reloaded — Chat tab with Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes (Keychain for cloud keys; local providers need no key).</div>
     </div>
 <!-- @end:feature-ai-chat -->
   </div>
@@ -1470,8 +1523,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td><strong style="color:var(--green);">macOS</strong> · Stable</td><td>v8.3.6-Final-arm64</td><td><span class="status-pill status-pill--active">Active</span></td><td><code>rNitro-v8.3.6-Final-arm64.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>CPU monitor, benchmark, stress test, System Advisor, App Cleaner; AI chat: OpenAI + OpenRouter only</td></tr>
-          <tr><td><strong style="color:var(--orange);">macOS</strong> · Beta</td><td>v8.4.3-Beta-arm64</td><td><span class="status-pill status-pill--beta">Experimental</span></td><td><code>rNitro-v8.4.3-Beta-arm64.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>Everything in Stable plus all AI providers, temp banners, AES-256 key storage, first-launch tips</td></tr>
+          <tr><td><strong style="color:var(--green);">macOS</strong> · Stable</td><td>v1.1.0-Final-Reloaded</td><td><span class="status-pill status-pill--active">Active</span></td><td><code>rNitro-v1.1.0-Final-Reloaded.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>CPU monitor, benchmark, stress test, System Advisor, App Cleaner; AI chat: OpenAI + OpenRouter only</td></tr>
+          <tr><td><strong style="color:var(--orange);">macOS</strong> · Beta</td><td>v1.1.1-Beta-Reloaded</td><td><span class="status-pill status-pill--beta">Experimental</span></td><td><code>rNitro-v1.1.1-Beta-Reloaded.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>Everything in Stable plus all AI providers, temp banners, AES-256 key storage, first-launch tips</td></tr>
           <tr><td><strong style="color:#a78bfa;">CLI</strong> · Terminal</td><td>v0.2-cli</td><td><span class="status-pill status-pill--active">New</span></td><td><code>rNitro-CLI.tar.gz</code></td><td><code>~/bin/rnitro</code> or <code>/usr/local/bin/rnitro</code></td><td>Manual — re-download tarball or curl one-liner</td><td>btop-style TUI: CPU, RAM, disk, network, battery, top processes; macOS + Linux; Python 3</td></tr>
           <tr><td><strong style="color:#e8a838;">Linux</strong> · Pre-release</td><td>v0.1-Linux-Beta-Pre-release-x64</td><td><span class="status-pill status-pill--prerelease">Pre-release</span></td><td><code>rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz</code> or <code>install-rNitro-linux.sh</code></td><td><code>~/.local/share/rnitro</code></td><td>Checks <code>version.json</code> on launch</td><td>GTK4 app: Monitor, Advisor, Chat, Cleaner; x86_64; needs Python 3.10+, GTK 4, libadwaita</td></tr>
           <tr><td><strong style="color:var(--cyan);">Windows</strong> · Legacy</td><td>v4.2.4-Windows-Final-x86</td><td><span class="status-pill status-pill--deprecated">Deprecated</span></td><td><code>rNitro-v4.2.4-Windows-Final-x86.exe</code></td><td><code>%LOCALAPPDATA%\rNitro</code></td><td>Manual — check website or GitHub</td><td>Tray monitor only (CPU, temp, RAM, BTC); no AI chat or Cleaner; .NET 8 runtime for EXE</td></tr>
@@ -1557,11 +1610,11 @@
 <!-- @sync:install-sh-commands -->
         <p style="margin-top:8px; color:var(--muted); line-height:1.6;">Paste in <strong>Terminal</strong> (Apple Silicon Mac, Xcode CLT required). The script is saved to disk first — <code>curl | bash</code> is blocked on purpose.</p>
         <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--green); word-break:break-all; text-align:left;">
-          curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.6-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+          curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
-        <p style="margin-top:10px; color:var(--muted);">Beta (v8.4.3):</p>
+        <p style="margin-top:10px; color:var(--muted);">Beta (v1.1.1):</p>
         <div style="margin-top:6px; background:var(--card2); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--orange); word-break:break-all; text-align:left;">
-          curl -fsSL https://getrnitro.netlify.app/rNitro-v8.4.3-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+          curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.1-Beta-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
         <p style="margin-top:8px;">Installs to <code>~/Applications/rNitro.app</code> in ~30 seconds. Self-verifies its SHA-256 checksum before running.</p>
 <!-- @end:install-sh-commands -->
@@ -1669,14 +1722,14 @@
 <!-- @sync:stable-beta-compare -->
   <div class="channel-compare">
     <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Stable vs Beta — which should I download?</h2>
-    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">New here? Start with the green Recommended Download (App ZIP). v8.3.6 Final is production-ready; v8.4.2 Beta adds every AI provider and experimental features. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.</p>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.1.1 Beta Reloaded adds every AI provider and experimental features. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.</p>
     <div class="channel-compare-scroll">
       <table class="channel-compare-table">
         <thead>
           <tr>
             <th></th>
-            <th style="color:var(--green);">v8.3.6 Final</th>
-            <th style="color:var(--orange);">v8.4.3 Beta</th>
+            <th style="color:var(--green);">v1.1.0 Final Reloaded</th>
+            <th style="color:var(--orange);">v1.1.1 Beta Reloaded</th>
           </tr>
         </thead>
         <tbody>
@@ -1736,106 +1789,13 @@
   </div>
 <!-- @end:stable-beta-compare -->
 <!-- @sync:whats-new -->
-  <div id="whats-new-panel" class="whats-new-panel prev-versions-panel is-open">
-    <button type="button" class="prev-versions-toggle" onclick="toggleWhatsNew()" aria-expanded="true">
-      <span>What's new</span>
-      <span class="prev-versions-chevron" aria-hidden="true">▸</span>
-    </button>
-    <p class="prev-versions-note">Latest stable and beta highlights — see the full changelog below for older releases.</p>
-    <div class="whats-new-body prev-versions-body">
-      <div class="whats-new-grid">
-        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
-          <h3 style="color:var(--green);">v8.3.6 Final</h3>
-          <ul>
-            <li><strong>Battery fix</strong> — MacBooks show live charge % via direct IOKit reads (backport from v8.3.12 Beta; fixes — % / desktop on laptops).</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(0,217,255,0.35);">
-          <h3 style="color:var(--cyan);">rNitro CLI v0.2</h3>
-          <ul>
-            <li><strong>Get rNitro CLI!</strong> — btop-style terminal monitor with Unicode borders, full process names on macOS, live CPU/RAM/disk/network/battery, and top processes. Run rnitro in any terminal (macOS + Linux, Python 3).</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.4.3 Beta</h3>
-          <ul>
-            <li><strong>Menu bar stays visible</strong> — rNitro keeps its menu bar icon and stats when you switch to other apps (.accessory mode + on-demand main window).</li>
-            <li><strong>Chat API sub-tab</strong> — API keys moved out of Settings into Chat → API.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.4.2 Beta</h3>
-          <ul>
-            <li><strong>Traditional Chinese</strong> — language picker shows 繁體中文; all UI strings use Traditional characters (Taiwan/HK style).</li>
-            <li><strong>Extra Large font</strong> — body text is now 22px at the Extra Large preset (was ~17.5px).</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.4.1 Beta</h3>
-          <ul>
-            <li><strong>Top processes</strong> — CPU section shows top 5 by CPU%; Memory section shows top 5 by RAM. Polls every 3s while the menubar popover is open (idle-safe).</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.4.0 Beta</h3>
-          <ul>
-            <li><strong>Display settings</strong> — Settings → Appearance: choose font size (Small to Extra Large) and language (English, 中文, Español, Deutsch).</li>
-            <li><strong>Localization</strong> — tabs, settings, and monitor sections update live when you switch language.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.16 Beta</h3>
-          <ul>
-            <li><strong>UI</strong> — removed the in-app How it works tab from the main window; platform and download overview remains on getrnitro.netlify.app under How everything works.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.15 Beta</h3>
-          <ul>
-            <li><strong>Deeper RAM efficiency</strong> — tiered idle sampling (minimal / slot-aware / full), RingBuffer graph histories, coalesced @Published updates, decoupled memory polling, and lazy 12h battery history.</li>
-            <li><strong>Idle profile</strong> — Settings → General: Balanced (snappy menubar) or Aggressive (slowest polls, lowest RAM while closed).</li>
-            <li><strong>SwiftUI</strong> — monitor tab split into isolated section views so only the visible section re-renders on each tick.</li>
-            <li><strong>How it works</strong> — new Beta 8.3.15 flowchart documents the efficiency model.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.14 Beta</h3>
-          <ul>
-            <li><strong>Charge wattage restored</strong> — MacBooks show live charging speed again (e.g. 67 W) via IOKit ChargerData; ioreg fallback when wattage is missing. CHARGE panel and menu bar battery slot display watts + time-to-full.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.13 Beta</h3>
-          <ul>
-            <li><strong>Performance</strong> — lower idle CPU and RAM: lazy network/BTC/advisor monitors, IOKit battery fast path, SMC TTL cache, disk decoupled from CPU tick, slot-aware menubar subscriptions.</li>
-            <li><strong>How it works</strong> — new Beta 8.3.13 flowchart in the How it works tab documents the optimised idle vs popover-open model.</li>
-            <li><strong>Binary</strong> — post-compile strip for a slightly smaller app bundle.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.12 Beta</h3>
-          <ul>
-            <li><strong>Battery fix</strong> — MacBooks now show live charge % via direct IOKit AppleSmartBattery reads (fixes — % / desktop / N/A when pmset subprocesses fail).</li>
-            <li><strong>Reliability</strong> — battery polling always runs at launch with pmset/ioreg fallbacks; no desktop-Mac false detection.</li>
-          </ul>
-        </div>
-        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
-          <h3 style="color:var(--orange);">v8.3.9 Beta</h3>
-          <ul>
-            <li><strong>Performance</strong> — CPU monitoring on a background queue with batched UI updates; SMC key cache; debounced menubar refresh; narrower SwiftUI observation in the monitor tab.</li>
-            <li><strong>Open source</strong> — full source on GitHub (install-rNitro.sh, build scripts, Linux/Windows companions); slim repo with binaries on Releases only.</li>
-            <li><strong>Homebrew</strong> — brew tap ilikemacos/rnitro && brew install rnitro.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
+
 <!-- @end:whats-new -->
 
 <!-- @sync:download-stable -->
   <div class="download-card" style="border-color:var(--green);">
     <div class="download-meta">
-      <h2>rNitro v8.3.6-Final-arm64</h2>
+      <h2>rNitro v1.1.0-Final-Reloaded</h2>
       <p>Stable macOS build — monitor, benchmark, and AI chat (OpenAI GPT + OpenRouter only).</p>
       <div class="req">
         <span class="req-tag">macOS 12+</span>
@@ -1845,7 +1805,7 @@
       </div>
       <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
         SHA-256 (.sh):
-        <span id="sha-hash-stable" style="color:var(--green); word-break:break-all;">9ddf154e5ad60b81c0d324396a8ff61ad0214c37956f6694628e0f1add868fc5</span>
+        <span id="sha-hash-stable" style="color:var(--green); word-break:break-all;">33dab5874e95f842f0b5dd94da1fadcca53b56541b33e4de4a2e1fc47986a50c</span>
         <button onclick="copyHash('stable')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
       </div>
     </div>
@@ -1853,7 +1813,7 @@
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.zip')">⬇ Download App ZIP · 1.8 MB</button>
       </div>
       <div id="dl-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-stable-other')" aria-expanded="false">
@@ -1862,9 +1822,9 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.pkg')">PKG installer · 1.8 MB</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.dmg')">DMG disk image · 2.3 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v8.3.6-Final-arm64.sh')">Shell installer (.sh) · 406 KB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.dmg')">DMG disk image · 2.2 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v1.1.0-Final-Reloaded.sh')">Shell installer (.sh) · 410 KB</button>
           </div>
           <div class="dl-other-note"><strong>Don't trust the PKG?</strong> The .sh compiles from readable source on your Mac.</div>
         </div>
@@ -1874,8 +1834,8 @@
 <!-- @sync:download-beta -->
   <div class="download-card" style="margin-top:16px; border-color:var(--orange);">
     <div class="download-meta">
-      <h2>rNitro v8.4.3-Beta-arm64</h2>
-      <p>Beta macOS build — v8.3.6 features plus AI chat API (Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes).</p>
+      <h2>rNitro v1.1.1-Beta-Reloaded</h2>
+      <p>Beta macOS build — v1.1.0 features plus AI chat API (Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes).</p>
       <p style="font-family:var(--mono); font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.6;">
         <strong>Beta notice:</strong> Experimental AI features — Terms &amp; Conditions required before download.
       </p>
@@ -1888,7 +1848,7 @@
       </div>
       <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
         SHA-256 (.sh):
-        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">d1a3254d4be2903f1d4ee61a312671ce823a06a8929b4efc57a84aad9f77068a</span>
+        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">d9dab85dde2304ac43743b4f9c8525ced7e7d05989dacb1b1a2ef9881ffd8865</span>
         <button onclick="copyHash('beta')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
       </div>
     </div>
@@ -1896,7 +1856,7 @@
         <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.zip')">⬇ Download App ZIP · 1.8 MB</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.zip')">⬇ Download App ZIP · 1.8 MB</button>
       </div>
       <div id="dl-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-beta-other')" aria-expanded="false">
@@ -1905,9 +1865,9 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.pkg')">PKG installer · 1.8 MB</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.dmg')">DMG disk image · 2.4 MB</button>
-            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v8.4.3-Beta-arm64.sh')">Shell installer (.sh) · 419 KB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.pkg')">PKG installer · 1.8 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.dmg')">DMG disk image · 2.4 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v1.1.1-Beta-Reloaded.sh')">Shell installer (.sh) · 419 KB</button>
           </div>
           <div class="dl-other-note"><strong>Skeptical of the PKG?</strong> Use the .sh — full-source compile, verified checksum.</div>
         </div>
@@ -1923,9 +1883,8 @@
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
             <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-macOS-Apps.zip')">macOS Apps ZIP (Stable + Beta) · 3.6 MB</button>
-            <button type="button" class="btn btn-secondary" data-dl-full-zip style="background:var(--cyan); color:#000;" onclick="requestDownload('rnitro-netlify.zip')">Full Release ZIP · 891.5 MB</button>
           </div>
-          <div class="dl-other-note">Apps ZIP includes rNitro-Stable.app (v8.3.6-Final-arm64) and rNitro-Beta.app (v8.4.3-Beta-arm64). Full Release has the entire site + all builds.</div>
+          <div class="dl-other-note">Apps ZIP includes rNitro-Stable.app (v1.1.0-Final-Reloaded) and rNitro-Beta.app (v1.1.1-Beta-Reloaded). macOS 12+ Apple Silicon.</div>
         </div>
       </div>
 <!-- @end:download-more -->
@@ -1934,7 +1893,7 @@
     <p style="color:var(--muted); font-size:14px; font-family:var(--mono); line-height:1.6;">
       Need an older build? Shell installers for v8.3.9–v8.3.11 are in <strong style="color:var(--text);">Other download options</strong> above.
       All hosted <strong style="color:var(--text);">DMG</strong> disk images (current + archive) are on
-      <a href="/archives" style="color:var(--cyan);">rNitro Archives</a> — v8.3.6 Final, v8.4.3 Beta, and older releases.
+      <a href="/archives" style="color:var(--cyan);">rNitro Archives</a> — v1.1.0 Final, v1.1.1 Beta, and older releases.
     </p>
   </div>
 <!-- @end:download-previous -->
@@ -2010,26 +1969,9 @@
 <!-- @end:download-linux -->
 </section>
 
-<!-- Changelog -->
-<section class="section" style="padding-top:0; padding-bottom:100px">
-  <div class="section-label">Changelog</div>
 <!-- @sync:changelog -->
-  <div class="features" style="grid-template-columns:1fr;">
-    <div class="feature">
-      <div class="feature-title">Website — Windows end of support</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--orange);">Windows deprecated</strong> — rNitro is no longer actively developed for Windows. The last build (<code>v4.2.2-Windows-Final-x86</code>) stays on the Windows tab and GitHub for download. New platforms: <strong>Linux v0.1</strong> pre-release (Linux tab + GitHub Releases).
-      </div>
-    </div>
-    <div class="feature">
-      <div class="feature-title">v4.2.2-Windows-Final-x86</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        <strong style="color:var(--cyan);">Patched major bugs</strong> — version bump aligned with macOS v8.2.6/v8.2.7 website fixes. Windows tray monitor unchanged; download buttons on the site work again.
-      </div>
-    </div>
-  </div>
+
 <!-- @end:changelog -->
-</section>
 
 <section style="max-width:640px; margin:0 auto; padding:60px 24px 40px; text-align:center;">
   <div class="section-label">Support</div>
@@ -2201,26 +2143,26 @@
   // @sync:js-versions
   const RNITRO_VERSIONS =   {
     "stable": {
-      "id": "v8.3.6-Final-arm64",
-      "label": "v8.3.6 Final",
-      "short": "v8.3.6",
-      "sh": "rNitro-v8.3.6-Final-arm64.sh",
-      "pkg": "rNitro-v8.3.6-Final-arm64.pkg",
-      "dmg": "rNitro-v8.3.6-Final-arm64.dmg",
-      "zip": "rNitro-v8.3.6-Final-arm64.zip",
-      "hash": "9ddf154e5ad60b81c0d324396a8ff61ad0214c37956f6694628e0f1add868fc5",
-      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v8.3.6-Final-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+      "id": "v1.1.0-Final-Reloaded",
+      "label": "v1.1.0 Final Reloaded",
+      "short": "v1.1.0",
+      "sh": "rNitro-v1.1.0-Final-Reloaded.sh",
+      "pkg": "rNitro-v1.1.0-Final-Reloaded.pkg",
+      "dmg": "rNitro-v1.1.0-Final-Reloaded.dmg",
+      "zip": "rNitro-v1.1.0-Final-Reloaded.zip",
+      "hash": "33dab5874e95f842f0b5dd94da1fadcca53b56541b33e4de4a2e1fc47986a50c",
+      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
     },
     "beta": {
-      "id": "v8.4.3-Beta-arm64",
-      "label": "v8.4.3 Beta",
-      "short": "v8.4.3",
-      "sh": "rNitro-v8.4.3-Beta-arm64.sh",
-      "pkg": "rNitro-v8.4.3-Beta-arm64.pkg",
-      "dmg": "rNitro-v8.4.3-Beta-arm64.dmg",
-      "zip": "rNitro-v8.4.3-Beta-arm64.zip",
-      "hash": "d1a3254d4be2903f1d4ee61a312671ce823a06a8929b4efc57a84aad9f77068a",
-      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v8.4.3-Beta-arm64.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+      "id": "v1.1.1-Beta-Reloaded",
+      "label": "v1.1.1 Beta Reloaded",
+      "short": "v1.1.1",
+      "sh": "rNitro-v1.1.1-Beta-Reloaded.sh",
+      "pkg": "rNitro-v1.1.1-Beta-Reloaded.pkg",
+      "dmg": "rNitro-v1.1.1-Beta-Reloaded.dmg",
+      "zip": "rNitro-v1.1.1-Beta-Reloaded.zip",
+      "hash": "d9dab85dde2304ac43743b4f9c8525ced7e7d05989dacb1b1a2ef9881ffd8865",
+      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.1-Beta-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
     },
     "windows": {
       "id": "v4.2.4-Windows-Final-x86",
@@ -2238,10 +2180,6 @@
     "macos_apps": {
       "label": "macOS Apps ZIP",
       "zip": "rNitro-macOS-Apps.zip"
-    },
-    "full": {
-      "label": "Full Release",
-      "zip": "rnitro-netlify.zip"
     },
     "cli": {
       "id": "v0.2-cli",
@@ -2723,7 +2661,7 @@
       a: "In rNitro Beta, open the menubar popover → Advisor tab. It's a client-side assistant (no API key) that reads YOUR live CPU, temp, RAM, GPU, battery, and disk stats. Ask \"my specs\" or \"is my temp ok?\" Tap ⚙ to set custom warning thresholds — you'll get proactive alerts in the chat when temps or usage cross your limits." },
     // @sync:chat-kb-platform
     { label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
-      a: "Scroll to **How everything works** on [getrnitro.netlify.app](https://getrnitro.netlify.app/) for tables covering macOS Stable (v8.3.6), macOS Beta (v8.4.3), Linux (v0.1), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." },
+      a: "Scroll to **How everything works** on [getrnitro.netlify.app](https://getrnitro.netlify.app/) for tables covering macOS Stable (v1.1.0), macOS Beta (v1.1.1), Linux (v0.1), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." },
     { label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
       a: `Windows is no longer actively supported. The last build (${RNITRO_VERSIONS.windows.id}) remains on the Windows tab — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` },
     { label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
@@ -2749,8 +2687,8 @@
     { label: 'Is the source code visible?', kws: ['source', 'open source', 'code'],
       a: "The full install script (including the app's source) is right there in the downloaded .sh / .ps1 file — nothing is hidden or obfuscated. You're compiling it yourself." },
     // @sync:chat-whats-new
-    { label: "What's new in v8.4.3?", kws: ["whats new", "what's new", "v8.4.3", "v8.3.6", "varela", "font", "changelog", "low power"],
-      a: "v8.3.6 Final highlights:\n• Battery fix — MacBooks show live charge % via direct IOKit reads (backport from v8.3.12 Beta; fixes — % / desktop on laptops).\n\nrNitro CLI v0.2 highlights:\n• Get rNitro CLI! — btop-style terminal monitor with Unicode borders, full process names on macOS, live CPU/RAM/disk/network/battery, and top processes. Run rnitro in any terminal (macOS + Linux, Python 3).\n\nv8.4.3 Beta highlights:\n• Menu bar stays visible — rNitro keeps its menu bar icon and stats when you switch to other apps (.accessory mode + on-demand main window).\n• Chat API sub-tab — API keys moved out of Settings into Chat → API.\n\nv8.4.2 Beta highlights:\n• Traditional Chinese — language picker shows 繁體中文; all UI strings use Traditional characters (Taiwan/HK style).\n• Extra Large font — body text is now 22px at the Extra Large preset (was ~17.5px).\n\nv8.4.1 Beta highlights:\n• Top processes — CPU section shows top 5 by CPU%; Memory section shows top 5 by RAM. Polls every 3s while the menubar popover is open (idle-safe).\n\nv8.4.0 Beta highlights:\n• Display settings — Settings → Appearance: choose font size (Small to Extra Large) and language (English, 中文, Español, Deutsch).\n• Localization — tabs, settings, and monitor sections update live when you switch language.\n\nv8.3.16 Beta highlights:\n• UI — removed the in-app How it works tab from the main window; platform and download overview remains on getrnitro.netlify.app under How everything works.\n\nv8.3.15 Beta highlights:\n• Deeper RAM efficiency — tiered idle sampling (minimal / slot-aware / full), RingBuffer graph histories, coalesced @Published updates, decoupled memory polling, and lazy 12h battery history.\n• Idle profile — Settings → General: Balanced (snappy menubar) or Aggressive (slowest polls, lowest RAM while closed).\n• SwiftUI — monitor tab split into isolated section views so only the visible section re-renders on each tick.\n• How it works — new Beta 8.3.15 flowchart documents the efficiency model.\n\nv8.3.14 Beta highlights:\n• Charge wattage restored — MacBooks show live charging speed again (e.g. 67 W) via IOKit ChargerData; ioreg fallback when wattage is missing. CHARGE panel and menu bar battery slot display watts + time-to-full.\n\nv8.3.13 Beta highlights:\n• Performance — lower idle CPU and RAM: lazy network/BTC/advisor monitors, IOKit battery fast path, SMC TTL cache, disk decoupled from CPU tick, slot-aware menubar subscriptions.\n• How it works — new Beta 8.3.13 flowchart in the How it works tab documents the optimised idle vs popover-open model.\n• Binary — post-compile strip for a slightly smaller app bundle.\n\nv8.3.12 Beta highlights:\n• Battery fix — MacBooks now show live charge % via direct IOKit AppleSmartBattery reads (fixes — % / desktop / N/A when pmset subprocesses fail).\n• Reliability — battery polling always runs at launch with pmset/ioreg fallbacks; no desktop-Mac false detection.\n\nv8.3.9 Beta highlights:\n• Performance — CPU monitoring on a background queue with batched UI updates; SMC key cache; debounced menubar refresh; narrower SwiftUI observation in the monitor tab.\n• Open source — full source on GitHub (install-rNitro.sh, build scripts, Linux/Windows companions); slim repo with binaries on Releases only.\n• Homebrew — brew tap ilikemacos/rnitro && brew install rnitro." },
+    { label: "What's the current version?", kws: ["whats new", "what's new", "v1.1.1", "v1.1.0", "v1.0.0", "changelog", "version"],
+      a: "Current macOS builds: Stable v1.1.0 Final Reloaded (v1.1.0-Final-Reloaded) and Beta v1.1.1 Beta Reloaded (v1.1.1-Beta-Reloaded). All product features are on the download page — there is no public changelog. Use Stable for daily monitoring; Beta for every AI provider." },
     // @end:chat-whats-new
     { label: 'App ZIP won\'t open?', kws: ['wont run', "won't run", 'damaged', 'quarantine', 'xattr', '3.6', 'small', 'zip'],
       a: "If Gatekeeper blocks the App ZIP: right-click rNitro.app → Open → Open (once). Or run in Terminal:\nxattr -cr ~/Applications/rNitro.app\n\nThe .app is ~3.5–3.7 MB (native Swift, not Electron). Download the fresh build from getrnitro.netlify.app — older zips may have been stale." },

@@ -79,8 +79,8 @@ function mergeVersions(bodyVersions, remote) {
         remote?.latest ||
         bodyVersions?.stable?.id ||
         idFromSh(stableRel?.sh) ||
-        "v8.2.6-Final-arm64",
-      sh: stableRel?.sh || bodyVersions?.stable?.sh || "rNitro-v8.2.6-Final-arm64.sh",
+        "v1.0.0-RELOADED",
+      sh: stableRel?.sh || bodyVersions?.stable?.sh || "rNitro-v1.0.0-RELOADED.sh",
       zip: stableRel?.zip || bodyVersions?.stable?.zip,
       label: stableRel?.label || bodyVersions?.stable?.label,
     },
@@ -89,49 +89,33 @@ function mergeVersions(bodyVersions, remote) {
         remote?.beta ||
         bodyVersions?.beta?.id ||
         idFromSh(betaRel?.sh) ||
-        "v8.2.8-Beta-arm64",
-      sh: betaRel?.sh || bodyVersions?.beta?.sh || "rNitro-v8.2.8-Beta-arm64.sh",
+        "v1.1.0-Beta-Reloaded",
+      sh: betaRel?.sh || bodyVersions?.beta?.sh || "rNitro-v1.1.0-Beta-Reloaded.sh",
       zip: betaRel?.zip || bodyVersions?.beta?.zip,
       label: betaRel?.label || bodyVersions?.beta?.label,
     },
     windows: {
-      id: remote?.windows || bodyVersions?.windows?.id || "v4.2.2-Windows-Final-x86",
+      id: remote?.windows || bodyVersions?.windows?.id || "v4.2.4-Windows-Final-x86",
       exe: winRel?.exe || bodyVersions?.windows?.exe,
     },
   };
 }
 
-function changelogHighlights(changelog) {
-  if (!changelog?.whats_new?.length) return "";
-  return changelog.whats_new
-    .map((card) => {
-      const items = (card.items || [])
-        .map((it) => (typeof it === "object" ? `${it.strong || ""}${it.text || ""}` : String(it)))
-        .join("; ");
-      return `${card.title}: ${items}`;
-    })
-    .join("\n");
-}
-
-function buildSystemPrompt(versions, changelog) {
-  const stable = versions?.stable?.id || "v8.2.6-Final-arm64";
-  const beta = versions?.beta?.id || "v8.2.8-Beta-arm64";
-  const win = versions?.windows?.id || "v4.2.2-Windows-Final-x86";
-  const highlights = changelogHighlights(changelog);
-  const highlightsBlock = highlights
-    ? `\nRECENT HIGHLIGHTS (from changelog.json)\n${highlights}\n`
-    : "";
+function buildSystemPrompt(versions) {
+  const stable = versions?.stable?.id || "v1.0.0-RELOADED";
+  const beta = versions?.beta?.id || "v1.1.0-Beta-Reloaded";
+  const win = versions?.windows?.id || "v4.2.4-Windows-Final-x86";
   return `You are the official rNitro support assistant on ${SITE_URL}. Answer ONLY about rNitro (macOS/Windows CPU monitor app, downloads, install, features, troubleshooting). Be concise, friendly, and accurate. Use short paragraphs or bullet lists. If unsure, say so and suggest the Support email form on the page.
 
 CURRENT RELEASES
 - Stable macOS: ${stable} — CPU monitor, benchmark, stress test, AI chat (OpenAI GPT + OpenRouter only), System Advisor.
 - Beta macOS: ${beta} — stable features + all AI providers (Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes), Varela Round UI font, critical temp notification banners, System Advisor.
 - Windows: ${win} — tray monitor (.exe needs .NET 8 Desktop Runtime; .ps1 compiles with built-in csc.exe).
-${highlightsBlock}
+
 INSTALL (macOS)
 - Recommended: App ZIP (1.8 MB) — unzip, drag rNitro.app to Applications, right-click → Open once if Gatekeeper blocks.
 - PKG/DMG: fastest; macOS may warn "can't verify" — click Done, then System Settings → Privacy & Security → Open.
-- .sh installer: compiles from readable source on the user's Mac (~30s). Stable .sh: ${versions?.stable?.sh || "rNitro-v8.2.6-Final-arm64.sh"} — Beta .sh: ${versions?.beta?.sh || "rNitro-v8.2.8-Beta-arm64.sh"}
+- .sh installer: compiles from readable source on the user's Mac (~30s). Stable .sh: ${versions?.stable?.sh || "rNitro-v1.0.0-RELOADED.sh"} — Beta .sh: ${versions?.beta?.sh || "rNitro-v1.1.0-Beta-Reloaded.sh"}
 - Site: ${SITE_URL}
 - GitHub Releases (Stable + Beta each: App ZIP with rNitro.app, PKG, DMG): https://github.com/ilikemacos/rNitro/releases
 - Requires Apple Silicon (arm64), macOS 12+. Not Intel Macs.
@@ -314,12 +298,9 @@ export async function handler(event) {
   }
 
   const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
-  const [remoteVersions, changelog] = await Promise.all([
-    fetchSiteJson("/version.json"),
-    fetchSiteJson("/changelog.json"),
-  ]);
+  const remoteVersions = await fetchSiteJson("/version.json");
   const versions = mergeVersions(body.versions || {}, remoteVersions);
-  const system = buildSystemPrompt(versions, changelog);
+  const system = buildSystemPrompt(versions);
 
   const messages = [
     { role: "system", content: system },

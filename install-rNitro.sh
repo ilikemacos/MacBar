@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="5ef86b46c30a92c8da22e44af2e8a5ce0e05993a81cca7012dcfc4b3142d48d8"
+EXPECTED_HASH="772c26a7db2c2db1b980575f9b46adc22d824910fc0d5eb2ae4a11e2343494f5"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -372,7 +372,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v8.4.3-Beta-arm64"
+let CURRENT_VERSION = "v1.1.1-Beta-Reloaded"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -440,7 +440,11 @@ enum UpdateChecker {
     static func displayLabel(_ versionId: String) -> String {
         versionId
             .replacingOccurrences(of: "-arm64", with: "")
+            .replacingOccurrences(of: "-Final-Reloaded", with: " Final Reloaded")
             .replacingOccurrences(of: "-Final", with: " Final")
+            .replacingOccurrences(of: "-RELOADED", with: " RELOADED")
+            .replacingOccurrences(of: "-Beta-Reloaded", with: " Beta Reloaded")
+            .replacingOccurrences(of: "-Beta", with: " Beta")
             .replacingOccurrences(of: "-Beta", with: " Beta")
     }
 
@@ -553,9 +557,9 @@ enum UpdateChecker {
         alert.messageText = "rNitro Update Available"
         var lines = ["You're running \(displayLabel(CURRENT_VERSION))."]
         if stableNewer {
-            lines.append("• Final \(displayLabel(stable)) is available (production-ready).")
+            lines.append("• Stable \(displayLabel(stable)) is available (production-ready).")
         } else {
-            lines.append("• Final: \(displayLabel(stable)) (switch to stable channel).")
+            lines.append("• Stable: \(displayLabel(stable)) (switch to stable channel).")
         }
         if !beta.isEmpty {
             if betaNewer {
@@ -568,14 +572,14 @@ enum UpdateChecker {
         alert.informativeText = lines.joined(separator: "\n")
         alert.alertStyle = .informational
 
-        let installFinal = "Install Final"
+        let installStable = "Install Stable"
         let installBeta = beta.isEmpty ? nil : "Install Beta"
         let betaFirst = RNITRO_FEATURE_BETA_UI && betaNewer && installBeta != nil
         if betaFirst, let installBeta {
             alert.addButton(withTitle: installBeta)
-            alert.addButton(withTitle: installFinal)
+            alert.addButton(withTitle: installStable)
         } else {
-            alert.addButton(withTitle: installFinal)
+            alert.addButton(withTitle: installStable)
             if let installBeta {
                 alert.addButton(withTitle: installBeta)
             }
@@ -9399,8 +9403,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>8.3.12-Beta-arm64</string>
-    <key>CFBundleShortVersionString</key><string>8.3.12-Beta-arm64</string>
+    <key>CFBundleVersion</key><string>v1.1.1-Beta-Reloaded</string>
+    <key>CFBundleShortVersionString</key><string>v1.1.1-Beta-Reloaded</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

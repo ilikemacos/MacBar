@@ -147,10 +147,6 @@ def js_versions_object(data: dict) -> str:
             "label": v.macos_apps_release(data)["label"],
             "zip": v.macos_apps_release(data)["zip"],
         },
-        "full": {
-            "label": v.full_release(data)["label"],
-            "zip": v.full_release(data)["zip"],
-        },
         "cli": {
             "id": cli["id"],
             "label": cli["label"],
@@ -169,9 +165,14 @@ def nav_right(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
     linux = v.linux_release(data)
+    archive = data.get("archive") or []
+    archives_link = (
+        '    <a class="nav-link" href="/archives">Archives</a>\n'
+        if archive
+        else ""
+    )
     return f"""  <div class="nav-right">
-    <a class="nav-link" href="/archives">Archives</a>
-    <div class="nav-badge">{stable["label"]} · {beta["label"]} · CLI · Linux {linux["short"]}</div>
+{archives_link}    <div class="nav-badge">{stable["label"]} · {beta["label"]} · macOS arm64</div>
   </div>"""
 
 
@@ -242,16 +243,14 @@ def hero_macos_apps_card(data: dict) -> str:
 
 
 def hero_more_downloads(data: dict) -> str:
-    full = v.full_release(data)
     apps = v.macos_apps_release(data)
     stable = v.stable_release(data)
     beta = v.beta_release(data)
-    inner = f"""            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('{apps["zip"]}')">{sized_label("macOS Apps ZIP (Stable + Beta)", apps["zip"])}</button>
-            <button type="button" class="btn btn-secondary" data-dl-full-zip style="background:var(--cyan); color:#000;" onclick="requestDownload('{full["zip"]}')">{sized_label("Full Release ZIP", full["zip"])}</button>"""
+    inner = f"""            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('{apps["zip"]}')">{sized_label("macOS Apps ZIP (Stable + Beta)", apps["zip"])}</button>"""
     return other_downloads_panel(
         "hero-more-downloads",
         inner,
-        note=f"<strong>macOS Apps ZIP</strong> — rNitro-Stable.app ({stable['short']}) + rNitro-Beta.app ({beta['short']}). <strong>Full Release</strong> — entire website + all builds for developers.",
+        note=f"<strong>macOS Apps ZIP</strong> — rNitro-Stable.app ({stable['id']}) + rNitro-Beta.app ({beta['id']}). Apple Silicon only.",
     )
 
 
@@ -322,7 +321,7 @@ def hero_head(data: dict) -> str:
         f"({stable['short']} Stable / {beta['short']} Beta). CPU, temperature, MacBook battery %, "
         f"GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux {linux['short']} pre-release. No account, no telemetry."
     )
-    og_image = f"{SITE_URL}/apple-touch-icon.png"
+    og_image = f"{SITE_URL}/screenshots/hero-monitor.png"
     ld_json = json.dumps(
         {
             "@context": "https://schema.org",
@@ -330,7 +329,7 @@ def hero_head(data: dict) -> str:
             "name": "rNitro",
             "operatingSystem": "macOS, Linux, Windows",
             "applicationCategory": "UtilitiesApplication",
-            "softwareVersion": beta["short"],
+            "softwareVersion": stable["id"],
             "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
             "downloadUrl": SITE_URL,
         },
@@ -354,11 +353,10 @@ def hero_head(data: dict) -> str:
 def hero_copy(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
-    linux = v.linux_release(data)
-    return f"""  <p class="hero-eyebrow">System Monitor</p>
+    return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon · macOS 12+</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, and per-core stats for <strong>macOS</strong> ({stable["short"]} Stable + {beta["short"]} Beta), <strong>rNitro CLI</strong> (terminal / btop-style), <strong>Linux</strong> ({linux["short"]} pre-release), and legacy <strong>Windows</strong> (deprecated — downloads remain).</p>"""
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>{stable["label"]}</strong> for daily use · <strong>{beta["label"]}</strong> for every AI provider. <strong>Intel Macs not supported.</strong> Free · no account · no telemetry.</p>"""
 
 
 def platform_tabs() -> str:
@@ -448,11 +446,9 @@ def steps_win(data: dict) -> str:
 def hero_dl_note(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
-    linux = v.linux_release(data)
     gh = v.github_releases_url()
-    linux_gh = v.github_release_page_url(linux["id"])
     return f"""    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New here? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) above — or the purple <strong style="color:#a78bfa;">CLI</strong> tab for terminal/btop-style monitoring. Same macOS builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> — {stable["short"]} Final and {beta["short"]} Beta (ZIP, PKG, DMG). Linux {linux["short"]} pre-release is on the <strong style="color:#e8a838;">Linux</strong> tab and <a href="{linux_gh}" style="color:var(--cyan);">GitHub</a>. Older DMG builds: <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>.
+      New on Mac? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) — unzip, drag to Applications, right-click → Open once. Same builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> ({stable["id"]} · {beta["id"]}). Apple Silicon only.
     </p>"""
 
 
@@ -776,16 +772,14 @@ def download_card_macos_apps(data: dict) -> str:
 
 
 def download_more_section(data: dict) -> str:
-    full = v.full_release(data)
     apps = v.macos_apps_release(data)
     stable = v.stable_release(data)
     beta = v.beta_release(data)
-    inner = f"""            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('{apps["zip"]}')">{sized_label("macOS Apps ZIP (Stable + Beta)", apps["zip"])}</button>
-            <button type="button" class="btn btn-secondary" data-dl-full-zip style="background:var(--cyan); color:#000;" onclick="requestDownload('{full["zip"]}')">{sized_label("Full Release ZIP", full["zip"])}</button>"""
+    inner = f"""            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('{apps["zip"]}')">{sized_label("macOS Apps ZIP (Stable + Beta)", apps["zip"])}</button>"""
     return other_downloads_panel(
         "dl-more-downloads",
         inner,
-        note=f"Apps ZIP includes rNitro-Stable.app ({stable['id']}) and rNitro-Beta.app ({beta['id']}). Full Release has the entire site + all builds.",
+        note=f"Apps ZIP includes rNitro-Stable.app ({stable['id']}) and rNitro-Beta.app ({beta['id']}). macOS 12+ Apple Silicon.",
     )
 
 
@@ -820,58 +814,13 @@ def download_card_windows(data: dict) -> str:
 
 
 def whats_new_section(changelog: dict) -> str:
-    cards = []
-    for card in changelog.get("whats_new", []):
-        accent = card.get("accent", "green")
-        color, border = cl.ACCENT_COLORS.get(accent, cl.ACCENT_COLORS["green"])
-        items_html = []
-        for item in card.get("items", []):
-            if isinstance(item, dict):
-                items_html.append(
-                    f"            <li><strong>{item.get('strong', '')}</strong>{item.get('text', '')}</li>"
-                )
-            else:
-                items_html.append(f"            <li>{item}</li>")
-        cards.append(
-            f"""        <div class="whats-new-card" style="border-color:{border};">
-          <h3 style="color:{color};">{card.get('title', '')}</h3>
-          <ul>
-{chr(10).join(items_html)}
-          </ul>
-        </div>"""
-        )
-    grid = "\n".join(cards) if cards else ""
-    return f"""  <div id="whats-new-panel" class="whats-new-panel prev-versions-panel is-open">
-    <button type="button" class="prev-versions-toggle" onclick="toggleWhatsNew()" aria-expanded="true">
-      <span>What's new</span>
-      <span class="prev-versions-chevron" aria-hidden="true">▸</span>
-    </button>
-    <p class="prev-versions-note">Latest stable and beta highlights — see the full changelog below for older releases.</p>
-    <div class="whats-new-body prev-versions-body">
-      <div class="whats-new-grid">
-{grid}
-      </div>
-    </div>
-  </div>"""
+    """Changelog / What's new removed from the public website."""
+    return ""
 
 
 def changelog_section(changelog: dict) -> str:
-    blocks = []
-    for rel in changelog.get("releases", []):
-        title = rel.get("title", "")
-        body = rel.get("body_html", "")
-        blocks.append(
-            f"""    <div class="feature">
-      <div class="feature-title">{title}</div>
-      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
-        {body}
-      </div>
-    </div>"""
-        )
-    body = "\n".join(blocks) if blocks else '    <p style="color:var(--muted);">No changelog entries.</p>'
-    return f"""  <div class="features" style="grid-template-columns:1fr;">
-{body}
-  </div>"""
+    """Changelog section removed from the public website."""
+    return ""
 
 
 def _status_pill(label: str, kind: str) -> str:
@@ -1061,7 +1010,9 @@ def stable_beta_compare_section(changelog: dict, data: dict) -> str:
     title = meta.get("title", "Stable vs Beta")
     subtitle = meta.get(
         "subtitle",
-        f"Stable ({stable['label']}) for everyday use; Beta ({beta['label']}) for all AI providers.",
+        f"New here? Start with the green Recommended Download (App ZIP). "
+        f"{stable['label']} is production-ready; {beta['label']} adds every AI provider and experimental features. "
+        f"Linux pre-release is on the Linux tab; Windows is deprecated but downloads remain.",
     )
     rows_html = []
     for row in meta.get("rows", []):
@@ -1108,23 +1059,26 @@ def chat_kb_platform(data: dict) -> str:
 
 
 def chat_whats_new_kb(data: dict, changelog: dict) -> str:
-    beta = v.beta_release(data)
+    """No website changelog — point chat at current channels instead."""
     stable = v.stable_release(data)
-    answer = cl.whats_new_answer(changelog).replace("`", "\\`")
-    # JSON-safe for embedding in JS template literal
+    beta = v.beta_release(data)
+    answer = (
+        f"Current macOS builds: Stable {stable['label']} ({stable['id']}) and "
+        f"Beta {beta['label']} ({beta['id']}). All product features are on the download page — "
+        f"there is no public changelog. Use Stable for daily monitoring; Beta for every AI provider."
+    )
     answer_js = json.dumps(answer, ensure_ascii=False)
     kws = [
         "whats new",
         "what's new",
         beta["short"],
         stable["short"],
-        "varela",
-        "font",
+        "v1.0.0",
         "changelog",
-        "low power",
+        "version",
     ]
     kws_js = json.dumps(kws)
-    return f"""    {{ label: "What's new in {beta['short']}?", kws: {kws_js},
+    return f"""    {{ label: "What's the current version?", kws: {kws_js},
       a: {answer_js} }},"""
 
 
@@ -1135,6 +1089,19 @@ def update_installer_versions(data: dict) -> None:
     text = re.sub(
         r'let CURRENT_VERSION = "v[^"]+"',
         f'let CURRENT_VERSION = "{beta["id"]}"',
+        text,
+        count=1,
+    )
+    # Keep Info.plist in sync with CURRENT_VERSION (was hard-coded to old 8.x).
+    text = re.sub(
+        r'(<key>CFBundleVersion</key><string>)[^<]+(</string>)',
+        rf"\g<1>{beta['id']}\2",
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r'(<key>CFBundleShortVersionString</key><string>)[^<]+(</string>)',
+        rf"\g<1>{beta['id']}\2",
         text,
         count=1,
     )
@@ -1152,6 +1119,30 @@ def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
     dst = SITE / beta["sh"]
     shutil.copy2(src, dst)
     dst.chmod(0o755)
+
+    # Ensure stable installer Info.plist matches stable id (make-v6 slug replace can miss edge cases).
+    if not skip_stable:
+        stable_path = SITE / stable["sh"]
+        st = stable_path.read_text(encoding="utf-8")
+        st = re.sub(
+            r'(<key>CFBundleVersion</key><string>)[^<]+(</string>)',
+            rf"\g<1>{stable['id']}\2",
+            st,
+            count=1,
+        )
+        st = re.sub(
+            r'(<key>CFBundleShortVersionString</key><string>)[^<]+(</string>)',
+            rf"\g<1>{stable['id']}\2",
+            st,
+            count=1,
+        )
+        st = re.sub(
+            r'let CURRENT_VERSION = "v[^"]+"',
+            f'let CURRENT_VERSION = "{stable["id"]}"',
+            st,
+            count=1,
+        )
+        stable_path.write_text(st, encoding="utf-8")
 
     paths = [src, dst]
     if not skip_stable:
@@ -1226,6 +1217,39 @@ def js_settab_handlers() -> str:
   }"""
 
 
+
+def screenshots_section(data: dict) -> str:
+    """Product shots from real macOS captures (screenshots/)."""
+    items = [
+        ("screenshots/feature-advisors.png", "Advisors", "System + AI advice with live stats"),
+        ("screenshots/feature-chat.png", "Chat", "Bring-your-own AI providers"),
+        ("screenshots/feature-cleaner.png", "Cleaner", "Find large files and free space"),
+        ("screenshots/feature-settings.png", "Settings", "Appearance, alerts, general"),
+        ("screenshots/feature-benchmark.png", "Benchmark", "CPU score + stress test"),
+    ]
+    cards = []
+    for src, title, sub in items:
+        cards.append(
+            f"""      <figure class="shot-card">
+        <img src="{src}" alt="rNitro {title}" loading="lazy" width="720" height="480">
+        <figcaption><strong>{title}</strong> — {sub}</figcaption>
+      </figure>"""
+        )
+    grid = "\n".join(cards)
+    return f"""  <div class="shots">
+    <p class="shots-kicker">macOS · Apple Silicon · Menu bar</p>
+    <h2 class="shots-title">See rNitro on your Mac</h2>
+    <p class="shots-sub">Menu bar monitor with Advisors, Chat, Cleaner, Settings, and Benchmark — built for macOS 12+ on Apple Silicon.</p>
+    <figure class="shot-hero">
+      <img src="screenshots/hero-monitor.png" alt="rNitro menu bar monitor showing CPU, temperature, memory, and battery" width="1200" height="800">
+      <figcaption>Menu bar + Monitor — live CPU, temps, memory, battery, and more</figcaption>
+    </figure>
+    <div class="shot-grid">
+{grid}
+    </div>
+  </div>"""
+
+
 def sync_index(data: dict) -> None:
     changelog = cl.load()
     html = INDEX.read_text(encoding="utf-8")
@@ -1241,6 +1265,7 @@ def sync_index(data: dict) -> None:
         "hero-windows": hero_windows_buttons(data),
         "hero-linux": hero_linux_buttons(data),
         "hero-cli": hero_cli_card(data),
+        "screenshots": screenshots_section(data),
         "steps-cli": steps_cli(data),
         "js-settab": js_settab_handlers(),
         "feature-ai-chat": feature_ai_chat(data),
@@ -1496,8 +1521,12 @@ def refresh_hashes(data: dict) -> dict:
     return data
 
 
-def refresh_archive(data: dict) -> dict:
-    data["archive"] = pv.build_archive(data)
+def refresh_archive(data: dict, *, rebuild: bool = False) -> dict:
+    # Keep archive empty for clean 1.x launches unless explicitly rebuilt.
+    if rebuild:
+        data["archive"] = pv.build_archive(data)
+    else:
+        data["archive"] = data.get("archive") or []
     return data
 
 
