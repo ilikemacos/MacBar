@@ -26,6 +26,8 @@ STATIC_FILES = [
     "apple-touch-icon.png",
     "VarelaRound.ttf",
     "GeistMono.ttf",
+    "robots.txt",
+    "sitemap.xml",
     "create-dmg.sh",
     "create-windows-exe.sh",
     "build-app-pkg.py",
@@ -62,6 +64,8 @@ WEBSITE_FILES = [
     "apple-touch-icon.png",
     "VarelaRound.ttf",
     "GeistMono.ttf",
+    "robots.txt",
+    "sitemap.xml",
 ]
 
 WEBSITE_README = """rNitro Website

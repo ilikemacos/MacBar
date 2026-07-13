@@ -7,15 +7,15 @@
       "items": [
         {
           "strong": "Relaunch",
-          "text": " — clean stable channel for daily CPU, temperature, battery, GPU, and RAM monitoring on Apple Silicon."
+          "text": " \u2014 clean stable channel for daily CPU, temperature, battery, GPU, and RAM monitoring on Apple Silicon."
         },
         {
           "strong": "AI chat",
-          "text": " — OpenAI (GPT) + OpenRouter only (bring your own keys)."
+          "text": " \u2014 OpenAI (GPT) + OpenRouter only (bring your own keys)."
         },
         {
           "strong": "Install",
-          "text": " — App ZIP recommended (no admin password); PKG/DMG/.sh also available."
+          "text": " \u2014 App ZIP recommended (no admin password); PKG/DMG/.sh also available."
         }
       ]
     },
@@ -26,15 +26,15 @@
       "items": [
         {
           "strong": "All AI providers",
-          "text": " — Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes."
+          "text": " \u2014 Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes."
         },
         {
           "strong": "System Advisor",
-          "text": " — client-side specs assistant with customizable temp/CPU/RAM/GPU/battery thresholds."
+          "text": " \u2014 client-side specs assistant with customizable temp/CPU/RAM/GPU/battery thresholds."
         },
         {
           "strong": "Security & UX",
-          "text": " — AES-256-GCM for keys/chat history, first-launch tips, critical temp banners."
+          "text": " \u2014 AES-256-GCM for keys/chat history, first-launch tips, critical temp banners."
         }
       ]
     },
@@ -45,15 +45,15 @@
       "items": [
         {
           "strong": "Screenshots",
-          "text": " — real macOS captures of Monitor, Advisors, Chat, Cleaner, Settings, and Benchmark."
+          "text": " \u2014 real macOS captures of Monitor, Advisors, Chat, Cleaner, Settings, and Benchmark."
         },
         {
           "strong": "GitHub",
-          "text": " — releases on github.com/ilikemacos/rNitro with App ZIP, PKG, DMG, and .sh."
+          "text": " \u2014 releases on github.com/ilikemacos/rNitro with App ZIP, PKG, DMG, and .sh."
         },
         {
           "strong": "Privacy",
-          "text": " — no accounts, no telemetry; see /privacy."
+          "text": " \u2014 no accounts, no telemetry; see /privacy."
         }
       ]
     }
@@ -61,20 +61,20 @@
   "releases": [
     {
       "title": "v1.1.1 Beta Reloaded",
-      "body_html": "<strong style=\"color:var(--orange);\">Beta channel</strong> — full AI provider list, System Advisor, Cleaner, AES key storage, and experimental features. Download the orange App ZIP or see <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.1.1-Beta-Reloaded\" style=\"color:var(--cyan);\">GitHub</a>."
+      "body_html": "<strong style=\"color:var(--orange);\">Beta channel</strong> \u2014 full AI provider list, System Advisor, Cleaner, AES key storage, and experimental features. Download the orange App ZIP or see <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.1.1-Beta-Reloaded\" style=\"color:var(--cyan);\">GitHub</a>."
     },
     {
       "title": "v1.1.0 Final Reloaded",
-      "body_html": "<strong style=\"color:var(--green);\">Stable channel</strong> — production-ready menu bar monitor for daily use. AI limited to OpenAI + OpenRouter. Latest release on <a href=\"https://github.com/ilikemacos/rNitro/releases/latest\" style=\"color:var(--cyan);\">GitHub</a>."
+      "body_html": "<strong style=\"color:var(--green);\">Stable channel</strong> \u2014 production-ready menu bar monitor for daily use. AI limited to OpenAI + OpenRouter. Latest release on <a href=\"https://github.com/ilikemacos/rNitro/releases/latest\" style=\"color:var(--cyan);\">GitHub</a>."
     },
     {
       "title": "Platform notes",
-      "body_html": "<strong style=\"color:var(--cyan);\">macOS</strong> — Apple Silicon, macOS 12+. <strong>Linux</strong> — v0.1 pre-release on the Linux tab. <strong style=\"color:var(--orange);\">Windows</strong> — deprecated; last builds remain for download only."
+      "body_html": "<strong style=\"color:var(--cyan);\">macOS</strong> \u2014 Apple Silicon, macOS 12+. <strong>Linux</strong> \u2014 v0.1 pre-release on the Linux tab. <strong style=\"color:var(--orange);\">Windows</strong> \u2014 deprecated; last builds remain for download only."
     }
   ],
   "compare": {
-    "title": "Stable vs Beta — which should I download?",
-    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.1.1 Beta Reloaded adds every AI provider and experimental features. Linux v0.1 pre-release is on the Linux tab; Windows is deprecated but downloads remain.",
+    "title": "Stable vs Beta \u2014 which should I download?",
+    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.1.1 Beta Reloaded adds every AI provider. See the Linux and Windows pages for other platforms.",
     "rows": [
       {
         "feature": "Best for",
@@ -119,7 +119,7 @@
       {
         "feature": "Risk level",
         "stable": "Production-ready",
-        "beta": "Experimental — Terms required"
+        "beta": "Experimental \u2014 Terms required"
       },
       {
         "feature": "Recommended file",

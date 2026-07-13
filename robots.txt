@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://getrnitro.netlify.app/sitemap.xml

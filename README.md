@@ -2,7 +2,7 @@
 
 > Free menubar system monitor for Apple Silicon Macs — CPU, temperature, battery, GPU, RAM, and per-core stats. Open source, no account, no telemetry.
 
-**[→ getrnitro.netlify.app](https://getrnitro.netlify.app/)** · **[Privacy](https://getrnitro.netlify.app/privacy.html)** · **[Releases](https://github.com/ilikemacos/rNitro/releases)**
+**[→ getrnitro.netlify.app](https://getrnitro.netlify.app/)** · **[CLI](https://getrnitro.netlify.app/cli)** · **[Linux](https://getrnitro.netlify.app/linux)** · **[Windows](https://getrnitro.netlify.app/windows)** · **[Privacy](https://getrnitro.netlify.app/privacy.html)** · **[Releases](https://github.com/ilikemacos/rNitro/releases)**
 
 ## Screenshots
 
