@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="772c26a7db2c2db1b980575f9b46adc22d824910fc0d5eb2ae4a11e2343494f5"
+EXPECTED_HASH="febe005bec162c0485326561728668184e46ab0e32a4228baa855891ed55ae21"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -424,7 +424,15 @@ enum UpdateChecker {
         return nums
     }
 
-    // True when `remote` is strictly newer than `current` (e.g. v2 → v6.0.1b).
+    // Channel rank: stable/final < beta so equal numeric bases don't thrash.
+    private static func channelRank(_ id: String) -> Int {
+        let s = id.lowercased()
+        if s.contains("beta") { return 2 }
+        if s.contains("final") || s.contains("reloaded") || s.contains("stable") { return 1 }
+        return 0
+    }
+
+    // True when `remote` is strictly newer than `current` (numeric first, then channel).
     static func isNewer(_ remote: String, than current: String) -> Bool {
         if remote == current { return false }
         let rn = versionNumbers(remote), cn = versionNumbers(current)
@@ -434,6 +442,9 @@ enum UpdateChecker {
             let c = i < cn.count ? cn[i] : 0
             if r != c { return r > c }
         }
+        // Same numeric core (e.g. 1.2.0 vs 1.2.0-beta): higher channel rank wins.
+        let rr = channelRank(remote), cr = channelRank(current)
+        if rr != cr { return rr > cr }
         return remote.localizedCaseInsensitiveCompare(current) == .orderedDescending
     }
 
@@ -441,11 +452,11 @@ enum UpdateChecker {
         versionId
             .replacingOccurrences(of: "-arm64", with: "")
             .replacingOccurrences(of: "-Final-Reloaded", with: " Final Reloaded")
-            .replacingOccurrences(of: "-Final", with: " Final")
-            .replacingOccurrences(of: "-RELOADED", with: " RELOADED")
             .replacingOccurrences(of: "-Beta-Reloaded", with: " Beta Reloaded")
+            .replacingOccurrences(of: "-RELOADED", with: " RELOADED")
+            .replacingOccurrences(of: "-Final", with: " Final")
             .replacingOccurrences(of: "-Beta", with: " Beta")
-            .replacingOccurrences(of: "-Beta", with: " Beta")
+            .replacingOccurrences(of: "-beta", with: " beta")
     }
 
     private static func fetchVersionInfo(completion: @escaping (VersionInfo?) -> Void) {
