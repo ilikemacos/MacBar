@@ -53,10 +53,10 @@ def release_notes(data: dict, channel: str) -> str:
     if channel == "beta":
         lines += [
             "### What’s new in this beta",
-            "- **BETA LAB** strip on Monitor — thermal weather + **Why hot?** detective",
-            "- **Whisper menubar** — calm glyph until load/heat/battery/build (Settings → Menubar, or toggle in BETA LAB)",
-            "- **Compile-farm mode** — detects swiftc/clang/xcodebuild; boost sampling while building (Settings → General)",
-            "- **Stress duel (LAN)** — host/join room code under Stress & Benchmark (local network only)",
+            "- **Lab tab** (sidebar) — dedicated home for thermal weather, **Why hot?** detective, Whisper, compile-farm, and LAN stress duel",
+            "- **Whisper menubar** — calm glyph until load/heat/battery/build (toggle on Lab or Settings → Menubar)",
+            "- **Compile-farm mode** — detects swiftc/clang/xcodebuild; boost sampling while building",
+            "- **Stress duel (LAN)** — host/join room code on the Lab tab (local network only)",
             "- Full AI provider list + System Advisor + Cleaner",
             "",
         ]

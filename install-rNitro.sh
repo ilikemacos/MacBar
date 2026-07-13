@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="5b8689c080fe7b0e9e2476ccde70fad2276b8a13a74507ce6144e47d1341f616"
+EXPECTED_HASH="a3eed1465275b530d0da7d3ab87875917dbe77e5ed3e64a4796a36e2fe394bd5"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -3789,6 +3789,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case advisor = "Advisor"
     case chat = "Chat"
     case cleaner = "Cleaner"
+    case lab = "Lab"
     case settings = "Settings"
     var id: String { rawValue }
 
@@ -3798,12 +3799,23 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .advisor: return "waveform.path.ecg"
         case .chat: return "bubble.left.and.bubble.right"
         case .cleaner: return "trash"
+        case .lab: return "flask"
         case .settings: return "gearshape"
         }
     }
 
-    static let popoverTabs: [AppTab] = [.monitor, .advisor, .chat, .cleaner]
-    static let windowTabs: [AppTab] = [.monitor, .advisor, .chat, .cleaner, .settings]
+    static var popoverTabs: [AppTab] {
+        var t: [AppTab] = [.monitor, .advisor, .chat, .cleaner]
+        if RNITRO_FEATURE_BETA_UI { t.append(.lab) }
+        return t
+    }
+
+    static var windowTabs: [AppTab] {
+        var t: [AppTab] = [.monitor, .advisor, .chat, .cleaner]
+        if RNITRO_FEATURE_BETA_UI { t.append(.lab) }
+        t.append(.settings)
+        return t
+    }
 
     var localizedTitle: String {
         let key: String
@@ -3812,6 +3824,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .advisor: key = "tab.advisor"
         case .chat: key = "tab.chat"
         case .cleaner: key = "tab.cleaner"
+        case .lab: key = "tab.lab"
         case .settings: key = "tab.settings"
         }
         return DisplayPreferencesStore.shared.tr(key)
@@ -6290,7 +6303,7 @@ final class SystemAdvisorModel: ObservableObject {
 struct SystemAdvisorView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var advisor = SystemAdvisorModel.shared
-    @State private var showDetective = false
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     var compact: Bool = false
 
     var body: some View {
@@ -6325,7 +6338,13 @@ struct SystemAdvisorView: View {
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).buttonStyle(.plain)
             }
             if RNITRO_FEATURE_BETA_UI {
-                Button("Why hot?") { showDetective = true }
+                Button(display.tr("lab.open")) {
+                    NotificationCenter.default.post(
+                        name: .rNitroOpenMainWindow,
+                        object: nil,
+                        userInfo: ["tab": AppTab.lab.rawValue]
+                    )
+                }
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.nOrange).buttonStyle(.plain)
             }
             if !compact {
@@ -6335,7 +6354,6 @@ struct SystemAdvisorView: View {
         }
         .padding(.horizontal, compact ? 10 : 14)
         .padding(.vertical, compact ? 6 : 8)
-        .sheet(isPresented: $showDetective) { DetectiveSheet() }
     }
 
     private func openAlertsSettings() {
@@ -6978,7 +6996,21 @@ final class DisplayPreferencesStore: ObservableObject {
 
     private static let enStrings: [String: String] = [
         "tab.monitor": "Monitor", "tab.advisor": "Advisor", "tab.chat": "Chat",
-        "tab.cleaner": "Cleaner", "tab.settings": "Settings",
+        "tab.cleaner": "Cleaner", "tab.lab": "Lab", "tab.settings": "Settings",
+        "lab.title": "Lab",
+        "lab.subtitle": "Beta tools — all local, no cloud. Thermal weather, Whisper, detective, compile-farm, LAN duel.",
+        "lab.weather": "Thermal weather",
+        "lab.weather.hint": "Maps load + temp into Clear → Storm. Optional menubar slot.",
+        "lab.weather.menubar": "Show weather in menubar",
+        "lab.detective": "Why is my Mac hot?",
+        "lab.detective.refresh": "Refresh report",
+        "lab.whisper": "Whisper menubar",
+        "lab.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "lab.whisper.sensitivity": "Sensitivity",
+        "lab.farm": "Compile-farm",
+        "lab.farm.hint": "Detect swiftc / clang / xcodebuild, boost sampling while building, then cool down.",
+        "lab.duel": "Stress duel",
+        "lab.open": "Open Lab",
         "chat.title": "AI Chat", "chat.subtitle": "Chat with your provider or manage API keys.",
         "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
         "settings.title": "Settings",
@@ -7036,7 +7068,7 @@ final class DisplayPreferencesStore: ObservableObject {
     ]
 
     private static let zhStrings: [String: String] = [
-        "tab.monitor": "監控", "tab.advisor": "顧問", "tab.chat": "聊天", "tab.cleaner": "清理", "tab.settings": "設定",
+        "tab.monitor": "監控", "tab.advisor": "顧問", "tab.chat": "聊天", "tab.cleaner": "清理", "tab.lab": "實驗室", "tab.settings": "設定",
         "chat.title": "AI 聊天", "chat.subtitle": "與 AI 對話或管理 API 密鑰。",
         "chat.subtab.chat": "聊天", "chat.subtab.api": "API",
         "settings.title": "設定", "settings.subtitle": "監控版面、選單列、提醒與啟動選項。",
@@ -7087,7 +7119,7 @@ final class DisplayPreferencesStore: ObservableObject {
     ]
 
     private static let esStrings: [String: String] = [
-        "tab.monitor": "Monitor", "tab.advisor": "Asesor", "tab.chat": "Chat", "tab.cleaner": "Limpiador", "tab.settings": "Ajustes",
+        "tab.monitor": "Monitor", "tab.advisor": "Asesor", "tab.chat": "Chat", "tab.cleaner": "Limpiador", "tab.lab": "Lab", "tab.settings": "Ajustes",
         "chat.title": "Chat IA", "chat.subtitle": "Chatea con tu proveedor o gestiona claves API.",
         "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
         "settings.title": "Ajustes", "settings.subtitle": "Diseño del monitor, barra de menú, alertas y opciones de inicio.",
@@ -7138,7 +7170,7 @@ final class DisplayPreferencesStore: ObservableObject {
     ]
 
     private static let deStrings: [String: String] = [
-        "tab.monitor": "Monitor", "tab.advisor": "Berater", "tab.chat": "Chat", "tab.cleaner": "Reiniger", "tab.settings": "Einstellungen",
+        "tab.monitor": "Monitor", "tab.advisor": "Berater", "tab.chat": "Chat", "tab.cleaner": "Reiniger", "tab.lab": "Labor", "tab.settings": "Einstellungen",
         "chat.title": "KI-Chat", "chat.subtitle": "Mit deinem Anbieter chatten oder API-Schlüssel verwalten.",
         "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
         "settings.title": "Einstellungen", "settings.subtitle": "Monitor-Layout, Menüleiste, Warnungen und Startoptionen.",
@@ -9043,105 +9075,37 @@ struct ProcessUsageRow: View {
 struct MonitorModernHeaderView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var m = CPUMonitor.shared
-    @ObservedObject private var farm = CompileFarmDetector.shared
-    @State private var showDetective = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Text(m.cpuName)
-                    .font(rNitroFont(.caption, metrics: metrics))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1).truncationMode(.tail)
-                Spacer()
-                if m.isLowPowerModeEnabled {
-                    LowPowerModeBadge(compact: true)
-                }
-                Text(CURRENT_VERSION)
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.secondary.opacity(0.7))
-            }
+        HStack(spacing: 6) {
+            Text(m.cpuName)
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(.secondary)
+                .lineLimit(1).truncationMode(.tail)
+            Spacer()
             if RNITRO_FEATURE_BETA_UI {
-                BetaLabBar(showDetective: $showDetective, farm: farm)
+                Button(action: {
+                    NotificationCenter.default.post(
+                        name: .rNitroOpenMainWindow,
+                        object: nil,
+                        userInfo: ["tab": AppTab.lab.rawValue]
+                    )
+                }) {
+                    Text(DisplayPreferencesStore.shared.tr("lab.open"))
+                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                        .foregroundColor(.nOrange)
+                }
+                .buttonStyle(.plain)
             }
+            if m.isLowPowerModeEnabled {
+                LowPowerModeBadge(compact: true)
+            }
+            Text(CURRENT_VERSION)
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary.opacity(0.7))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, metrics.hPad).padding(.top, 10).padding(.bottom, 6)
-        .sheet(isPresented: $showDetective) { DetectiveSheet() }
-    }
-}
-
-/// Always-visible beta feature strip so Whisper / weather / detective / farm are hard to miss.
-struct BetaLabBar: View {
-    @Environment(\.uiMetrics) private var metrics
-    @Binding var showDetective: Bool
-    @ObservedObject var farm: CompileFarmDetector
-    @ObservedObject private var m = CPUMonitor.shared
-    @AppStorage(MonitorPreferences.whisperModeKey) private var whisperOn = false
-
-    var body: some View {
-        let wx = ThermalWeather.current()
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Text("BETA LAB")
-                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
-                    .foregroundColor(.nOrange)
-                Text("\(wx.emoji) \(wx.label)")
-                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-                    .foregroundColor(wx == .heatwave || wx == .storm ? .nOrange : .primary)
-                if farm.isBuilding {
-                    Text("· Build active")
-                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-                        .foregroundColor(.nOrange)
-                } else if farm.isCoolingDown {
-                    Text("· Cool-down")
-                        .font(rNitroFont(.caption, metrics: metrics))
-                        .foregroundColor(.secondary)
-                }
-                Spacer(minLength: 4)
-                if whisperOn {
-                    Text("Whisper on")
-                        .font(rNitroFont(.micro, metrics: metrics))
-                        .foregroundColor(.secondary)
-                }
-            }
-            HStack(spacing: 8) {
-                Button(action: { showDetective = true }) {
-                    Text("Why hot?")
-                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Capsule().fill(Color.nOrange))
-                }
-                .buttonStyle(.plain)
-                Button(action: {
-                    whisperOn.toggle()
-                    NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
-                }) {
-                    Text(whisperOn ? "Whisper: ON" : "Whisper: off")
-                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
-                        .foregroundColor(whisperOn ? .nOrange : .secondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Capsule().stroke(whisperOn ? Color.nOrange.opacity(0.6) : Color.border, lineWidth: 0.8))
-                }
-                .buttonStyle(.plain)
-                Text(String(format: "%.0f° · %.0f%%", m.temperature, m.totalUsage))
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.secondary)
-            }
-            Text("Settings → Menubar (Whisper + weather slot) · General (Compile-farm) · scroll to Stress for LAN Duel")
-                .font(rNitroFont(.micro, metrics: metrics))
-                .foregroundColor(.secondary.opacity(0.85))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.nOrange.opacity(0.08))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.nOrange.opacity(0.35), lineWidth: 1))
-        )
     }
 }
 
@@ -9448,9 +9412,6 @@ struct MonitorToolsSectionView: View {
                     action: { bench.run() }
                 )
             }
-            if RNITRO_FEATURE_BETA_UI {
-                StressDuelPanel()
-            }
         }
         .padding(.bottom, 12)
     }
@@ -9518,8 +9479,6 @@ struct MonitorTabContent: View {
         }
     }
 
-    @State private var showLegacyDetective = false
-
     private var legacyMonitorTab: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -9539,14 +9498,7 @@ struct MonitorTabContent: View {
                         Text("Live").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                     }
                 }
-                .padding(.horizontal, metrics.hPad).padding(.top, 12).padding(.bottom, 8)
-
-                if RNITRO_FEATURE_BETA_UI {
-                    BetaLabBar(showDetective: $showLegacyDetective, farm: CompileFarmDetector.shared)
-                        .padding(.horizontal, metrics.hPad)
-                        .padding(.bottom, 10)
-                        .sheet(isPresented: $showLegacyDetective) { DetectiveSheet() }
-                }
+                .padding(.horizontal, metrics.hPad).padding(.top, 12).padding(.bottom, 14)
 
                 MinimalDivider().padding(.horizontal, 16)
 
@@ -9636,11 +9588,6 @@ struct MonitorTabContent: View {
                         )
                     }
                     .padding(.horizontal, 16).padding(.vertical, 12)
-                    if RNITRO_FEATURE_BETA_UI {
-                        StressDuelPanel()
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 12)
-                    }
                 }
 
                 if showBenchmarkUI {
@@ -9695,6 +9642,240 @@ struct MonitorTabContent: View {
         .clipped()
     }
 }
+
+
+// ── Lab tab (beta): weather · detective · whisper · compile-farm · duel ──────
+struct LabTabView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
+    @ObservedObject private var m = CPUMonitor.shared
+    @ObservedObject private var bat = BatteryMonitor.shared
+    @ObservedObject private var farm = CompileFarmDetector.shared
+    @AppStorage(MonitorPreferences.whisperModeKey) private var whisperOn = false
+    @State private var report = ThermalDetective.analyze()
+    @State private var whisperStatus = "—"
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                weatherCard
+                detectiveCard
+                whisperCard
+                farmCard
+                duelCard
+            }
+            .padding(.horizontal, metrics.hPad)
+            .padding(.vertical, 14)
+        }
+        .background(Color.bg)
+        .onAppear { refreshAll() }
+        .onReceive(m.$temperature) { _ in tickWhisper() }
+        .onReceive(m.$totalUsage) { _ in tickWhisper() }
+        .onReceive(farm.$isBuilding) { _ in tickWhisper() }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "flask")
+                    .foregroundColor(.nOrange)
+                Text(display.tr("lab.title"))
+                    .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+                Spacer()
+                Text(CURRENT_VERSION)
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+            Text(display.tr("lab.subtitle"))
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var weatherCard: some View {
+        let wx = ThermalWeather.current()
+        return labCard {
+            Text(display.tr("lab.weather"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("\(wx.emoji) \(wx.label)")
+                    .font(rNitroFont(.headline, metrics: metrics, weight: .bold))
+                    .foregroundColor(wx == .heatwave || wx == .storm ? .nOrange : .primary)
+                Text(String(format: "%.0f°C · CPU %.0f%% · %@", m.temperature, m.totalUsage, CPUMonitor.thermalLabel(m.thermalState)))
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+            Text(display.tr("lab.weather.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Toggle(isOn: Binding(
+                get: { MenuBarConfig.isSlotEnabled(.weather) },
+                set: { MenuBarConfig.setSlot(.weather, enabled: $0) }
+            )) {
+                Text(display.tr("lab.weather.menubar")).font(rNitroFont(.caption, metrics: metrics))
+            }
+            .toggleStyle(.switch)
+        }
+    }
+
+    private var detectiveCard: some View {
+        labCard {
+            HStack {
+                Text(display.tr("lab.detective"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Spacer()
+                MinimalButton(title: display.tr("lab.detective.refresh"), action: {
+                    if ProcessMonitor.shared.topByCPU.isEmpty {
+                        ProcessMonitor.shared.start()
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        report = ThermalDetective.analyze()
+                    }
+                    report = ThermalDetective.analyze()
+                })
+            }
+            Text(report.headline)
+                .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
+                .foregroundColor(.nOrange)
+            VStack(alignment: .leading, spacing: 5) {
+                ForEach(Array(report.bullets.enumerated()), id: \.offset) { _, line in
+                    HStack(alignment: .top, spacing: 6) {
+                        Text("•").foregroundColor(.secondary)
+                        Text(line).font(rNitroFont(.caption, metrics: metrics))
+                    }
+                }
+            }
+            Text(report.suggestion)
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+        }
+    }
+
+    private var whisperCard: some View {
+        labCard {
+            Text(display.tr("lab.whisper"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.whisper.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Toggle(isOn: $whisperOn) {
+                Text(display.tr("menubar.whisper.toggle")).font(rNitroFont(.caption, metrics: metrics))
+            }
+            .toggleStyle(.switch)
+            .onChange(of: whisperOn) { _, _ in
+                NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+                tickWhisper()
+            }
+            Picker(display.tr("lab.whisper.sensitivity"), selection: Binding(
+                get: { UserDefaults.standard.string(forKey: MonitorPreferences.whisperSensitivityKey) ?? WhisperSensitivity.normal.rawValue },
+                set: {
+                    UserDefaults.standard.set($0, forKey: MonitorPreferences.whisperSensitivityKey)
+                    tickWhisper()
+                }
+            )) {
+                ForEach(WhisperSensitivity.allCases) { s in
+                    Text(s.label).tag(s.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            Text(whisperStatus)
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var farmCard: some View {
+        labCard {
+            Text(display.tr("lab.farm"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.farm.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Toggle(isOn: Binding(
+                get: {
+                    if UserDefaults.standard.object(forKey: MonitorPreferences.compileFarmKey) == nil { return true }
+                    return UserDefaults.standard.bool(forKey: MonitorPreferences.compileFarmKey)
+                },
+                set: {
+                    UserDefaults.standard.set($0, forKey: MonitorPreferences.compileFarmKey)
+                    CompileFarmDetector.shared.applyPreferenceChange()
+                }
+            )) {
+                Text(display.tr("general.compileFarm")).font(rNitroFont(.caption, metrics: metrics))
+            }
+            .toggleStyle(.switch)
+            Text(farmStatusLine)
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                .foregroundColor(farm.isBuilding ? .nOrange : .secondary)
+        }
+    }
+
+    private var duelCard: some View {
+        labCard {
+            Text(display.tr("lab.duel"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            StressDuelPanel()
+        }
+    }
+
+    private var farmStatusLine: String {
+        if farm.isBuilding {
+            let names = farm.matchedNames.joined(separator: ", ")
+            return names.isEmpty ? "Building…" : "Building: \(names)"
+        }
+        if farm.isCoolingDown { return "Cool-down after compile" }
+        return "Idle — no compile tools detected"
+    }
+
+    private func labCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            content()
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.card)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.border.opacity(0.5), lineWidth: 0.5))
+        )
+    }
+
+    private func refreshAll() {
+        if ProcessMonitor.shared.topByCPU.isEmpty {
+            ProcessMonitor.shared.start()
+        }
+        report = ThermalDetective.analyze()
+        tickWhisper()
+        if RNITRO_FEATURE_BETA_UI {
+            CompileFarmDetector.shared.startIfNeeded()
+        }
+    }
+
+    private func tickWhisper() {
+        let wx = ThermalWeather.current()
+        let state = WhisperEngine.shared.evaluate(
+            usage: m.totalUsage,
+            temp: m.temperature,
+            weather: wx,
+            farmActive: farm.isBuilding || farm.forceSpeaking,
+            dischargeHigh: bat.isPresent && !bat.isCharging && bat.levelPercent < 25
+        )
+        if !whisperOn {
+            whisperStatus = "Whisper off — menubar always shows stats"
+            return
+        }
+        switch state {
+        case .silent:
+            whisperStatus = "Menubar: quiet (calm)"
+        case .speaking(let reason):
+            whisperStatus = "Menubar: speaking (\(reason))"
+        }
+    }
+}
+
 
 struct ContentView: View {
     @Environment(\.uiMetrics) private var metrics
@@ -9823,6 +10004,8 @@ struct ContentView: View {
                 SystemAdvisorView(compact: layout == .popover)
             case .cleaner:
                 AppCleanerView()
+            case .lab:
+                LabTabView()
             case .settings:
                 SettingsView()
             case .monitor:
