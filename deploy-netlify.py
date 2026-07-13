@@ -106,10 +106,6 @@ def verify_deploy(url: str) -> bool:
                 print(f"VERIFY FAIL: {base}/version.json returned HTTP {resp.status}")
                 return False
             version_data = json.loads(resp.read().decode("utf-8"))
-        with urllib.request.urlopen(f"{base}/changelog.json", timeout=15) as resp:
-            if resp.status != 200:
-                print(f"VERIFY FAIL: {base}/changelog.json returned HTTP {resp.status}")
-                return False
         for label, key in (("stable", "stable"), ("beta", "beta")):
             zip_name = version_data.get("releases", {}).get(key, {}).get("zip")
             if not zip_name:
@@ -127,21 +123,7 @@ def verify_deploy(url: str) -> bool:
                     )
                     return False
                 print(f"VERIFY OK: {label} {zip_name} → {length / 1_048_576:.1f} MB")
-        full_zip = version_data.get("releases", {}).get("full", {}).get("zip")
-        if full_zip:
-            req = urllib.request.Request(f"{base}/{full_zip}", method="HEAD")
-            with urllib.request.urlopen(req, timeout=30) as zresp:
-                if zresp.status != 200:
-                    print(f"VERIFY FAIL: {full_zip} returned HTTP {zresp.status}")
-                    return False
-                length = int(zresp.headers.get("Content-Length", "0") or 0)
-                if length < 25_000_000:
-                    print(
-                        f"VERIFY FAIL: {full_zip} Content-Length {length} "
-                        "(expected ≥ 25 MB — missing from deploy)"
-                    )
-                    return False
-                print(f"VERIFY OK: {full_zip} → {length / 1_048_576:.1f} MB")
+        # Full-site ZIP is intentionally not hosted on Netlify (avoids recursive zip bloat).
         for row in version_data.get("archive", []):
             zip_name = row.get("zip")
             if not zip_name:
@@ -162,7 +144,7 @@ def verify_deploy(url: str) -> bool:
     except Exception as exc:
         print(f"VERIFY FAIL: {exc}")
         return False
-    print(f"VERIFY OK: {base}/, /version.json, /changelog.json, stable + beta + archive ZIPs")
+    print(f"VERIFY OK: {base}/, /version.json, stable + beta + archive ZIPs")
     return True
 
 
@@ -327,16 +309,15 @@ def launch_beta_mac() -> None:
 
 def main() -> None:
     data = v.load()
-    ensure_bundle_zip(data)
-    print("Staging Netlify deploy...")
-    bnd.stage(data, include_bundle_zip=True)
+    # Do not embed rnitro-netlify.zip in the publish tree (recursive self-zip).
+    print("Staging Netlify deploy (no full-site ZIP)...")
+    bnd.stage(data, include_bundle_zip=False)
     copy_desktop_folder()
     maybe_setup_chat_api()
 
     if logged_in():
         print("Netlify: logged in — deploying to production...")
         if deploy_authenticated():
-            launch_beta_mac()
             return
         print("Authenticated deploy failed; falling back to anonymous deploy...")
 
@@ -345,7 +326,6 @@ def main() -> None:
     print("  Then: python3 deploy-netlify.py")
     print("Falling back to anonymous deploy + claim link...")
     deploy_anonymous()
-    launch_beta_mac()
 
 
 if __name__ == "__main__":

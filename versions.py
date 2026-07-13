@@ -88,7 +88,7 @@ def linux_release(data: dict | None = None) -> dict:
 
 def full_release(data: dict | None = None) -> dict:
     data = data or load()
-    return dict(data["releases"]["full"])
+    return dict(data.get("releases", {}).get("full") or {"label": "Full Release", "zip": "rnitro-netlify.zip"})
 
 
 def macos_apps_release(data: dict | None = None) -> dict:
