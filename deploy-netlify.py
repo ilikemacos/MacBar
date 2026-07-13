@@ -308,11 +308,17 @@ def launch_beta_mac() -> None:
 
 
 def main() -> None:
+    import os
+
     data = v.load()
     # Do not embed rnitro-netlify.zip in the publish tree (recursive self-zip).
     print("Staging Netlify deploy (no full-site ZIP)...")
     bnd.stage(data, include_bundle_zip=False)
-    copy_desktop_folder()
+    # Desktop mirror can hang on some macOS Desktop/iCloud setups — skip unless asked.
+    if os.environ.get("RNITRO_COPY_DESKTOP", "").strip() in ("1", "true", "yes"):
+        copy_desktop_folder()
+    else:
+        print("Skipping Desktop copy (set RNITRO_COPY_DESKTOP=1 to enable).")
     maybe_setup_chat_api()
 
     if logged_in():

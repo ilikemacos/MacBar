@@ -1,6 +1,6 @@
 {
   "latest": "v1.1.0-Final-Reloaded",
-  "beta": "v1.1.1-Beta-Reloaded",
+  "beta": "v1.2.1",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
   "cli": "v0.2-cli",
@@ -14,13 +14,13 @@
       "zip": "rNitro-v1.1.0-Final-Reloaded.zip"
     },
     "beta": {
-      "label": "v1.1.1 Beta Reloaded",
-      "short": "v1.1.1",
-      "sh": "rNitro-v1.1.1-Beta-Reloaded.sh",
+      "label": "v1.2.1 Beta",
+      "short": "v1.2.1",
+      "sh": "rNitro-v1.2.1.sh",
       "source_sh": "install-rNitro.sh",
-      "pkg": "rNitro-v1.1.1-Beta-Reloaded.pkg",
-      "dmg": "rNitro-v1.1.1-Beta-Reloaded.dmg",
-      "zip": "rNitro-v1.1.1-Beta-Reloaded.zip"
+      "pkg": "rNitro-v1.2.1.pkg",
+      "dmg": "rNitro-v1.2.1.dmg",
+      "zip": "rNitro-v1.2.1.zip"
     },
     "linux": {
       "label": "v0.1 Linux Beta Pre-release",
@@ -44,8 +44,8 @@
     }
   },
   "hashes": {
-    "stable_sh": "e4ad802b2b686345952db0a0e92fa1156ff73730443d938140d41c48f9f9ae5b",
-    "beta_sh": "15f31523bf563320a692ee1065af554a94c0e4bebd7a1c00348e307f9e37ba83"
+    "stable_sh": "84793aff2c98a640d63bf7ed8432a80971825d6519fe6d829a5b0f4ab4027196",
+    "beta_sh": "c720ee848af4e8c4862fb492b66d95f0c6a3c5489523a837d9e11ba8604e5955"
   },
   "archive": []
 }

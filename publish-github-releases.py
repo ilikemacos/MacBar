@@ -42,13 +42,25 @@ def release_notes(data: dict, channel: str) -> str:
         "",
         "### Install from App ZIP",
         "1. Download the `.zip`",
-        "2. Unzip → drag **rNitro.app** to **Applications**",
+        "2. Unzip → drag **rNitro.app** to **Applications** (or `~/Applications`)",
         "3. First launch: right-click → **Open** → **Open** if Gatekeeper blocks it",
         "",
         "### Other formats",
         f"- **PKG** — `{rel['pkg']}` — double-click installer (admin password)",
         f"- **DMG** — `{rel['dmg']}` — open disk image, drag app to Applications",
         "",
+    ]
+    if channel == "beta":
+        lines += [
+            "### What’s new in this beta",
+            "- **BETA LAB** strip on Monitor — thermal weather + **Why hot?** detective",
+            "- **Whisper menubar** — calm glyph until load/heat/battery/build (Settings → Menubar, or toggle in BETA LAB)",
+            "- **Compile-farm mode** — detects swiftc/clang/xcodebuild; boost sampling while building (Settings → General)",
+            "- **Stress duel (LAN)** — host/join room code under Stress & Benchmark (local network only)",
+            "- Full AI provider list + System Advisor + Cleaner",
+            "",
+        ]
+    lines += [
         f"Also available: [{other['label']}]({v.github_release_page_url(other['id'])})",
         "",
         "Website with all builds: [getrnitro.netlify.app](https://getrnitro.netlify.app/)",
