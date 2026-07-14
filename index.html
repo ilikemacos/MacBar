@@ -1158,7 +1158,7 @@
 <!-- @sync:nav-right -->
   <div class="nav-right">
     <a class="nav-link" href="/privacy.html">Privacy</a>
-    <div class="nav-badge">v1.1.0 Final Reloaded · v1.2.3 Beta · macOS arm64</div>
+    <div class="nav-badge">v1.1.0 Final Reloaded · v1.2.3 Beta · Apple Silicon + Intel</div>
   </div>
 <!-- @end:nav-right -->
 </nav>
@@ -1166,10 +1166,10 @@
 <!-- Hero -->
 <section class="hero">
 <!-- @sync:hero-copy -->
-  <p class="hero-eyebrow">Menu bar · Apple Silicon · macOS 12+</p>
+  <p class="hero-eyebrow">Menu bar · Apple Silicon &amp; Intel · macOS 12+</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>v1.1.0 Final Reloaded</strong> for daily use · <strong>v1.2.3 Beta</strong> for every AI provider. <strong>Intel Macs not supported.</strong> Free · no account · no telemetry.</p>
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>v1.1.0 Final Reloaded</strong> for daily use · <strong>v1.2.3 Beta</strong> for every AI provider. Choose <strong>Apple Silicon</strong> or <strong>Intel</strong> below. Free · no account · no telemetry.</p>
 <!-- @end:hero-copy -->
 
   <!-- Animated terminal -->
@@ -1212,7 +1212,26 @@
 <!-- @end:platform-tabs -->
 
   <!-- macOS download -->
-  <div id="dl-mac" role="tabpanel" aria-labelledby="tab-mac" style="display:flex; flex-direction:column; gap:20px; align-items:center; width:100%; max-width:640px;">
+  <div id="dl-mac" role="tabpanel" aria-labelledby="tab-mac" style="display:flex; flex-direction:column; gap:16px; align-items:center; width:100%; max-width:640px;">
+<!-- @sync:mac-arch-tabs -->
+  <div role="tablist" aria-label="Mac chip" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:8px; width:100%;">
+    <button type="button" id="mac-arch-silicon" role="tab" aria-selected="true" onclick="setMacArch('silicon')"
+      style="padding:8px 16px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:14px; font-weight:600; cursor:pointer;">
+      Apple Silicon
+    </button>
+    <button type="button" id="mac-arch-intel" role="tab" aria-selected="false" onclick="setMacArch('intel')"
+      style="padding:8px 16px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:14px; font-weight:600; cursor:pointer;">
+      Intel Mac
+    </button>
+  </div>
+  <p style="font-size:13px; color:var(--muted); text-align:center; margin:0 0 12px; max-width:520px; line-height:1.5;">
+    M1 / M2 / M3 / M4 → <strong style="color:var(--green);">Apple Silicon</strong>.
+    Older Intel Macs → <strong style="color:var(--cyan);">Intel</strong> (compiles on your Mac).
+  </p>
+<!-- @end:mac-arch-tabs -->
+<!-- @sync:mac-silicon-wrap-open -->
+    <div id="mac-silicon-panel" style="display:flex; width:100%; flex-direction:column; gap:16px;">
+<!-- @end:mac-silicon-wrap-open -->
 <!-- @sync:hero-stable -->
     <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">v1.1.0-Final-Reloaded</div>
@@ -1270,7 +1289,7 @@
         <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.3.zip')">⬇ Download App ZIP</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.3.zip')">⬇ Download App ZIP · 2.0 MB</button>
       </div>
       <div id="hero-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-beta-other')" aria-expanded="false">
@@ -1279,8 +1298,8 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.pkg')">PKG installer</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.dmg')">DMG disk image</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.pkg')">PKG installer · 2.0 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.dmg')">DMG disk image · 2.5 MB</button>
             <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v1.2.3.sh')">Shell installer (.sh) · 519 KB</button>
             <button class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('beta')">⎘ Copy bash command</button>
@@ -1290,46 +1309,57 @@
       </div>
     </div>
 <!-- @end:hero-beta -->
-
-<!-- @sync:hero-curl-install -->
-  <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
-    <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
-    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Best first launch: usually avoids Gatekeeper blocks from ZIP/PKG/DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
-    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable (v1.1.0)</div>
-    <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
-      curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+<!-- @sync:mac-silicon-wrap-close -->
     </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy stable curl</button>
-    </div>
-    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta (v1.2.3) — all AI providers</div>
-    <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--orange); word-break:break-all; line-height:1.45;">
-      curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.3.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy beta curl</button>
-    </div>
-  </div>
-<!-- @end:hero-curl-install -->
-
-
-<!-- @sync:hero-more -->
-      <div id="hero-more-downloads" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
-        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-more-downloads')" aria-expanded="false">
-          <span>Other download options</span>
-          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
-        </button>
-        <div class="dl-other-body prev-versions-body">
-          <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-macOS-Apps.zip')">macOS Apps ZIP (Stable + Beta) · 3.6 MB</button>
+<!-- @end:mac-silicon-wrap-close -->
+<!-- @sync:hero-intel -->
+    <div id="mac-intel-panel" style="display:none; width:100%; flex-direction:column; gap:16px;">
+      <div style="width:100%; background:var(--card); border:1px solid var(--cyan); border-radius:12px; padding:20px; text-align:center;">
+        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">v1.1.0-Intel</div>
+        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel Stable — compiles from source on your Intel Mac. Daily monitoring; AI: OpenAI + OpenRouter.</div>
+        <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4);">
+          <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Recommended · Intel</div>
+          <div class="dl-recommended-title" style="color:var(--cyan);">Terminal one-liner</div>
+          <p class="dl-recommended-steps">Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>. Compiles ~30–60s on Intel.</p>
+          <div style="background:var(--card2); border:1px solid rgba(0,217,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--cyan); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
+            curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Intel.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
           </div>
-          <div class="dl-other-note"><strong>macOS Apps ZIP</strong> — rNitro-Stable.app (v1.1.0-Final-Reloaded) + rNitro-Beta.app (v1.2.3). Apple Silicon only.</div>
+          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="copyCurlCmd('intel_stable')">⎘ Copy curl one-liner</button>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button type="button" class="btn btn-sh" style="border-color:var(--cyan); color:var(--cyan);" onclick="requestDownload('rNitro-v1.1.0-Intel.sh')">⬇ Download .sh installer</button>
         </div>
       </div>
+      <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
+        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">v1.2.3-Intel</div>
+        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel Beta — Lab features + all AI providers. Experimental on Intel.</div>
+        <p style="font-size:14px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin:0 0 12px; line-height:1.5; text-align:left;">
+          <strong>Beta notice:</strong> Experimental — some sensors differ on Intel. Agree to Terms &amp; Conditions before download.
+        </p>
+        <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
+          <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended · Intel Beta</div>
+          <div class="dl-recommended-title" style="color:var(--orange);">Terminal one-liner</div>
+          <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--orange); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
+            curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.3-Intel.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+          </div>
+          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="copyCurlCmd('intel_beta')">⎘ Copy curl one-liner</button>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v1.2.3-Intel.sh')">⬇ Download .sh installer</button>
+          <button type="button" class="btn btn-secondary" onclick="requestDownload('install-rNitro-intel.sh')">⬇ install-rNitro-intel.sh (source)</button>
+        </div>
+      </div>
+    </div>
+<!-- @end:hero-intel -->
+<!-- @sync:hero-curl-install -->
+
+<!-- @end:hero-curl-install -->
+<!-- @sync:hero-more -->
+
 <!-- @end:hero-more -->
 <!-- @sync:hero-dl-note -->
-    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New on Mac? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) — unzip, drag to Applications, right-click → Open once. Same builds on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a> (v1.1.0-Final-Reloaded · v1.2.3). Apple Silicon only.
+    <p style="color:var(--muted); font-size:14px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:8px; line-height:1.55;">
+      Pick <strong style="color:var(--green);">Apple Silicon</strong> or <strong style="color:var(--cyan);">Intel</strong> above, then Stable or Beta. Terms apply once per session. Also on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a>.
     </p>
 <!-- @end:hero-dl-note -->
   </div>
@@ -1848,7 +1878,7 @@
         <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.3.zip')">⬇ Download App ZIP</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.3.zip')">⬇ Download App ZIP · 2.0 MB</button>
       </div>
       <div id="dl-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-beta-other')" aria-expanded="false">
@@ -1857,8 +1887,8 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.pkg')">PKG installer</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.dmg')">DMG disk image</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.pkg')">PKG installer · 2.0 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.3.dmg')">DMG disk image · 2.5 MB</button>
             <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('rNitro-v1.2.3.sh')">Shell installer (.sh) · 519 KB</button>
           </div>
           <div class="dl-other-note"><strong>Skeptical of the PKG?</strong> Use the .sh — full-source compile, verified checksum.</div>
@@ -2187,6 +2217,22 @@
       "version": "v0.2-cli",
       "tar": "rNitro-CLI.tar.gz",
       "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh"
+    },
+    "intel_stable": {
+      "id": "v1.1.0-Intel",
+      "label": "v1.1.0 Intel Stable",
+      "short": "v1.1.0",
+      "sh": "rNitro-v1.1.0-Intel.sh",
+      "hash": "",
+      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Intel.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+    },
+    "intel_beta": {
+      "id": "v1.2.3-Intel",
+      "label": "v1.2.3 Intel Beta",
+      "short": "v1.2.3",
+      "sh": "rNitro-v1.2.3-Intel.sh",
+      "hash": "",
+      "curlInstall": "curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.3-Intel.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
     }
   };
   // @end:js-versions
@@ -2220,6 +2266,7 @@
 
   // ── Terms-gated downloads ────────────────────────────────────────────────
   let pendingDownloadUrl = null;
+  let pendingCopyCurl = null;
 
   function platformForDownload(url) {
     const name = url.toLowerCase();
@@ -2326,12 +2373,20 @@
 
   function confirmTcAndDownload() {
     const agree = document.getElementById('tc-agree');
-    if (!agree?.checked || !pendingDownloadUrl) return;
+    if (!agree?.checked) return;
     sessionStorage.setItem('rnitro_tc_accepted', '1');
-    const url = pendingDownloadUrl;
-    pendingDownloadUrl = null;
     document.getElementById('tc-overlay')?.classList.remove('open');
     clearTcModalContext();
+    if (pendingCopyCurl) {
+      const which = pendingCopyCurl;
+      pendingCopyCurl = null;
+      pendingDownloadUrl = null;
+      copyCurlCmd(which);
+      return;
+    }
+    if (!pendingDownloadUrl) return;
+    const url = pendingDownloadUrl;
+    pendingDownloadUrl = null;
     triggerFileDownload(url);
   }
 
@@ -2419,8 +2474,24 @@
     }, 600);
   }
 
-  function copyCurlCmd(which) {
-    const rel = which === 'beta' ? RNITRO_VERSIONS.beta : RNITRO_VERSIONS.stable;
+    function copyCurlCmd(which) {
+    if (sessionStorage.getItem('rnitro_tc_accepted') !== '1') {
+      pendingCopyCurl = which;
+      pendingDownloadUrl = null;
+      const agree = document.getElementById('tc-agree');
+      const overlay = document.getElementById('tc-overlay');
+      if (agree && overlay) {
+        updateTcModalContext(which + ' curl');
+        agree.checked = false;
+        updateTcAgreeButton();
+        overlay.classList.add('open');
+        return;
+      }
+    }
+    let rel = RNITRO_VERSIONS.stable;
+    if (which === 'beta') rel = RNITRO_VERSIONS.beta;
+    else if (which === 'intel_beta') rel = RNITRO_VERSIONS.intel_beta;
+    else if (which === 'intel_stable') rel = RNITRO_VERSIONS.intel_stable;
     const cmd = rel?.curlInstall || '';
     navigator.clipboard.writeText(cmd).then(() => {
       const toast = document.getElementById('toast');
@@ -2458,6 +2529,29 @@
     return 'mac';
   }
 
+  function setMacArch(arch) {
+    const silicon = document.getElementById('mac-silicon-panel');
+    const intel = document.getElementById('mac-intel-panel');
+    const btnS = document.getElementById('mac-arch-silicon');
+    const btnI = document.getElementById('mac-arch-intel');
+    const isIntel = arch === 'intel';
+    if (silicon) silicon.style.display = isIntel ? 'none' : 'flex';
+    if (intel) intel.style.display = isIntel ? 'flex' : 'none';
+    if (btnS) {
+      btnS.setAttribute('aria-selected', isIntel ? 'false' : 'true');
+      btnS.style.background = isIntel ? 'transparent' : 'var(--green)';
+      btnS.style.color = isIntel ? 'var(--text)' : '#000';
+      btnS.style.borderColor = isIntel ? 'var(--border)' : 'var(--green)';
+    }
+    if (btnI) {
+      btnI.setAttribute('aria-selected', isIntel ? 'true' : 'false');
+      btnI.style.background = isIntel ? 'var(--cyan)' : 'transparent';
+      btnI.style.color = isIntel ? '#000' : 'var(--text)';
+      btnI.style.borderColor = isIntel ? 'var(--cyan)' : 'var(--border)';
+    }
+    try { sessionStorage.setItem('rnitro_mac_arch', isIntel ? 'intel' : 'silicon'); } catch (e) {}
+  }
+
   function setTab(platform) {
     if (platform === 'cli') { location.href = '/cli.html'; return; }
     if (platform === 'linux') { location.href = '/linux.html'; return; }
@@ -2465,6 +2559,10 @@
     // macOS is this page — show mac panels only
     const mac = document.getElementById('dl-mac');
     if (mac) mac.style.display = 'flex';
+    try {
+      const saved = sessionStorage.getItem('rnitro_mac_arch');
+      if (saved === 'intel' || saved === 'silicon') setMacArch(saved);
+    } catch (e) {}
     ['dl-cli','dl-win','dl-linux','steps-cli','steps-linux','steps-win','card-win','card-linux'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';

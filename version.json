@@ -41,11 +41,26 @@
       "short": "CLI",
       "version": "v0.2-cli",
       "tar": "rNitro-CLI.tar.gz"
+    },
+    "intel_beta": {
+      "label": "v1.2.3 Intel Beta",
+      "short": "v1.2.3",
+      "sh": "rNitro-v1.2.3-Intel.sh",
+      "source_sh": "install-rNitro-intel.sh"
+    },
+    "intel_stable": {
+      "label": "v1.1.0 Intel Stable",
+      "short": "v1.1.0",
+      "sh": "rNitro-v1.1.0-Intel.sh"
     }
   },
   "hashes": {
     "stable_sh": "f8c42e9900a55c1eeb7a9bec7bf6daf74dac8db63bfe9e5530ec14ceb6f8df32",
-    "beta_sh": "fce1ec5b758ec6b74c8dff46acd0c85dbfeca379d3054134d308b6858318177b"
+    "beta_sh": "fce1ec5b758ec6b74c8dff46acd0c85dbfeca379d3054134d308b6858318177b",
+    "intel_beta_sh": "",
+    "intel_stable_sh": ""
   },
-  "archive": []
+  "archive": [],
+  "intel_beta": "v1.2.3-Intel",
+  "intel_stable": "v1.1.0-Intel"
 }
