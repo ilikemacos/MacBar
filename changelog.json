@@ -21,24 +21,24 @@
     },
     {
       "channel": "beta",
-      "title": "v1.2.2 Beta",
+      "title": "v1.2.3 Beta",
       "accent": "orange",
       "items": [
         {
-          "strong": "Lab jump list",
-          "text": " \u2014 chip TOC to jump to Weather, Detective, Ghost, Receipt, and more."
+          "strong": "AirDrop snapshot card",
+          "text": " \u2014 export a .rnitrocard and share via AirDrop/Finder."
         },
         {
-          "strong": "Time-scrub",
-          "text": " \u2014 scrub last ~90s of CPU / temp / watts from Lab."
+          "strong": "SOC budget",
+          "text": " \u2014 daily heat/Wh goal progress on Lab."
         },
         {
-          "strong": "Polite peer",
-          "text": " \u2014 ease sampling when Activity Monitor / Instruments is running."
+          "strong": "Cooling confession",
+          "text": " \u2014 3-panel recap after Heatwave cools down."
         },
         {
-          "strong": "Lab stack",
-          "text": " \u2014 weather, detective, ghost-load, power receipt, whisper, cloak, farm ledger, alibi, duel."
+          "strong": "Desktop widget + CLI",
+          "text": " \u2014 floating weather/temp panel; rnitro lab status JSON."
         }
       ]
     },
@@ -64,8 +64,8 @@
   ],
   "releases": [
     {
-      "title": "v1.2.2 Beta",
-      "body_html": "<strong style=\"color:var(--orange);\">Beta channel</strong> \u2014 Lab jump list, time-scrub, polite peer, thermal weather, Whisper, detective, ghost-load, power receipt, meeting cloak, build ledger, LAN duel. See <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.2\" style=\"color:var(--cyan);\">GitHub</a>."
+      "title": "v1.2.3 Beta",
+      "body_html": "<strong style=\"color:var(--orange);\">Beta</strong> \u2014 Lab: AirDrop card, SOC budget, cooling confession, desktop widget, <code>rnitro lab status</code>. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.3\" style=\"color:var(--cyan);\">GitHub</a>."
     },
     {
       "title": "v1.1.0 Final Reloaded",

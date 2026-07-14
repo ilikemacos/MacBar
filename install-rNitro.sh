@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="9337fa2c0c886097dffbecd86fd8eaea5c47c98915b17d500958068f27714c70"
+EXPECTED_HASH="abdd9315f581d3e211e3dc8b297c57b25f112168012347a920345f97167aa42a"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -374,7 +374,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v1.2.2"
+let CURRENT_VERSION = "v1.2.3"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -6943,6 +6943,10 @@ enum MonitorPreferences {
     static let buildLedgerKey = "rnitro.buildLedger"
     static let powerReceiptResetKey = "rnitro.powerReceiptSessionStart"
     static let politePeerKey = "rnitro.politePeer"
+    static let socBudgetWhKey = "rnitro.socBudgetWh"
+    static let socBudgetDayKey = "rnitro.socBudgetDay"
+    static let socBudgetUsedWhKey = "rnitro.socBudgetUsedWh"
+    static let socBudgetHeatMinKey = "rnitro.socBudgetHeatMin"
 }
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -7058,6 +7062,21 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
         "lab.peer.active": "Peer active — sampling eased",
         "lab.peer.idle": "No peer profilers detected",
+        "lab.toc.snapshot": "Share", "lab.toc.budget": "Budget", "lab.toc.confess": "Confess", "lab.toc.widget": "Widget",
+        "lab.snapshot": "AirDrop snapshot card",
+        "lab.snapshot.hint": "One-shot local snapshot (.rnitrocard). Share via AirDrop or Files — no cloud, no fleet server.",
+        "lab.snapshot.export": "Export & share",
+        "lab.snapshot.copied": "Card saved",
+        "lab.budget": "SOC budget",
+        "lab.budget.hint": "Daily energy goal (estimated Wh from package power). Local only; resets at midnight.",
+        "lab.budget.goal": "Daily goal (Wh)",
+        "lab.confess": "Cooling confession",
+        "lab.confess.hint": "After a Heatwave/Storm cools to Clear/Breezy, a 3-panel recap appears.",
+        "lab.confess.dismiss": "Dismiss",
+        "lab.widget": "Desktop widget",
+        "lab.widget.hint": "Floating mini panel with thermal weather + temperature (beta stand-in for WidgetKit).",
+        "lab.widget.show": "Show widget",
+        "lab.widget.hide": "Hide widget",
         "lab.jump": "Jump to",
         "chat.title": "AI Chat", "chat.subtitle": "Chat with your provider or manage API keys.",
         "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
@@ -10181,6 +10200,351 @@ final class PolitePeer: ObservableObject {
     }
 }
 
+
+// ── v1.2.3 Lab toys: snapshot · budget · confession · desktop widget · CLI status ─
+
+struct RnitroCardPayload: Codable {
+    var format: String = "rnitrocard-v1"
+    var version: String
+    var host: String
+    var exportedAt: String
+    var cpuName: String
+    var temperature: Double
+    var cpuPercent: Double
+    var packageWatts: Double
+    var weather: String
+    var thermalState: String
+    var batteryPercent: Int?
+    var topProcesses: [String]
+    var notes: String
+}
+
+enum RnitroSnapshotCard {
+    static func make() -> RnitroCardPayload {
+        let cpu = CPUMonitor.shared
+        let bat = BatteryMonitor.shared
+        let wx = ThermalWeather.current()
+        let tops = ProcessMonitor.shared.topByCPU.prefix(5).map {
+            String(format: "%@ %.0f%%", $0.name, $0.cpuPercent)
+        }
+        let df = ISO8601DateFormatter()
+        return RnitroCardPayload(
+            version: CURRENT_VERSION,
+            host: Host.current().localizedName ?? "Mac",
+            exportedAt: df.string(from: Date()),
+            cpuName: cpu.cpuName,
+            temperature: cpu.temperature,
+            cpuPercent: cpu.totalUsage,
+            packageWatts: cpu.packagePowerWatts,
+            weather: wx.label,
+            thermalState: CPUMonitor.thermalLabel(cpu.thermalState),
+            batteryPercent: bat.isPresent ? bat.levelPercent : nil,
+            topProcesses: Array(tops),
+            notes: "Local rNitro snapshot — share via AirDrop. No cloud."
+        )
+    }
+
+    @discardableResult
+    static func exportToFile() -> URL? {
+        let payload = make()
+        guard let data = try? JSONEncoder().encode(payload) else { return nil }
+        let dir = FileManager.default.temporaryDirectory
+        let name = "rNitro-\(payload.host.replacingOccurrences(of: " ", with: "-"))-\(Int(Date().timeIntervalSince1970)).rnitrocard"
+        let url = dir.appendingPathComponent(name)
+        do {
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    static func share() {
+        guard let url = exportToFile() else { return }
+        // Reveal + open share-friendly path; user can AirDrop from Finder share sheet
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+        let picker = NSSharingServicePicker(items: [url])
+        if let view = NSApp.keyWindow?.contentView {
+            picker.show(relativeTo: NSRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1), of: view, preferredEdge: .minY)
+        }
+    }
+}
+
+final class SOCBudgetStore: ObservableObject {
+    static let shared = SOCBudgetStore()
+    @Published var goalWh: Double
+    @Published private(set) var usedWh: Double
+    @Published private(set) var heatMinutes: Double
+    private var timer: Timer?
+    private var lastTick = Date()
+
+    private init() {
+        let g = UserDefaults.standard.double(forKey: MonitorPreferences.socBudgetWhKey)
+        goalWh = g > 0 ? g : 25.0
+        usedWh = UserDefaults.standard.double(forKey: MonitorPreferences.socBudgetUsedWhKey)
+        heatMinutes = UserDefaults.standard.double(forKey: MonitorPreferences.socBudgetHeatMinKey)
+        rolloverIfNeeded()
+        lastTick = Date()
+    }
+
+    var progress: Double {
+        guard goalWh > 0 else { return 0 }
+        return min(1.5, usedWh / goalWh)
+    }
+
+    func setGoal(_ wh: Double) {
+        goalWh = max(1, min(200, wh))
+        UserDefaults.standard.set(goalWh, forKey: MonitorPreferences.socBudgetWhKey)
+    }
+
+    func start() {
+        guard timer == nil else { return }
+        let t = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in self?.sample() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    private func dayKey() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
+    private func rolloverIfNeeded() {
+        let today = dayKey()
+        let stored = UserDefaults.standard.string(forKey: MonitorPreferences.socBudgetDayKey) ?? ""
+        if stored != today {
+            usedWh = 0
+            heatMinutes = 0
+            UserDefaults.standard.set(today, forKey: MonitorPreferences.socBudgetDayKey)
+            UserDefaults.standard.set(0.0, forKey: MonitorPreferences.socBudgetUsedWhKey)
+            UserDefaults.standard.set(0.0, forKey: MonitorPreferences.socBudgetHeatMinKey)
+        }
+    }
+
+    private func sample() {
+        rolloverIfNeeded()
+        let now = Date()
+        let dt = now.timeIntervalSince(lastTick)
+        lastTick = now
+        guard dt > 0, dt < 60 else { return }
+        let w = max(0, CPUMonitor.shared.packagePowerWatts)
+        usedWh += w * dt / 3600.0
+        let wx = ThermalWeather.current()
+        if wx == .humid || wx == .heatwave || wx == .storm {
+            heatMinutes += dt / 60.0
+        }
+        UserDefaults.standard.set(usedWh, forKey: MonitorPreferences.socBudgetUsedWhKey)
+        UserDefaults.standard.set(heatMinutes, forKey: MonitorPreferences.socBudgetHeatMinKey)
+        objectWillChange.send()
+    }
+}
+
+struct CoolingConfessionPanels: Identifiable {
+    let id = UUID()
+    let panel1: String
+    let panel2: String
+    let panel3: String
+    let at: Date
+}
+
+final class CoolingConfessionStore: ObservableObject {
+    static let shared = CoolingConfessionStore()
+    @Published var active: CoolingConfessionPanels? = nil
+    private var lastWeather: ThermalWeatherKind = .clear
+    private var peakDuringHot: Double = 0
+    private var culprit: String = ""
+    private var timer: Timer?
+
+    private init() {}
+
+    func start() {
+        guard timer == nil else { return }
+        lastWeather = ThermalWeather.current()
+        let t = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { [weak self] _ in self?.tick() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    func dismiss() { active = nil }
+
+    private func tick() {
+        let wx = ThermalWeather.current()
+        let temp = CPUMonitor.shared.temperature
+        let hot = (wx == .heatwave || wx == .storm)
+        let calm = (wx == .clear || wx == .breezy)
+        if hot {
+            peakDuringHot = max(peakDuringHot, temp)
+            if let top = ProcessMonitor.shared.topByCPU.first {
+                culprit = String(format: "%@ (%.0f%%)", top.name, top.cpuPercent)
+            }
+        }
+        let wasHot = (lastWeather == .heatwave || lastWeather == .storm)
+        if wasHot && calm && peakDuringHot > 0 {
+            let who = culprit.isEmpty ? "something hungry" : culprit
+            active = CoolingConfessionPanels(
+                panel1: "It got hot.\n\(who) was working hard.",
+                panel2: String(format: "Peak ~%.0f°C\nWeather was %@", peakDuringHot, lastWeather.label),
+                panel3: String(format: "Now %@ · %.0f°C\nGive it a minute.", wx.label, temp),
+                at: Date()
+            )
+            peakDuringHot = 0
+            culprit = ""
+        }
+        if hot && !wasHot {
+            peakDuringHot = temp
+        }
+        lastWeather = wx
+    }
+}
+
+final class LabDesktopWidgetController: NSObject {
+    static let shared = LabDesktopWidgetController()
+    private var panel: NSPanel?
+    private var timer: Timer?
+    private var host: NSHostingView<LabDesktopWidgetView>?
+
+    var isVisible: Bool { panel?.isVisible == true }
+
+    func toggle() {
+        if isVisible { hide() } else { show() }
+    }
+
+    func show() {
+        if panel == nil {
+            let view = LabDesktopWidgetView()
+            let hosting = NSHostingView(rootView: view)
+            hosting.frame = NSRect(x: 0, y: 0, width: 200, height: 88)
+            let p = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 200, height: 88),
+                styleMask: [.titled, .closable, .nonactivatingPanel, .fullSizeContentView],
+                backing: .buffered,
+                defer: false
+            )
+            p.title = "rNitro"
+            p.titleVisibility = .hidden
+            p.titlebarAppearsTransparent = true
+            p.isFloatingPanel = true
+            p.level = .floating
+            p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            p.isReleasedWhenClosed = false
+            p.backgroundColor = NSColor.black.withAlphaComponent(0.85)
+            p.contentView = hosting
+            p.center()
+            panel = p
+            host = hosting
+        }
+        panel?.orderFrontRegardless()
+        startTick()
+    }
+
+    func hide() {
+        panel?.orderOut(nil)
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func startTick() {
+        timer?.invalidate()
+        // Panel view observes CPUMonitor; timer keeps runloop warm for updates.
+        let t = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+        }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+}
+
+struct LabDesktopWidgetView: View {
+    @ObservedObject private var m = CPUMonitor.shared
+
+    var body: some View {
+        let wx = ThermalWeather.current()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("rNitro").font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.orange)
+                Spacer()
+                Text(wx.emoji + " " + wx.label)
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            Text(String(format: "%.0f°C  ·  CPU %.0f%%", m.temperature, m.totalUsage))
+                .font(.system(size: 16, weight: .semibold))
+            Text(m.cpuName)
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+        .padding(10)
+        .frame(width: 200, height: 88)
+    }
+}
+
+/// Writes JSON for `rnitro lab status` CLI.
+enum LabStatusFile {
+    static var url: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = base.appendingPathComponent("rNitro", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("lab-status.json")
+    }
+
+    static func write() {
+        let cpu = CPUMonitor.shared
+        let bat = BatteryMonitor.shared
+        let wx = ThermalWeather.current()
+        let farm = CompileFarmDetector.shared
+        let receipt = PowerReceiptStore.shared
+        let budget = SOCBudgetStore.shared
+        let peer = PolitePeer.shared
+        let cloak = MeetingCloak.shared
+        let df = ISO8601DateFormatter()
+        var dict: [String: Any] = [
+            "format": "rnitro-lab-status-v1",
+            "version": CURRENT_VERSION,
+            "updated_at": df.string(from: Date()),
+            "cpu_name": cpu.cpuName,
+            "cpu_percent": cpu.totalUsage,
+            "temperature_c": cpu.temperature,
+            "package_watts": cpu.packagePowerWatts,
+            "weather": wx.rawValue,
+            "weather_label": wx.label,
+            "thermal_state": CPUMonitor.thermalLabel(cpu.thermalState),
+            "whisper_on": UserDefaults.standard.bool(forKey: MonitorPreferences.whisperModeKey),
+            "compile_farm_building": farm.isBuilding,
+            "compile_farm_cooldown": farm.isCoolingDown,
+            "session_wh_est": receipt.wattHours,
+            "budget_goal_wh": budget.goalWh,
+            "budget_used_wh": budget.usedWh,
+            "budget_heat_minutes": budget.heatMinutes,
+            "meeting_cloak_active": cloak.shouldHushMenubar,
+            "polite_peer_active": peer.shouldEaseSampling,
+            "peer_name": peer.peerName,
+            "top_cpu": ProcessMonitor.shared.topByCPU.prefix(5).map { ["name": $0.name, "cpu": $0.cpuPercent, "pid": $0.pid] as [String: Any] },
+        ]
+        if bat.isPresent {
+            dict["battery_percent"] = bat.levelPercent
+            dict["on_ac"] = bat.isOnAC || bat.isCharging
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+}
+
+final class LabStatusWriter: ObservableObject {
+    static let shared = LabStatusWriter()
+    private var timer: Timer?
+    private init() {}
+    func start() {
+        guard timer == nil else { return }
+        LabStatusFile.write()
+        let t = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in LabStatusFile.write() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+}
+
 struct LabTabView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
@@ -10193,6 +10557,8 @@ struct LabTabView: View {
     @ObservedObject private var ledger = BuildLedger.shared
     @ObservedObject private var scrub = LabTimeScrubStore.shared
     @ObservedObject private var peer = PolitePeer.shared
+    @ObservedObject private var budget = SOCBudgetStore.shared
+    @ObservedObject private var confess = CoolingConfessionStore.shared
     @AppStorage(MonitorPreferences.whisperModeKey) private var whisperOn = false
     @AppStorage(MonitorPreferences.meetingCloakKey) private var meetingCloakOn = false
     @State private var report = ThermalDetective.analyze()
@@ -10207,6 +10573,10 @@ struct LabTabView: View {
         ("detective", "lab.toc.detective"),
         ("ghost", "lab.toc.ghost"),
         ("receipt", "lab.toc.receipt"),
+        ("budget", "lab.toc.budget"),
+        ("snapshot", "lab.toc.snapshot"),
+        ("confess", "lab.toc.confess"),
+        ("widget", "lab.toc.widget"),
         ("whisper", "lab.toc.whisper"),
         ("cloak", "lab.toc.cloak"),
         ("peer", "lab.toc.peer"),
@@ -10228,6 +10598,10 @@ struct LabTabView: View {
                     detectiveCard.id("detective")
                     ghostCard.id("ghost")
                     receiptCard.id("receipt")
+                    budgetCard.id("budget")
+                    snapshotCard.id("snapshot")
+                    confessCard.id("confess")
+                    widgetCard.id("widget")
                     whisperCard.id("whisper")
                     cloakCard.id("cloak")
                     peerCard.id("peer")
@@ -10577,6 +10951,104 @@ struct LabTabView: View {
         }
     }
 
+    private var budgetCard: some View {
+        labCard {
+            Text(display.tr("lab.budget"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.budget.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            HStack {
+                Text(display.tr("lab.budget.goal"))
+                    .font(rNitroFont(.caption, metrics: metrics))
+                Spacer()
+                Slider(value: Binding(
+                    get: { budget.goalWh },
+                    set: { budget.setGoal($0) }
+                ), in: 5...80, step: 1)
+                .frame(maxWidth: 160)
+                Text(String(format: "%.0f Wh", budget.goalWh))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .frame(width: 48, alignment: .trailing)
+            }
+            ProgressView(value: min(1.0, budget.progress))
+                .tint(budget.progress > 1.0 ? Color.nRed : Color.nOrange)
+            Text(String(format: "%.2f / %.0f Wh est. · heat-min %.1f", budget.usedWh, budget.goalWh, budget.heatMinutes))
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(budget.progress > 1.0 ? .nRed : .secondary)
+        }
+    }
+
+    private var snapshotCard: some View {
+        labCard {
+            Text(display.tr("lab.snapshot"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.snapshot.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            MinimalButton(title: display.tr("lab.snapshot.export"), action: {
+                ProcessMonitor.shared.start()
+                RnitroSnapshotCard.share()
+                flashCopied(display.tr("lab.snapshot.copied"))
+            })
+        }
+    }
+
+    private var confessCard: some View {
+        labCard {
+            Text(display.tr("lab.confess"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.confess.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            if let c = confess.active {
+                HStack(alignment: .top, spacing: 8) {
+                    confessPanel("1", c.panel1)
+                    confessPanel("2", c.panel2)
+                    confessPanel("3", c.panel3)
+                }
+                MinimalButton(title: display.tr("lab.confess.dismiss"), action: { confess.dismiss() })
+            } else {
+                Text("No recent cool-down story yet. Create some heat, then chill.")
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private func confessPanel(_ n: String, _ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Panel \(n)")
+                .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
+                .foregroundColor(.nOrange)
+            Text(text)
+                .font(rNitroFont(.micro, metrics: metrics))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.nOrange.opacity(0.08)))
+    }
+
+    private var widgetCard: some View {
+        labCard {
+            Text(display.tr("lab.widget"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.widget.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            MinimalButton(
+                title: LabDesktopWidgetController.shared.isVisible
+                    ? display.tr("lab.widget.hide")
+                    : display.tr("lab.widget.show"),
+                action: {
+                    LabDesktopWidgetController.shared.toggle()
+                    flashCopied(LabDesktopWidgetController.shared.isVisible ? "Widget shown" : "Widget hidden")
+                }
+            )
+        }
+    }
+
     private var peerCard: some View {
         labCard {
             Text(display.tr("lab.peer"))
@@ -10726,6 +11198,9 @@ struct LabTabView: View {
             MeetingCloak.shared.startIfNeeded()
             LabTimeScrubStore.shared.start()
             PolitePeer.shared.startIfNeeded()
+            SOCBudgetStore.shared.start()
+            CoolingConfessionStore.shared.start()
+            LabStatusWriter.shared.start()
         }
     }
 
@@ -11188,6 +11663,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             PowerReceiptStore.shared.start()
             MeetingCloak.shared.startIfNeeded()
             PolitePeer.shared.startIfNeeded()
+            SOCBudgetStore.shared.start()
+            CoolingConfessionStore.shared.start()
+            LabStatusWriter.shared.start()
         }
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -11503,8 +11981,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.2.2</string>
-    <key>CFBundleShortVersionString</key><string>v1.2.2</string>
+    <key>CFBundleVersion</key><string>v1.2.3</string>
+    <key>CFBundleShortVersionString</key><string>v1.2.3</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
