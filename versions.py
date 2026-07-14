@@ -72,6 +72,20 @@ def beta_release(data: dict | None = None) -> dict:
     return rel
 
 
+def intel_beta_release(data: dict | None = None) -> dict:
+    data = data or load()
+    rel = dict(data.get("releases", {}).get("intel_beta") or {})
+    rel["id"] = data.get("intel_beta", rel.get("id", "v0.0.0-Intel"))
+    return rel
+
+
+def intel_stable_release(data: dict | None = None) -> dict:
+    data = data or load()
+    rel = dict(data.get("releases", {}).get("intel_stable") or {})
+    rel["id"] = data.get("intel_stable", rel.get("id", "v0.0.0-Intel"))
+    return rel
+
+
 def windows_release(data: dict | None = None) -> dict:
     data = data or load()
     rel = dict(data["releases"]["windows"])

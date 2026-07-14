@@ -33,6 +33,9 @@ def netlify_files(data: dict, *, include_bundle_zip: bool = False, website_zip: 
         v.macos_apps_release(data)["zip"],
         stable["sh"],
         beta["sh"],
+        v.intel_stable_release(data).get("sh") or "",
+        v.intel_beta_release(data).get("sh") or "",
+        "install-rNitro-intel.sh",
         win["exe"],
         win["ps1"],
         "install-rNitro-windows.ps1",
@@ -232,6 +235,8 @@ AI support chat (optional):
     if include_bundle_zip is None:
         include_bundle_zip = False
     for name in netlify_files(data, website_zip=True, include_bundle_zip=include_bundle_zip):
+        if not name:
+            continue
         src = SITE / name
         if not src.is_file():
             raise FileNotFoundError(f"Missing deploy file: {src}")

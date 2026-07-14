@@ -156,6 +156,22 @@ def js_versions_object(data: dict) -> str:
             "tar": cli["tar"],
             "curlInstall": cli_curl_install_cmd(cli["tar"]),
         },
+        "intel_stable": {
+            "id": v.intel_stable_release(data)["id"],
+            "label": v.intel_stable_release(data).get("label", "Intel Stable"),
+            "short": v.intel_stable_release(data).get("short", "Intel"),
+            "sh": v.intel_stable_release(data).get("sh", ""),
+            "hash": data.get("hashes", {}).get("intel_stable_sh", ""),
+            "curlInstall": curl_install_cmd(v.intel_stable_release(data).get("sh", "")),
+        },
+        "intel_beta": {
+            "id": v.intel_beta_release(data)["id"],
+            "label": v.intel_beta_release(data).get("label", "Intel Beta"),
+            "short": v.intel_beta_release(data).get("short", "Intel"),
+            "sh": v.intel_beta_release(data).get("sh", ""),
+            "hash": data.get("hashes", {}).get("intel_beta_sh", ""),
+            "curlInstall": curl_install_cmd(v.intel_beta_release(data).get("sh", "")),
+        },
     }
     body = json.dumps(payload, indent=2)
     indented = "\n".join("  " + line if line else line for line in body.splitlines())
@@ -174,8 +190,73 @@ def nav_right(data: dict) -> str:
     )
     return f"""  <div class="nav-right">
 {archives_link}    <a class="nav-link" href="/privacy.html">Privacy</a>
-    <div class="nav-badge">{stable["label"]} · {beta["label"]} · macOS arm64</div>
+    <div class="nav-badge">{stable["label"]} · {beta["label"]} · Apple Silicon + Intel</div>
   </div>"""
+
+
+
+def mac_arch_subtabs() -> str:
+    """Sub-tabs under macOS: Apple Silicon vs Intel."""
+    return """  <div role="tablist" aria-label="Mac chip" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:8px; width:100%;">
+    <button type="button" id="mac-arch-silicon" role="tab" aria-selected="true" onclick="setMacArch('silicon')"
+      style="padding:8px 16px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:14px; font-weight:600; cursor:pointer;">
+      Apple Silicon
+    </button>
+    <button type="button" id="mac-arch-intel" role="tab" aria-selected="false" onclick="setMacArch('intel')"
+      style="padding:8px 16px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:14px; font-weight:600; cursor:pointer;">
+      Intel Mac
+    </button>
+  </div>
+  <p style="font-size:13px; color:var(--muted); text-align:center; margin:0 0 12px; max-width:520px; line-height:1.5;">
+    M1 / M2 / M3 / M4 → <strong style="color:var(--green);">Apple Silicon</strong>.
+    Older Intel Macs → <strong style="color:var(--cyan);">Intel</strong> (compiles on your Mac).
+  </p>"""
+
+
+def hero_intel_panel(data: dict) -> str:
+    """Intel Mac downloads — source installers (compile on device)."""
+    ib = v.intel_beta_release(data)
+    is_ = v.intel_stable_release(data)
+    beta_curl = curl_install_cmd(ib.get("sh") or "install-rNitro-intel.sh")
+    stable_curl = curl_install_cmd(is_.get("sh") or "rNitro-v1.1.0-Intel.sh")
+    return f"""    <div id="mac-intel-panel" style="display:none; width:100%; flex-direction:column; gap:16px;">
+      <div style="width:100%; background:var(--card); border:1px solid var(--cyan); border-radius:12px; padding:20px; text-align:center;">
+        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">{is_["id"]}</div>
+        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel Stable — compiles from source on your Intel Mac. Daily monitoring; AI: OpenAI + OpenRouter.</div>
+        <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4);">
+          <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Recommended · Intel</div>
+          <div class="dl-recommended-title" style="color:var(--cyan);">Terminal one-liner</div>
+          <p class="dl-recommended-steps">Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>. Compiles ~30–60s on Intel.</p>
+          <div style="background:var(--card2); border:1px solid rgba(0,217,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--cyan); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
+            {stable_curl}
+          </div>
+          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="copyCurlCmd('intel_stable')">⎘ Copy curl one-liner</button>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button type="button" class="btn btn-sh" style="border-color:var(--cyan); color:var(--cyan);" onclick="requestDownload('{is_["sh"]}')">⬇ Download .sh installer</button>
+        </div>
+      </div>
+      <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
+        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">{ib["id"]}</div>
+        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel Beta — Lab features + all AI providers. Experimental on Intel.</div>
+        <p style="font-size:14px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin:0 0 12px; line-height:1.5; text-align:left;">
+          <strong>Beta notice:</strong> Experimental — some sensors differ on Intel. Agree to Terms &amp; Conditions before download.
+        </p>
+        <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
+          <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended · Intel Beta</div>
+          <div class="dl-recommended-title" style="color:var(--orange);">Terminal one-liner</div>
+          <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--orange); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
+            {beta_curl}
+          </div>
+          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="copyCurlCmd('intel_beta')">⎘ Copy curl one-liner</button>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('{ib["sh"]}')">⬇ Download .sh installer</button>
+          <button type="button" class="btn btn-secondary" onclick="requestDownload('install-rNitro-intel.sh')">⬇ install-rNitro-intel.sh (source)</button>
+        </div>
+      </div>
+    </div>"""
+
 
 
 def hero_stable_card(data: dict) -> str:
@@ -245,15 +326,8 @@ def hero_macos_apps_card(data: dict) -> str:
 
 
 def hero_more_downloads(data: dict) -> str:
-    apps = v.macos_apps_release(data)
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    inner = f"""            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('{apps["zip"]}')">{sized_label("macOS Apps ZIP (Stable + Beta)", apps["zip"])}</button>"""
-    return other_downloads_panel(
-        "hero-more-downloads",
-        inner,
-        note=f"<strong>macOS Apps ZIP</strong> — rNitro-Stable.app ({stable['id']}) + rNitro-Beta.app ({beta['id']}). Apple Silicon only.",
-    )
+    # Removed: redundant second download strip under the macOS tab.
+    return ""
 
 
 def download_card_full(data: dict) -> str:
@@ -355,10 +429,10 @@ def hero_head(data: dict) -> str:
 def hero_copy(data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
-    return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon · macOS 12+</p>
+    return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon &amp; Intel · macOS 12+</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>{stable["label"]}</strong> for daily use · <strong>{beta["label"]}</strong> for every AI provider. <strong>Intel Macs not supported.</strong> Free · no account · no telemetry.</p>"""
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>{stable["label"]}</strong> for daily use · <strong>{beta["label"]}</strong> for every AI provider. Choose <strong>Apple Silicon</strong> or <strong>Intel</strong> below. Free · no account · no telemetry.</p>"""
 
 
 def platform_tabs() -> str:
@@ -447,11 +521,9 @@ def steps_win(data: dict) -> str:
 
 
 def hero_dl_note(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
     gh = v.github_releases_url()
-    return f"""    <p style="color:var(--muted); font-size:15px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:12px; line-height:1.55;">
-      New on Mac? Use the green <strong style="color:var(--green);">Recommended Download</strong> (App ZIP) — unzip, drag to Applications, right-click → Open once. Same builds on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a> ({stable["id"]} · {beta["id"]}). Apple Silicon only.
+    return f"""    <p style="color:var(--muted); font-size:14px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:8px; line-height:1.55;">
+      Pick <strong style="color:var(--green);">Apple Silicon</strong> or <strong style="color:var(--cyan);">Intel</strong> above, then Stable or Beta. Terms apply once per session. Also on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a>.
     </p>"""
 
 
@@ -644,28 +716,8 @@ def install_sh_commands(data: dict) -> str:
 
 
 def hero_curl_install(data: dict) -> str:
-    s = v.stable_release(data)
-    b = v.beta_release(data)
-    stable_curl = curl_install_cmd(s["sh"])
-    beta_curl = curl_install_cmd(b["sh"])
-    return f"""  <div style="width:100%; max-width:720px; margin:0 auto 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px; text-align:left;">
-    <div style="font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; letter-spacing:0.04em;">TERMINAL INSTALL · macOS</div>
-    <p style="font-size:15px; color:var(--muted); margin:0 0 12px; line-height:1.55;">Paste one line into Terminal — downloads the installer, then compiles and installs rNitro (~30s). Best first launch: usually avoids Gatekeeper blocks from ZIP/PKG/DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
-    <div style="font-size:13px; color:var(--green); margin-bottom:4px;">Stable ({s["short"]})</div>
-    <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--green); word-break:break-all; line-height:1.45;">
-      {stable_curl}
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy stable curl</button>
-    </div>
-    <div style="font-size:13px; color:var(--orange); margin:14px 0 4px;">Beta ({b["short"]}) — all AI providers</div>
-    <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:13px; color:var(--orange); word-break:break-all; line-height:1.45;">
-      {beta_curl}
-    </div>
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy beta curl</button>
-    </div>
-  </div>"""
+    # Removed: duplicate of per-channel curl blocks inside Apple Silicon / Intel cards.
+    return ""
 
 
 def download_card_stable(data: dict) -> str:
@@ -1157,6 +1209,93 @@ def update_installer_versions(data: dict) -> None:
     installer.write_text(text, encoding="utf-8")
 
 
+
+def _make_intel_text(text: str, version_id: str, channel: str) -> str:
+    """Adapt an arm64 installer script for Intel Macs (x86_64)."""
+    arch_pat = re.compile(
+        r"# ── Security: must be Apple Silicon[^\n]*\n"
+        r'if \[\[ "\$\(uname -m\)" != "arm64" \]\]; then\n'
+        r"  echo \"❌[^\n]*\n"
+        r"  exit 1\n"
+        r"fi",
+        re.M,
+    )
+    arch_repl = (
+        "# ── Security: Intel Mac (x86_64) ─────────────────────────────────────────────\n"
+        'ARCH="$(uname -m)"\n'
+        'if [[ "$ARCH" != "x86_64" && "$ARCH" != "i386" ]]; then\n'
+        '  echo "❌ This installer is for Intel Macs (x86_64)."\n'
+        '  echo "   On Apple Silicon use the Apple Silicon download instead."\n'
+        '  echo "   Detected: $ARCH"\n'
+        "  exit 1\n"
+        "fi\n"
+        'echo "✅ Intel Mac ($ARCH) detected."'
+    )
+    text2, n = arch_pat.subn(arch_repl, text, count=1)
+    if n == 0 and "This installer is for Intel Macs" not in text:
+        # Already intel or different format — leave arch block
+        text2 = text
+    text = text2
+    text = re.sub(r'let CURRENT_VERSION = "v[^"]+"', f'let CURRENT_VERSION = "{version_id}"', text, count=1)
+    text = re.sub(r'let RNITRO_BUILD_CHANNEL = "[^"]+"', f'let RNITRO_BUILD_CHANNEL = "{channel}"', text, count=1)
+    text = re.sub(
+        r"(<key>CFBundleVersion</key><string>)[^<]+(</string>)",
+        rf"\g<1>{version_id}\2",
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r"(<key>CFBundleShortVersionString</key><string>)[^<]+(</string>)",
+        rf"\g<1>{version_id}\2",
+        text,
+        count=1,
+    )
+    return text
+
+
+def _regenerate_intel_installers(data: dict) -> None:
+    beta = v.beta_release(data)
+    stable = v.stable_release(data)
+    intel_beta = v.intel_beta_release(data)
+    intel_stable = v.intel_stable_release(data)
+    src = SITE / beta.get("source_sh", "install-rNitro.sh")
+    if not src.is_file():
+        print("  (skip intel: no beta source)")
+        return
+    base = src.read_text(encoding="utf-8")
+    intel_src_name = intel_beta.get("source_sh") or "install-rNitro-intel.sh"
+    intel_src = SITE / intel_src_name
+    body = _make_intel_text(base, intel_beta["id"], "beta")
+    intel_src.write_text(body, encoding="utf-8")
+    intel_src.chmod(0o755)
+    ib_dst = SITE / intel_beta["sh"]
+    shutil.copy2(intel_src, ib_dst)
+    ib_dst.chmod(0o755)
+    v.update_expected_hash(intel_src)
+    v.update_expected_hash(ib_dst)
+    print(f"  EXPECTED_HASH updated: {intel_src.name}")
+    print(f"  EXPECTED_HASH updated: {ib_dst.name}")
+
+    stable_sh = SITE / stable["sh"]
+    if stable_sh.is_file() and intel_stable.get("sh"):
+        is_body = _make_intel_text(stable_sh.read_text(encoding="utf-8"), intel_stable["id"], "stable")
+        is_dst = SITE / intel_stable["sh"]
+        is_dst.write_text(is_body, encoding="utf-8")
+        is_dst.chmod(0o755)
+        v.update_expected_hash(is_dst)
+        print(f"  EXPECTED_HASH updated: {is_dst.name}")
+
+    d = v.load()
+    d.setdefault("hashes", {})
+    if ib_dst.is_file():
+        d["hashes"]["intel_beta_sh"] = __import__("hashlib").sha256(ib_dst.read_bytes()).hexdigest()
+    is_path = SITE / intel_stable.get("sh", "")
+    if is_path.is_file():
+        d["hashes"]["intel_stable_sh"] = __import__("hashlib").sha256(is_path.read_bytes()).hexdigest()
+    v.save(d)
+
+
+
 def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
     beta = v.beta_release(data)
     stable = v.stable_release(data)
@@ -1200,6 +1339,8 @@ def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
         v.update_expected_hash(path)
         print(f"  EXPECTED_HASH updated: {path.name}")
 
+    _regenerate_intel_installers(data)
+
 
 def js_settab_handlers() -> str:
     """Redirect legacy ?tab= / #hash platform switches to dedicated pages."""
@@ -1220,6 +1361,29 @@ def js_settab_handlers() -> str:
     return 'mac';
   }
 
+  function setMacArch(arch) {
+    const silicon = document.getElementById('mac-silicon-panel');
+    const intel = document.getElementById('mac-intel-panel');
+    const btnS = document.getElementById('mac-arch-silicon');
+    const btnI = document.getElementById('mac-arch-intel');
+    const isIntel = arch === 'intel';
+    if (silicon) silicon.style.display = isIntel ? 'none' : 'flex';
+    if (intel) intel.style.display = isIntel ? 'flex' : 'none';
+    if (btnS) {
+      btnS.setAttribute('aria-selected', isIntel ? 'false' : 'true');
+      btnS.style.background = isIntel ? 'transparent' : 'var(--green)';
+      btnS.style.color = isIntel ? 'var(--text)' : '#000';
+      btnS.style.borderColor = isIntel ? 'var(--border)' : 'var(--green)';
+    }
+    if (btnI) {
+      btnI.setAttribute('aria-selected', isIntel ? 'true' : 'false');
+      btnI.style.background = isIntel ? 'var(--cyan)' : 'transparent';
+      btnI.style.color = isIntel ? '#000' : 'var(--text)';
+      btnI.style.borderColor = isIntel ? 'var(--cyan)' : 'var(--border)';
+    }
+    try { sessionStorage.setItem('rnitro_mac_arch', isIntel ? 'intel' : 'silicon'); } catch (e) {}
+  }
+
   function setTab(platform) {
     if (platform === 'cli') { location.href = '/cli.html'; return; }
     if (platform === 'linux') { location.href = '/linux.html'; return; }
@@ -1227,6 +1391,10 @@ def js_settab_handlers() -> str:
     // macOS is this page — show mac panels only
     const mac = document.getElementById('dl-mac');
     if (mac) mac.style.display = 'flex';
+    try {
+      const saved = sessionStorage.getItem('rnitro_mac_arch');
+      if (saved === 'intel' || saved === 'silicon') setMacArch(saved);
+    } catch (e) {}
     ['dl-cli','dl-win','dl-linux','steps-cli','steps-linux','steps-win','card-win','card-linux'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
@@ -1290,8 +1458,12 @@ def sync_index(data: dict) -> None:
         "hero-copy": hero_copy(data),
         "hero-curl-install": hero_curl_install(data),
         "platform-tabs": platform_tabs(),
+        "mac-arch-tabs": mac_arch_subtabs(),
+        "mac-silicon-wrap-open": '    <div id="mac-silicon-panel" style="display:flex; width:100%; flex-direction:column; gap:16px;">',
+        "mac-silicon-wrap-close": "    </div>",
         "hero-stable": hero_stable_card(data),
         "hero-beta": hero_beta_card(data),
+        "hero-intel": hero_intel_panel(data),
         "hero-more": hero_more_downloads(data),
         "screenshots": screenshots_section(data),
         "js-settab": js_settab_handlers(),
