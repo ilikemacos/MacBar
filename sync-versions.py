@@ -195,9 +195,23 @@ def nav_right(data: dict) -> str:
 
 
 
+def intel_sunset_banner() -> str:
+    """Site-wide notice: Intel Mac support ends after v1.2.5-Beta."""
+    return """  <div role="status" aria-live="polite" style="width:100%; max-width:640px; margin:0 auto 14px; padding:12px 16px; border-radius:10px; border:1px solid rgba(255,140,26,0.55); background:rgba(255,140,26,0.12); text-align:center; line-height:1.55;">
+    <div style="font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--orange); margin-bottom:4px;">NOTICE</div>
+    <div style="font-size:15px; color:var(--text); font-weight:600;">
+      Intel Mac will no longer be getting updates after <strong style="color:var(--orange);">v1.2.5-Beta</strong>.
+    </div>
+    <div style="font-size:13px; color:var(--muted); margin-top:6px;">
+      Apple Silicon continues to receive full Stable and Beta updates. Plan to move to an Apple Silicon Mac for ongoing support.
+    </div>
+  </div>"""
+
+
 def mac_arch_subtabs() -> str:
     """Sub-tabs under macOS: Apple Silicon vs Intel."""
-    return """  <div role="tablist" aria-label="Mac chip" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:8px; width:100%;">
+    return f"""{intel_sunset_banner()}
+  <div role="tablist" aria-label="Mac chip" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:8px; width:100%;">
     <button type="button" id="mac-arch-silicon" role="tab" aria-selected="true" onclick="setMacArch('silicon')"
       style="padding:8px 16px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:14px; font-weight:600; cursor:pointer;">
       Apple Silicon
@@ -209,7 +223,7 @@ def mac_arch_subtabs() -> str:
   </div>
   <p style="font-size:13px; color:var(--muted); text-align:center; margin:0 0 12px; max-width:520px; line-height:1.5;">
     M1 / M2 / M3 / M4 → <strong style="color:var(--green);">Apple Silicon</strong>.
-    Older Intel Macs → <strong style="color:var(--cyan);">Intel</strong> (compiles on your Mac).
+    Older Intel Macs → <strong style="color:var(--cyan);">Intel</strong> (compiles on your Mac · last updates through v1.2.5-Beta).
   </p>"""
 
 
@@ -220,6 +234,10 @@ def hero_intel_panel(data: dict) -> str:
     beta_curl = curl_install_cmd(ib.get("sh") or "install-rNitro-intel.sh")
     stable_curl = curl_install_cmd(is_.get("sh") or "rNitro-v1.1.0-Intel.sh")
     return f"""    <div id="mac-intel-panel" style="display:none; width:100%; flex-direction:column; gap:16px;">
+      <div role="status" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,140,26,0.55); background:rgba(255,140,26,0.12); text-align:center; line-height:1.5;">
+        <strong style="color:var(--orange);">Intel Mac will no longer be getting updates after v1.2.5-Beta.</strong>
+        <div style="font-size:13px; color:var(--muted); margin-top:4px;">Current Intel builds remain downloadable; no new features after that release.</div>
+      </div>
       <div style="width:100%; background:var(--card); border:1px solid var(--cyan); border-radius:12px; padding:20px; text-align:center;">
         <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">{is_["id"]}</div>
         <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel Stable — compiles from source on your Intel Mac. Daily monitoring; AI: OpenAI + OpenRouter.</div>
