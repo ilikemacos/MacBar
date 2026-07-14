@@ -20,7 +20,12 @@ def run(cmd: list[str], *, cwd: Path = SITE, check: bool = True) -> None:
 
 
 def channel_assets(data: dict, channel: str) -> tuple[dict, list[Path]]:
-    rel = v.stable_release(data) if channel == "stable" else v.beta_release(data)
+    if channel == "stable":
+        rel = v.stable_release(data)
+    elif channel == "experimental":
+        rel = v.experimental_release(data)
+    else:
+        rel = v.beta_release(data)
     names = [rel["zip"], rel["pkg"], rel["dmg"]]
     paths = []
     for name in names:
@@ -34,7 +39,12 @@ def channel_assets(data: dict, channel: str) -> tuple[dict, list[Path]]:
 def release_notes(data: dict, channel: str) -> str:
     rel = v.stable_release(data) if channel == "stable" else v.beta_release(data)
     other = v.beta_release(data) if channel == "stable" else v.stable_release(data)
-    channel_label = "Stable (Release)" if channel == "stable" else "Beta"
+    if channel == "stable":
+        channel_label = "Stable (Release)"
+    elif channel == "experimental":
+        channel_label = "Experimental"
+    else:
+        channel_label = "Beta"
     lines = [
         f"## rNitro {rel['label']} — {channel_label}",
         "",
@@ -227,6 +237,7 @@ def main() -> None:
 
     # Stable is the latest public Release (v1.0.0-Release).
     publish_channel(data, "stable", latest=True)
+    publish_channel(data, "experimental", latest=False)
     publish_channel(data, "beta", latest=False)
     publish_linux(data)
 
