@@ -196,7 +196,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build rNitro.app ZIP distribution")
     parser.add_argument(
         "--variant",
-        choices=["beta", "stable", "all", "combined"],
+        choices=["beta", "stable", "experimental", "all", "combined"],
         default="combined",
         help="Which build to package (default: combined)",
     )
@@ -221,6 +221,9 @@ def main() -> None:
     builds = []
     if args.variant in ("beta", "all"):
         builds.append((beta["id"], beta.get("source_sh") or beta["sh"], beta["zip"]))
+    if args.variant in ("experimental", "all"):
+        exp = v.experimental_release(data)
+        builds.append((exp["id"], exp.get("source_sh") or exp["sh"], exp["zip"]))
     if args.variant in ("stable", "all"):
         builds.append((stable["id"], stable["sh"], stable["zip"]))
     for version, script, zip_name in builds:

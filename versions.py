@@ -72,6 +72,13 @@ def beta_release(data: dict | None = None) -> dict:
     return rel
 
 
+def experimental_release(data: dict | None = None) -> dict:
+    data = data or load()
+    rel = dict(data.get("releases", {}).get("experimental") or {})
+    rel["id"] = data.get("experimental", rel.get("id", "v0.0.0-Experimental"))
+    return rel
+
+
 def intel_beta_release(data: dict | None = None) -> dict:
     data = data or load()
     rel = dict(data.get("releases", {}).get("intel_beta") or {})

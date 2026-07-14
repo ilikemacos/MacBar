@@ -20,25 +20,32 @@
       ]
     },
     {
+      "channel": "experimental",
+      "title": "v1.2.4 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Beta + toys",
+          "text": " \u2014 everything in Beta, plus duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets."
+        },
+        {
+          "strong": "Unstable",
+          "text": " \u2014 expect breakage; for people who want the full playground."
+        }
+      ]
+    },
+    {
       "channel": "beta",
-      "title": "v1.2.3 Beta",
+      "title": "v1.2.4 Beta",
       "accent": "orange",
       "items": [
         {
-          "strong": "AirDrop snapshot card",
-          "text": " \u2014 export a .rnitrocard and share via AirDrop/Finder."
+          "strong": "Slim Lab",
+          "text": " \u2014 weather, detective, whisper, compile-farm, time-scrub, power receipt. Toys moved to Experimental."
         },
         {
-          "strong": "SOC budget",
-          "text": " \u2014 daily heat/Wh goal progress on Lab."
-        },
-        {
-          "strong": "Cooling confession",
-          "text": " \u2014 3-panel recap after Heatwave cools down."
-        },
-        {
-          "strong": "Desktop widget + CLI",
-          "text": " \u2014 floating weather/temp panel; rnitro lab status JSON."
+          "strong": "All AI providers",
+          "text": " \u2014 full provider list + Advisor + Cleaner."
         }
       ]
     },

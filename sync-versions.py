@@ -172,6 +172,17 @@ def js_versions_object(data: dict) -> str:
             "hash": data.get("hashes", {}).get("intel_beta_sh", ""),
             "curlInstall": curl_install_cmd(v.intel_beta_release(data).get("sh", "")),
         },
+        "experimental": {
+            "id": v.experimental_release(data)["id"],
+            "label": v.experimental_release(data).get("label", "Experimental"),
+            "short": v.experimental_release(data).get("short", "Exp"),
+            "sh": v.experimental_release(data).get("sh", ""),
+            "pkg": v.experimental_release(data).get("pkg", ""),
+            "dmg": v.experimental_release(data).get("dmg", ""),
+            "zip": v.experimental_release(data).get("zip", ""),
+            "hash": data.get("hashes", {}).get("experimental_sh", ""),
+            "curlInstall": curl_install_cmd(v.experimental_release(data).get("sh", "")),
+        },
     }
     body = json.dumps(payload, indent=2)
     indented = "\n".join("  " + line if line else line for line in body.splitlines())
@@ -313,14 +324,59 @@ def hero_beta_card(data: dict) -> str:
     )
     return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">{b["id"]}</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Beta — stable features plus AI chat API: Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes.</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Beta (slim Lab) — weather, detective, whisper, compile-farm, time-scrub, power receipt + all AI providers. Toys live on <strong>Experimental</strong>.</div>
       <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
-        <strong>Beta notice:</strong> Experimental AI features — report issues via Support. You must agree to Terms &amp; Conditions before download.
+        <strong>Beta notice:</strong> Power-user channel without the playground toys. Terms required before download.
       </p>
 {hero_curl_recommended_block("beta", b["sh"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
 {recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
 {other}
     </div>"""
+
+
+
+def hero_experimental_card(data: dict) -> str:
+    """Apple Silicon Experimental — Beta + Lab toys."""
+    e = v.experimental_release(data)
+    other = other_downloads_panel(
+        "hero-exp-other",
+        f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{e.get("pkg", "")}')">{sized_label("PKG installer", e.get("pkg", ""))}</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('{e.get("dmg", "")}')">{sized_label("DMG disk image", e.get("dmg", ""))}</button>
+            <button type="button" class="btn btn-sh" style="border-color:#b8a0ff; color:#b8a0ff;" onclick="requestDownload('{e.get("sh", "")}')">{sized_label("Shell installer (.sh)", e.get("sh", ""))}</button>
+            <button class="btn btn-secondary" onclick="copyCurlCmd('experimental')">⎘ Copy curl install</button>""",
+        note="<strong>Experimental:</strong> Beta + duel, ghost-load, budget, cloak, peer, AirDrop card, desktop widget, confession, alibi, presets. Unstable.",
+    )
+    curl_block = hero_curl_recommended_block(
+        "experimental",
+        e.get("sh") or "install-rNitro-experimental.sh",
+        accent="#b8a0ff",
+        accent_rgb="184,160,255",
+        btn_style="background:#9b7bff; color:#000;",
+    )
+    # hero_curl_recommended_block may only take which stable/beta - check signature
+    return f"""    <div style="width:100%; background:var(--card); border:1px solid #9b7bff; border-radius:12px; padding:20px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:#b8a0ff; margin-bottom:4px;">{e["id"]}</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;"><strong style="color:#b8a0ff;">Experimental</strong> — everything in Beta <em>plus</em> Lab toys (duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets).</div>
+      <p style="font-size:14px; color:#b8a0ff; background:rgba(155,123,255,0.1); border:1px solid rgba(155,123,255,0.4); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
+        <strong>Unstable playground.</strong> Prefer Beta for daily use. Terms required before download. Apple Silicon recommended.
+      </p>
+      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.45);">
+        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.5); background:rgba(155,123,255,0.12);">Recommended Download</div>
+        <div class="dl-recommended-title" style="color:#b8a0ff;">App ZIP</div>
+        <p class="dl-recommended-steps">Unzip → drag to Applications → right-click <strong>Open</strong> once if blocked.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="requestDownload('{e.get("zip", "")}')">⬇ Download App ZIP</button>
+      </div>
+      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.4); margin-top:12px;">
+        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.45); background:rgba(155,123,255,0.1);">Terminal</div>
+        <div class="dl-recommended-title" style="color:#b8a0ff;">curl one-liner</div>
+        <div style="background:var(--card2); border:1px solid rgba(155,123,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:#b8a0ff; word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
+          {curl_install_cmd(e.get("sh") or "install-rNitro-experimental.sh")}
+        </div>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="copyCurlCmd('experimental')">⎘ Copy curl one-liner</button>
+      </div>
+{other}
+    </div>"""
+
 
 
 def pkg_gatekeeper_warning() -> str:
@@ -1314,6 +1370,54 @@ def _regenerate_intel_installers(data: dict) -> None:
 
 
 
+
+def _regenerate_experimental_installer(data: dict) -> None:
+    """Copy beta source → experimental channel installer."""
+    exp = v.experimental_release(data)
+    beta = v.beta_release(data)
+    src = SITE / (beta.get("source_sh") or "install-rNitro.sh")
+    if not src.is_file():
+        print("  (skip experimental: no beta source)")
+        return
+    text = src.read_text(encoding="utf-8")
+    eid = exp["id"]
+    text = re.sub(r'let CURRENT_VERSION = "v[^"]+"', f'let CURRENT_VERSION = "{eid}"', text, count=1)
+    text = re.sub(
+        r'let RNITRO_BUILD_CHANNEL = "[^"]+"',
+        'let RNITRO_BUILD_CHANNEL = "experimental"',
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r"(<key>CFBundleVersion</key><string>)[^<]+(</string>)",
+        rf"\g<1>{eid}\2",
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r"(<key>CFBundleShortVersionString</key><string>)[^<]+(</string>)",
+        rf"\g<1>{eid}\2",
+        text,
+        count=1,
+    )
+    source_name = exp.get("source_sh") or "install-rNitro-experimental.sh"
+    source_path = SITE / source_name
+    source_path.write_text(text, encoding="utf-8")
+    source_path.chmod(0o755)
+    sh_path = SITE / exp["sh"]
+    shutil.copy2(source_path, sh_path)
+    sh_path.chmod(0o755)
+    v.update_expected_hash(source_path)
+    v.update_expected_hash(sh_path)
+    print(f"  EXPECTED_HASH updated: {source_path.name}")
+    print(f"  EXPECTED_HASH updated: {sh_path.name}")
+    d = v.load()
+    d.setdefault("hashes", {})
+    d["hashes"]["experimental_sh"] = __import__("hashlib").sha256(sh_path.read_bytes()).hexdigest()
+    v.save(d)
+
+
+
 def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
     beta = v.beta_release(data)
     stable = v.stable_release(data)
@@ -1358,6 +1462,7 @@ def regenerate_installers(data: dict, *, skip_stable: bool = False) -> None:
         print(f"  EXPECTED_HASH updated: {path.name}")
 
     _regenerate_intel_installers(data)
+    _regenerate_experimental_installer(data)
 
 
 def js_settab_handlers() -> str:
@@ -1481,6 +1586,7 @@ def sync_index(data: dict) -> None:
         "mac-silicon-wrap-close": "    </div>",
         "hero-stable": hero_stable_card(data),
         "hero-beta": hero_beta_card(data),
+        "hero-experimental": hero_experimental_card(data),
         "hero-intel": hero_intel_panel(data),
         "hero-more": hero_more_downloads(data),
         "screenshots": screenshots_section(data),

@@ -21,6 +21,7 @@ INSTALL_LOCATION = "/Applications"
 PKG_IDS = {
     "stable": "com.rnitro.cpumonitor",
     "beta": "com.rnitro.cpumonitor.beta",
+    "experimental": "com.rnitro.cpumonitor.experimental",
 }
 
 
@@ -171,7 +172,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build rNitro macOS PKG installers")
     parser.add_argument(
         "--variant",
-        choices=["beta", "stable", "all"],
+        choices=["beta", "stable", "experimental", "all"],
         default="all",
         help="Which build to package (default: all)",
     )
@@ -193,6 +194,10 @@ def main() -> None:
     if args.variant in ("beta", "all"):
         src = beta.get("source_sh") or beta["sh"]
         builds.append(("beta", src, beta["pkg"]))
+    if args.variant in ("experimental", "all"):
+        exp = v.experimental_release(data)
+        src = exp.get("source_sh") or exp["sh"]
+        builds.append(("experimental", src, exp["pkg"]))
     for variant, script, pkg_name in builds:
         out = create_pkg(variant, script, pkg_name, quick=args.quick)
         shutil.copy2(out, downloads / out.name)
