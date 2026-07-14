@@ -25,18 +25,17 @@
       "accent": "orange",
       "items": [
         {
-          "strong": "Lab tab",
-          "text": " \u2014 new sidebar tab with thermal weather, Why hot? detective, Whisper, compile-farm, and LAN stress duel in one place."
+          "strong": "Lab tab packed",
+          "text": " \u2014 status strip, presets, weather, detective (+copy), ghost-load, power receipt, whisper, meeting cloak, build ledger, alibi, collapsible LAN duel."
         },
         {
-          "strong": "Thermal weather + Whisper",
-          "text": " \u2014 Clear\u2192Storm weather; optional whisper menubar that stays quiet until load, heat, battery, or builds get interesting."
+          "strong": "Ghost-load + Power receipt",
+          "text": " \u2014 approx CPU-minutes and estimated Wh this session (local only)."
         },
         {
-          "strong": "Why hot? + Compile-farm + Duel",
-          "text": " \u2014 local detective narrative; swiftc/clang farm mode; host/join LAN stress duel. No cloud."
+          "strong": "Meeting cloak + Build ledger",
+          "text": " \u2014 hush menubar in Zoom/Teams/Webex; history of compile sessions."
         },
-
         {
           "strong": "All AI providers",
           "text": " \u2014 Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes."

@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="a3eed1465275b530d0da7d3ab87875917dbe77e5ed3e64a4796a36e2fe394bd5"
+EXPECTED_HASH="2da3033c04f0835110e6715f37851e6e5b3a4bb4e37818b74ee22f5c531807eb"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -6927,6 +6927,9 @@ enum MonitorPreferences {
     static let whisperSensitivityKey = "rnitro.whisperSensitivity"
     static let compileFarmKey = "rnitro.compileFarmMode"
     static let thermalWeatherSlotHintKey = "rnitro.thermalWeatherEnabled"
+    static let meetingCloakKey = "rnitro.meetingCloak"
+    static let buildLedgerKey = "rnitro.buildLedger"
+    static let powerReceiptResetKey = "rnitro.powerReceiptSessionStart"
 }
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -6998,19 +7001,39 @@ final class DisplayPreferencesStore: ObservableObject {
         "tab.monitor": "Monitor", "tab.advisor": "Advisor", "tab.chat": "Chat",
         "tab.cleaner": "Cleaner", "tab.lab": "Lab", "tab.settings": "Settings",
         "lab.title": "Lab",
-        "lab.subtitle": "Beta tools — all local, no cloud. Thermal weather, Whisper, detective, compile-farm, LAN duel.",
+        "lab.subtitle": "Experimental tools (beta, local only) — weather, detective, ghost-load, power, whisper, meetings, builds, duel.",
         "lab.weather": "Thermal weather",
         "lab.weather.hint": "Maps load + temp into Clear → Storm. Optional menubar slot.",
         "lab.weather.menubar": "Show weather in menubar",
         "lab.detective": "Why is my Mac hot?",
         "lab.detective.refresh": "Refresh report",
+        "lab.detective.copy": "Copy report",
         "lab.whisper": "Whisper menubar",
         "lab.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
         "lab.whisper.sensitivity": "Sensitivity",
         "lab.farm": "Compile-farm",
         "lab.farm.hint": "Detect swiftc / clang / xcodebuild, boost sampling while building, then cool down.",
-        "lab.duel": "Stress duel",
+        "lab.duel": "Stress duel (LAN)",
+        "lab.duel.show": "Show stress duel",
         "lab.open": "Open Lab",
+        "lab.presets": "Presets",
+        "lab.preset.quiet": "Quiet day",
+        "lab.preset.build": "Build day",
+        "lab.preset.full": "Full stats",
+        "lab.ghost": "Ghost-load radar",
+        "lab.ghost.hint": "Approx CPU-minutes last hour — quiet processes that still burn power.",
+        "lab.receipt": "Power receipt",
+        "lab.receipt.hint": "Estimated energy this session from package power (not a wall meter).",
+        "lab.receipt.copy": "Copy receipt",
+        "lab.receipt.reset": "Reset session",
+        "lab.cloak": "Meeting cloak",
+        "lab.cloak.hint": "When Zoom/Teams/Webex is running, hush the menubar (local process names only).",
+        "lab.ledger": "Build ledger",
+        "lab.ledger.clear": "Clear ledger",
+        "lab.alibi": "Process alibi",
+        "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
+        "lab.alibi.copy": "Copy alibi",
+        "lab.copied": "Copied",
         "chat.title": "AI Chat", "chat.subtitle": "Chat with your provider or manage API keys.",
         "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
         "settings.title": "Settings",
@@ -7497,6 +7520,10 @@ enum MenuBarStatusFormatter {
             } else if farm.isCoolingDown {
                 base = "Cool · " + base
             }
+            // Meeting cloak: hush menubar while conferencing apps run
+            if MeetingCloak.shared.shouldHushMenubar {
+                return "○ " + weather.emoji
+            }
             let whisperOn = UserDefaults.standard.bool(forKey: MonitorPreferences.whisperModeKey)
             if whisperOn {
                 let state = WhisperEngine.shared.evaluate(
@@ -7696,11 +7723,14 @@ final class CompileFarmDetector: ObservableObject {
     @Published private(set) var isCoolingDown = false
     @Published private(set) var matchedNames: [String] = []
     @Published private(set) var forceSpeaking = false
+    @Published private(set) var peakTempThisBuild: Double = 0
 
     private var timer: Timer?
     private var buildSince: Date?
     private var clearSince: Date?
     private var coolUntil = Date.distantPast
+    private var sessionStart: Date?
+    private var sessionNames: [String] = []
 
     private let buildNames: Set<String> = [
         "swiftc", "clang", "clang++", "ld", "ld-classic", "xcodebuild",
@@ -7767,8 +7797,15 @@ final class CompileFarmDetector: ObservableObject {
             if sustained {
                 isCoolingDown = false
                 coolUntil = Date.distantPast
+                let t = CPUMonitor.shared.temperature
+                if t > peakTempThisBuild { peakTempThisBuild = t }
                 if !wasBuilding {
+                    sessionStart = buildSince
+                    sessionNames = names
+                    peakTempThisBuild = t
                     MonitorActivity.applyIdleProfileChange()
+                } else {
+                    sessionNames = Array(Set(sessionNames + names)).sorted()
                 }
             }
         } else {
@@ -7777,11 +7814,17 @@ final class CompileFarmDetector: ObservableObject {
             if isBuilding {
                 if clearSince == nil { clearSince = now }
                 if now.timeIntervalSince(clearSince ?? now) >= 30 {
+                    let started = sessionStart ?? now.addingTimeInterval(-45)
+                    let tools = sessionNames
+                    let peak = peakTempThisBuild
                     isBuilding = false
                     forceSpeaking = false
                     coolUntil = now.addingTimeInterval(180) // 3 min cool-down
                     isCoolingDown = true
                     clearSince = nil
+                    sessionStart = nil
+                    sessionNames = []
+                    BuildLedger.shared.record(start: started, end: now, peakTemp: peak, tools: tools)
                     MonitorActivity.applyIdleProfileChange()
                 }
             } else if isCoolingDown {
@@ -9645,25 +9688,353 @@ struct MonitorTabContent: View {
 
 
 // ── Lab tab (beta): weather · detective · whisper · compile-farm · duel ──────
+
+// ── Lab expansion: ghost-load · power receipt · meeting cloak · build ledger ─
+
+struct GhostLoadRow: Identifiable {
+    let id: String
+    let name: String
+    let cpuMinutes: Double
+    let lastPercent: Double
+}
+
+final class GhostLoadTracker: ObservableObject {
+    static let shared = GhostLoadTracker()
+    @Published private(set) var rows: [GhostLoadRow] = []
+    private var accum: [String: Double] = [:] // name → CPU%-seconds
+    private var lastPct: [String: Double] = [:]
+    private var lastSample = Date.distantPast
+    private var timer: Timer?
+    private init() {}
+
+    func start() {
+        guard timer == nil else { return }
+        tick()
+        let t = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in self?.tick() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    func refreshFromProcesses(_ list: [ProcessSnapshot]) {
+        let now = Date()
+        let dt = lastSample == Date.distantPast ? 0 : now.timeIntervalSince(lastSample)
+        lastSample = now
+        if dt > 0, dt < 120 {
+            for p in list {
+                let key = p.name
+                accum[key, default: 0] += p.cpuPercent * dt
+                lastPct[key] = p.cpuPercent
+            }
+        }
+        // decay: drop very old contribution by soft cap window ~60 min worth
+        let maxSeconds = 3600.0 * 100.0 // absurd upper; we rank by accum
+        for (k, v) in accum where v > maxSeconds { accum[k] = maxSeconds }
+        publish()
+    }
+
+    private func tick() {
+        let list = ProcessMonitor.shared.topByCPU
+        if list.isEmpty {
+            ProcessMonitor.shared.start()
+        }
+        // Also light full-name scan for cumulative: use top list only (cheap)
+        refreshFromProcesses(ProcessMonitor.shared.topByCPU)
+    }
+
+    private func publish() {
+        let ranked = accum.map { (name, sec) -> GhostLoadRow in
+            GhostLoadRow(
+                id: name,
+                name: name,
+                cpuMinutes: sec / 60.0 / 100.0, // %·s → rough "CPU-minutes" at 100%
+                lastPercent: lastPct[name] ?? 0
+            )
+        }
+        .sorted { $0.cpuMinutes > $1.cpuMinutes }
+        .prefix(5)
+        rows = Array(ranked)
+    }
+
+    func reset() {
+        accum.removeAll()
+        lastPct.removeAll()
+        rows = []
+    }
+}
+
+final class PowerReceiptStore: ObservableObject {
+    static let shared = PowerReceiptStore()
+    @Published private(set) var wattSeconds: Double = 0
+    @Published private(set) var sessionStart: Date
+    @Published private(set) var onBatterySeconds: Double = 0
+    @Published private(set) var onACSeconds: Double = 0
+    private var lastTick = Date()
+    private var timer: Timer?
+    private init() {
+        if let t = UserDefaults.standard.object(forKey: MonitorPreferences.powerReceiptResetKey) as? Date {
+            sessionStart = t
+        } else {
+            sessionStart = Date()
+            UserDefaults.standard.set(sessionStart, forKey: MonitorPreferences.powerReceiptResetKey)
+        }
+        lastTick = Date()
+    }
+
+    func start() {
+        guard timer == nil else { return }
+        let t = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.sample() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    private func sample() {
+        let now = Date()
+        let dt = now.timeIntervalSince(lastTick)
+        lastTick = now
+        guard dt > 0, dt < 30 else { return }
+        let w = max(0, CPUMonitor.shared.packagePowerWatts)
+        wattSeconds += w * dt
+        let bat = BatteryMonitor.shared
+        if bat.isPresent {
+            if bat.isOnAC || bat.isCharging { onACSeconds += dt }
+            else { onBatterySeconds += dt }
+        }
+        objectWillChange.send()
+    }
+
+    var wattHours: Double { wattSeconds / 3600.0 }
+
+    func reset() {
+        wattSeconds = 0
+        onBatterySeconds = 0
+        onACSeconds = 0
+        sessionStart = Date()
+        lastTick = Date()
+        UserDefaults.standard.set(sessionStart, forKey: MonitorPreferences.powerReceiptResetKey)
+    }
+
+    func markdown(ghost: [GhostLoadRow]) -> String {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .short
+        var lines = [
+            "# rNitro power receipt",
+            "Session since: \(df.string(from: sessionStart))",
+            String(format: "Estimated energy: **%.2f Wh** (package power est.)", wattHours),
+            String(format: "On battery: %.0f min · On AC: %.0f min", onBatterySeconds / 60, onACSeconds / 60),
+            "Version: \(CURRENT_VERSION)",
+            ""
+        ]
+        if !ghost.isEmpty {
+            lines.append("## Quiet spenders (approx CPU-min)")
+            for g in ghost.prefix(5) {
+                lines.append(String(format: "- %@ — %.2f CPU-min (now %.0f%%)", g.name, g.cpuMinutes, g.lastPercent))
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+final class MeetingCloak: ObservableObject {
+    static let shared = MeetingCloak()
+    @Published private(set) var isMeetingActive = false
+    @Published private(set) var matchedApp: String = ""
+    private var timer: Timer?
+
+    private let names: Set<String> = [
+        "zoom.us", "Zoom", "ZoomOpener",
+        "Microsoft Teams", "Teams", "MSTeams",
+        "Webex", "webex", "Cisco Webex Meetings",
+        "FaceTime", "us.zoom.xos"
+    ]
+
+    private init() {}
+
+    var isEnabled: Bool {
+        UserDefaults.standard.bool(forKey: MonitorPreferences.meetingCloakKey)
+    }
+
+    var shouldHushMenubar: Bool {
+        RNITRO_FEATURE_BETA_UI && isEnabled && isMeetingActive
+    }
+
+    func startIfNeeded() {
+        guard RNITRO_FEATURE_BETA_UI else { return }
+        timer?.invalidate()
+        guard isEnabled else {
+            isMeetingActive = false
+            matchedApp = ""
+            return
+        }
+        let t = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.scan() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+        scan()
+    }
+
+    func applyPreferenceChange() {
+        startIfNeeded()
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+    }
+
+    private func scan() {
+        guard isEnabled else {
+            isMeetingActive = false
+            matchedApp = ""
+            return
+        }
+        let hit = Self.findMeeting(names)
+        isMeetingActive = hit != nil
+        matchedApp = hit ?? ""
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+    }
+
+    private static func findMeeting(_ targets: Set<String>) -> String? {
+        let cap = 4096
+        var buf = [pid_t](repeating: 0, count: cap)
+        let bytes = buf.withUnsafeMutableBufferPointer { ptr -> Int in
+            guard let base = ptr.baseAddress else { return 0 }
+            return Int(proc_listallpids(base, Int32(MemoryLayout<pid_t>.size * cap)))
+        }
+        guard bytes > 0 else { return nil }
+        let count = bytes / MemoryLayout<pid_t>.size
+        for pid in buf.prefix(count) where pid > 0 {
+            var nameBuf = [CChar](repeating: 0, count: 256)
+            guard proc_name(pid, &nameBuf, UInt32(nameBuf.count)) > 0 else { continue }
+            let raw = String(cString: nameBuf)
+            let base = (raw as NSString).lastPathComponent
+            if targets.contains(base) || targets.contains(raw) { return base }
+            let lower = base.lowercased()
+            if lower.contains("zoom") || lower.contains("webex") { return base }
+            if lower.contains("teams") && !lower.contains("helper") { return base }
+        }
+        return nil
+    }
+}
+
+struct BuildLedgerEntry: Codable, Identifiable {
+    var id: String
+    var start: TimeInterval
+    var end: TimeInterval
+    var peakTemp: Double
+    var tools: [String]
+    var durationMinutes: Double { max(0, (end - start) / 60.0) }
+}
+
+final class BuildLedger: ObservableObject {
+    static let shared = BuildLedger()
+    @Published private(set) var entries: [BuildLedgerEntry] = []
+    private init() { load() }
+
+    private func load() {
+        guard let data = UserDefaults.standard.data(forKey: MonitorPreferences.buildLedgerKey),
+              let decoded = try? JSONDecoder().decode([BuildLedgerEntry].self, from: data) else {
+            entries = []
+            return
+        }
+        entries = decoded
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(data, forKey: MonitorPreferences.buildLedgerKey)
+        }
+    }
+
+    func record(start: Date, end: Date, peakTemp: Double, tools: [String]) {
+        let e = BuildLedgerEntry(
+            id: UUID().uuidString,
+            start: start.timeIntervalSince1970,
+            end: end.timeIntervalSince1970,
+            peakTemp: peakTemp,
+            tools: tools
+        )
+        entries.insert(e, at: 0)
+        if entries.count > 20 { entries = Array(entries.prefix(20)) }
+        save()
+    }
+
+    func clear() {
+        entries = []
+        save()
+    }
+
+    var todayMinutes: Double {
+        let cal = Calendar.current
+        let startOfDay = cal.startOfDay(for: Date()).timeIntervalSince1970
+        return entries.filter { $0.start >= startOfDay }.reduce(0) { $0 + $1.durationMinutes }
+    }
+}
+
+enum LabAlibi {
+    static func markdown(
+        report: DetectiveReport,
+        whisperOn: Bool,
+        farm: CompileFarmDetector,
+        receipt: PowerReceiptStore
+    ) -> String {
+        let df = ISO8601DateFormatter()
+        var lines = [
+            "# rNitro process alibi",
+            "Time: \(df.string(from: Date()))",
+            "Version: \(CURRENT_VERSION)",
+            "Weather: \(report.weather.label)",
+            "",
+            "## \(report.headline)",
+        ]
+        for b in report.bullets { lines.append("- \(b)") }
+        lines.append("")
+        lines.append("Suggestion: \(report.suggestion)")
+        lines.append("")
+        lines.append("Whisper: \(whisperOn ? "on" : "off")")
+        lines.append("Compile-farm: \(farm.isBuilding ? "building" : (farm.isCoolingDown ? "cool-down" : "idle"))")
+        lines.append(String(format: "Power est.: %.2f Wh this session", receipt.wattHours))
+        return lines.joined(separator: "\n")
+    }
+}
+
 struct LabTabView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var m = CPUMonitor.shared
     @ObservedObject private var bat = BatteryMonitor.shared
     @ObservedObject private var farm = CompileFarmDetector.shared
+    @ObservedObject private var ghost = GhostLoadTracker.shared
+    @ObservedObject private var receipt = PowerReceiptStore.shared
+    @ObservedObject private var cloak = MeetingCloak.shared
+    @ObservedObject private var ledger = BuildLedger.shared
     @AppStorage(MonitorPreferences.whisperModeKey) private var whisperOn = false
+    @AppStorage(MonitorPreferences.meetingCloakKey) private var meetingCloakOn = false
     @State private var report = ThermalDetective.analyze()
     @State private var whisperStatus = "—"
+    @State private var showDuel = false
+    @State private var toast = ""
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 header
+                statusStrip
+                presetsRow
                 weatherCard
                 detectiveCard
+                ghostCard
+                receiptCard
                 whisperCard
+                cloakCard
                 farmCard
+                alibiCard
                 duelCard
+                if !toast.isEmpty {
+                    Text(toast)
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.nOrange)
+                }
             }
             .padding(.horizontal, metrics.hPad)
             .padding(.vertical, 14)
@@ -9673,6 +10044,9 @@ struct LabTabView: View {
         .onReceive(m.$temperature) { _ in tickWhisper() }
         .onReceive(m.$totalUsage) { _ in tickWhisper() }
         .onReceive(farm.$isBuilding) { _ in tickWhisper() }
+        .onReceive(ProcessMonitor.shared.$topByCPU) { list in
+            ghost.refreshFromProcesses(list)
+        }
     }
 
     private var header: some View {
@@ -9682,6 +10056,12 @@ struct LabTabView: View {
                     .foregroundColor(.nOrange)
                 Text(display.tr("lab.title"))
                     .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+                Text("BETA")
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.nOrange))
                 Spacer()
                 Text(CURRENT_VERSION)
                     .font(rNitroFont(.micro, metrics: metrics))
@@ -9691,6 +10071,49 @@ struct LabTabView: View {
                 .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var statusStrip: some View {
+        let wx = ThermalWeather.current()
+        return HStack(spacing: 8) {
+            Text("\(wx.emoji) \(wx.label)")
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+            Text("·").foregroundColor(.secondary)
+            Text(whisperOn ? (whisperStatus.contains("quiet") ? "Whisper quiet" : "Whisper live") : "Whisper off")
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Text("·").foregroundColor(.secondary)
+            Text(farm.isBuilding ? "Build" : (farm.isCoolingDown ? "Cool" : "Farm idle"))
+                .font(rNitroFont(.micro, metrics: metrics, weight: farm.isBuilding ? .semibold : .regular))
+                .foregroundColor(farm.isBuilding ? .nOrange : .secondary)
+            if cloak.shouldHushMenubar {
+                Text("· Meeting hush")
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nOrange)
+            }
+            Spacer()
+            Text(String(format: "%.0f° · %.0f%%", m.temperature, m.totalUsage))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.nOrange.opacity(0.08))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.nOrange.opacity(0.3), lineWidth: 1))
+        )
+    }
+
+    private var presetsRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(display.tr("lab.presets"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            HStack(spacing: 8) {
+                MinimalButton(title: display.tr("lab.preset.quiet"), action: applyQuietDay)
+                MinimalButton(title: display.tr("lab.preset.build"), action: applyBuildDay)
+                MinimalButton(title: display.tr("lab.preset.full"), action: applyFullStats)
+            }
         }
     }
 
@@ -9726,15 +10149,8 @@ struct LabTabView: View {
                 Text(display.tr("lab.detective"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Spacer()
-                MinimalButton(title: display.tr("lab.detective.refresh"), action: {
-                    if ProcessMonitor.shared.topByCPU.isEmpty {
-                        ProcessMonitor.shared.start()
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        report = ThermalDetective.analyze()
-                    }
-                    report = ThermalDetective.analyze()
-                })
+                MinimalButton(title: display.tr("lab.detective.refresh"), action: refreshDetective)
+                MinimalButton(title: display.tr("lab.detective.copy"), action: copyDetective)
             }
             Text(report.headline)
                 .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
@@ -9751,6 +10167,62 @@ struct LabTabView: View {
                 .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
+        }
+    }
+
+    private var ghostCard: some View {
+        labCard {
+            HStack {
+                Text(display.tr("lab.ghost"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Spacer()
+                MinimalButton(title: display.tr("lab.detective.refresh"), action: {
+                    ProcessMonitor.shared.start()
+                    ghost.refreshFromProcesses(ProcessMonitor.shared.topByCPU)
+                })
+            }
+            Text(display.tr("lab.ghost.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            if ghost.rows.isEmpty {
+                Text("Sampling… open Lab a minute while apps run.")
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(ghost.rows) { row in
+                    HStack {
+                        Text(row.name)
+                            .font(rNitroFont(.caption, metrics: metrics))
+                            .lineLimit(1)
+                        Spacer()
+                        Text(String(format: "%.2f min · now %.0f%%", row.cpuMinutes, row.lastPercent))
+                            .font(rNitroFont(.micro, metrics: metrics))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var receiptCard: some View {
+        labCard {
+            HStack {
+                Text(display.tr("lab.receipt"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Spacer()
+                MinimalButton(title: display.tr("lab.receipt.copy"), action: {
+                    copyText(receipt.markdown(ghost: ghost.rows))
+                })
+                MinimalButton(title: display.tr("lab.receipt.reset"), action: { receipt.reset(); flashCopied("Session reset") })
+            }
+            Text(display.tr("lab.receipt.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Text(String(format: "%.2f Wh est. · batt %.0f min · AC %.0f min", receipt.wattHours, receipt.onBatterySeconds / 60, receipt.onACSeconds / 60))
+                .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
+            Text(String(format: "Live package power: %.1f W", m.packagePowerWatts))
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(.secondary)
         }
     }
 
@@ -9787,6 +10259,32 @@ struct LabTabView: View {
         }
     }
 
+    private var cloakCard: some View {
+        labCard {
+            Text(display.tr("lab.cloak"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.cloak.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Toggle(isOn: $meetingCloakOn) {
+                Text(display.tr("lab.cloak")).font(rNitroFont(.caption, metrics: metrics))
+            }
+            .toggleStyle(.switch)
+            .onChange(of: meetingCloakOn) { _, _ in
+                MeetingCloak.shared.applyPreferenceChange()
+            }
+            if cloak.isMeetingActive {
+                Text("Active: \(cloak.matchedApp) — menubar hushed")
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nOrange)
+            } else {
+                Text(meetingCloakOn ? "No meeting app detected" : "Off")
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
     private var farmCard: some View {
         labCard {
             Text(display.tr("lab.farm"))
@@ -9810,14 +10308,64 @@ struct LabTabView: View {
             Text(farmStatusLine)
                 .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 .foregroundColor(farm.isBuilding ? .nOrange : .secondary)
+            Divider().opacity(0.4)
+            HStack {
+                Text(display.tr("lab.ledger"))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                Spacer()
+                Text(String(format: "Today %.0f min", ledger.todayMinutes))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+                MinimalButton(title: display.tr("lab.ledger.clear"), action: { ledger.clear() })
+            }
+            if ledger.entries.isEmpty {
+                Text("No finished builds recorded yet.")
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(ledger.entries.prefix(5)) { e in
+                    Text(String(format: "%.1f min · peak %.0f° · %@", e.durationMinutes, e.peakTemp, e.tools.joined(separator: ", ")))
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    private var alibiCard: some View {
+        labCard {
+            Text(display.tr("lab.alibi"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.alibi.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            MinimalButton(title: display.tr("lab.alibi.copy"), action: {
+                report = ThermalDetective.analyze()
+                copyText(LabAlibi.markdown(report: report, whisperOn: whisperOn, farm: farm, receipt: receipt))
+            })
         }
     }
 
     private var duelCard: some View {
         labCard {
-            Text(display.tr("lab.duel"))
-                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
-            StressDuelPanel()
+            Button(action: { withAnimation { showDuel.toggle() } }) {
+                HStack {
+                    Text(display.tr("lab.duel"))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: showDuel ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            if showDuel {
+                StressDuelPanel()
+            } else {
+                Text("Expand for LAN host/join duel (no cloud).")
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
@@ -9844,18 +10392,78 @@ struct LabTabView: View {
     }
 
     private func refreshAll() {
-        if ProcessMonitor.shared.topByCPU.isEmpty {
-            ProcessMonitor.shared.start()
-        }
+        ProcessMonitor.shared.start()
         report = ThermalDetective.analyze()
         tickWhisper()
         if RNITRO_FEATURE_BETA_UI {
             CompileFarmDetector.shared.startIfNeeded()
+            GhostLoadTracker.shared.start()
+            PowerReceiptStore.shared.start()
+            MeetingCloak.shared.startIfNeeded()
         }
+    }
+
+    private func refreshDetective() {
+        ProcessMonitor.shared.start()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            report = ThermalDetective.analyze()
+        }
+        report = ThermalDetective.analyze()
+    }
+
+    private func copyDetective() {
+        var md = "# \(report.headline)\n\n"
+        for b in report.bullets { md += "- \(b)\n" }
+        md += "\n**Suggestion:** \(report.suggestion)\n\n_rNitro \(CURRENT_VERSION)_\n"
+        copyText(md)
+    }
+
+    private func copyText(_ s: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(s, forType: .string)
+        flashCopied(display.tr("lab.copied"))
+    }
+
+    private func flashCopied(_ msg: String) {
+        toast = msg
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if toast == msg { toast = "" }
+        }
+    }
+
+    private func applyQuietDay() {
+        whisperOn = true
+        UserDefaults.standard.set(WhisperSensitivity.chill.rawValue, forKey: MonitorPreferences.whisperSensitivityKey)
+        MenuBarConfig.setSlot(.weather, enabled: false)
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+        tickWhisper()
+        flashCopied("Quiet day")
+    }
+
+    private func applyBuildDay() {
+        whisperOn = false
+        UserDefaults.standard.set(true, forKey: MonitorPreferences.compileFarmKey)
+        CompileFarmDetector.shared.applyPreferenceChange()
+        MenuBarConfig.setSlot(.weather, enabled: true)
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+        tickWhisper()
+        flashCopied("Build day")
+    }
+
+    private func applyFullStats() {
+        whisperOn = false
+        MenuBarConfig.setSlot(.weather, enabled: true)
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+        tickWhisper()
+        flashCopied("Full stats")
     }
 
     private func tickWhisper() {
         let wx = ThermalWeather.current()
+        if MeetingCloak.shared.shouldHushMenubar {
+            whisperStatus = "Meeting cloak — menubar hushed"
+            return
+        }
         let state = WhisperEngine.shared.evaluate(
             usage: m.totalUsage,
             temp: m.temperature,
@@ -10251,6 +10859,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         BatteryMonitor.shared.startMonitoring()
         if RNITRO_FEATURE_BETA_UI {
             CompileFarmDetector.shared.startIfNeeded()
+            PowerReceiptStore.shared.start()
+            MeetingCloak.shared.startIfNeeded()
         }
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
