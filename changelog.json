@@ -21,24 +21,24 @@
     },
     {
       "channel": "beta",
-      "title": "v1.2.1 Beta",
+      "title": "v1.2.2 Beta",
       "accent": "orange",
       "items": [
         {
-          "strong": "Lab tab packed",
-          "text": " \u2014 status strip, presets, weather, detective (+copy), ghost-load, power receipt, whisper, meeting cloak, build ledger, alibi, collapsible LAN duel."
+          "strong": "Lab jump list",
+          "text": " \u2014 chip TOC to jump to Weather, Detective, Ghost, Receipt, and more."
         },
         {
-          "strong": "Ghost-load + Power receipt",
-          "text": " \u2014 approx CPU-minutes and estimated Wh this session (local only)."
+          "strong": "Time-scrub",
+          "text": " \u2014 scrub last ~90s of CPU / temp / watts from Lab."
         },
         {
-          "strong": "Meeting cloak + Build ledger",
-          "text": " \u2014 hush menubar in Zoom/Teams/Webex; history of compile sessions."
+          "strong": "Polite peer",
+          "text": " \u2014 ease sampling when Activity Monitor / Instruments is running."
         },
         {
-          "strong": "All AI providers",
-          "text": " \u2014 Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes."
+          "strong": "Lab stack",
+          "text": " \u2014 weather, detective, ghost-load, power receipt, whisper, cloak, farm ledger, alibi, duel."
         }
       ]
     },
@@ -64,8 +64,8 @@
   ],
   "releases": [
     {
-      "title": "v1.2.1 Beta",
-      "body_html": "<strong style=\"color:var(--orange);\">Beta channel</strong> \u2014 Thermal weather, Whisper menubar, Why hot? detective, Compile-farm mode, Stress duel (LAN), full AI providers. Download the orange App ZIP or see <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.1\" style=\"color:var(--cyan);\">GitHub</a>."
+      "title": "v1.2.2 Beta",
+      "body_html": "<strong style=\"color:var(--orange);\">Beta channel</strong> \u2014 Lab jump list, time-scrub, polite peer, thermal weather, Whisper, detective, ghost-load, power receipt, meeting cloak, build ledger, LAN duel. See <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.2\" style=\"color:var(--cyan);\">GitHub</a>."
     },
     {
       "title": "v1.1.0 Final Reloaded",

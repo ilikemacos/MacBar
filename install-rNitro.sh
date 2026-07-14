@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="2da3033c04f0835110e6715f37851e6e5b3a4bb4e37818b74ee22f5c531807eb"
+EXPECTED_HASH="9337fa2c0c886097dffbecd86fd8eaea5c47c98915b17d500958068f27714c70"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -374,7 +374,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v1.2.1"
+let CURRENT_VERSION = "v1.2.2"
 let RNITRO_BUILD_CHANNEL = "beta"
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
 private let RNITRO_UI_FONT = "Varela Round"
@@ -1268,7 +1268,7 @@ fileprivate final class SMCReader {
         guard !keys.isEmpty else { return [] }
         let fresh = keys.compactMap { key, info in
             readCachedTemperature(key: key, info: info)
-        }.filter { $0 >= 20 && $0 <= 95 }
+        }.filter { $0 >= 15 && $0 <= 115 }
         cacheLock.lock()
         cachedReadings = fresh
         lastReadingsTime = Date()
@@ -1372,7 +1372,7 @@ fileprivate final class IOHIDTempReader {
             guard let event = IOHIDServiceClientCopyEvent(ptr, eventType, 0, 0) else { continue }
             let t = IOHIDEventGetFloatValue(event, field)
             Unmanaged<CFTypeRef>.fromOpaque(event).release()
-            if t >= 20, t <= 95 { temps.append(t) }
+            if t >= 15, t <= 115 { temps.append(t) }
         }
         return temps
     }
@@ -1724,26 +1724,25 @@ class CPUMonitor: ObservableObject {
 
     // Apple Silicon doesn't expose a public per-core °C sensor API, but
     // ProcessInfo.thermalState reflects the real thermal pressure macOS is
-    // tracking system-wide. We map its 4 discrete states to a *range* rather
-    // than a single flat number, and interpolate within that range using
-    // live CPU usage so the gauge moves continuously instead of sitting on
-    // one fixed value (e.g. always reading 40 while thermalState == .nominal).
+    // tracking system-wide. Fallback estimate only when no sensors resolve —
+    // ranges must allow full-load heat (M-series often 90–105°C), not stop at 80.
     static func thermalDisplayValue(_ state: ProcessInfo.ThermalState, usage: Double) -> Double {
         let u = max(0, min(100, usage)) / 100.0
         switch state {
-        case .nominal:  return 38 + 42 * u   // 38–80°C
-        case .fair:     return 48 + 38 * u   // 48–86°C
-        case .serious:  return 58 + 30 * u   // 58–88°C
-        case .critical: return 68 + 22 * u   // 68–90°C
-        @unknown default: return 38 + 42 * u
+        case .nominal:  return 35 + 55 * u   // 35–90°C
+        case .fair:     return 48 + 48 * u   // 48–96°C
+        case .serious:  return 62 + 40 * u   // 62–102°C
+        case .critical: return 75 + 35 * u   // 75–110°C
+        @unknown default: return 35 + 55 * u
         }
     }
 
     private static func plausibleSensorTemps(_ readings: [Double]) -> [Double] {
-        readings.filter { $0 >= 20 && $0 <= 95 }
+        // M-series die can exceed 100°C under sustained load; keep 115 as sanity ceiling.
+        readings.filter { $0 >= 15 && $0 <= 115 }
     }
 
-    // Prefer a robust sensor cluster; never let a single bogus/stuck key peg the UI at 105°C.
+    // Prefer sensor cluster; only discard clearly stuck high keys under near-idle load.
     static func resolveTemperature(state: ProcessInfo.ThermalState, usage: Double, smcReadings: [Double]) -> (temp: Double, source: String) {
         let estimate = thermalDisplayValue(state, usage: usage)
         let plausible = plausibleSensorTemps(smcReadings)
@@ -1752,16 +1751,19 @@ class CPUMonitor: ObservableObject {
         }
 
         let sorted = plausible.sorted()
-        let sensor = sorted[sorted.count / 2] // median — resists one hot garbage key
+        let sensor = sorted[sorted.count / 2] // median — resists one garbage key
+        let p90 = sorted[min(sorted.count - 1, (sorted.count * 9) / 10)]
 
-        // Stuck/high sensor under light load → trust load estimate instead.
-        if sensor >= 88 && usage < 35 && state == .nominal {
-            return (estimate, "Load estimate (sensor \(Int(sensor.rounded()))°C ignored — light load)")
+        // Only ignore absurd stuck highs when the Mac is truly idle.
+        if sensor >= 100 && usage < 12 && state == .nominal {
+            return (estimate, "Load estimate (sensor \(Int(sensor.rounded()))°C ignored — idle)")
         }
-        if sensor >= 95 && usage < 55 {
-            return (max(estimate, sensor * 0.65), "Blended (capped hot sensor \(Int(sensor.rounded()))°C)")
+        // Prefer upper-quartile under real load so we don't mute hot die sensors.
+        if usage >= 40 || state == .serious || state == .critical {
+            let hot = max(sensor, p90)
+            return (hot, "Sensor hot cluster (\(plausible.count) sensors)")
         }
-        if sensor < 62 && usage > 25 {
+        if sensor < 55 && usage > 40 {
             return (max(sensor, estimate), "Blended (\(plausible.count) sensors + load)")
         }
         return (sensor, "Sensor median (\(plausible.count) sensors)")
@@ -2137,7 +2139,7 @@ class CPUMonitor: ObservableObject {
         } else {
             nextTemp = resolved.temp
         }
-        smoothedTemperature = min(95, max(20, nextTemp))
+        smoothedTemperature = min(110, max(15, nextTemp))
         let boost = baseClock + (baseClock * 0.28) * (usage / 100.0)
         let estimate = Self.estimatePackagePowerWatts(
             usage: usage, baseClock: baseClock, boostClock: boost,
@@ -3388,6 +3390,7 @@ enum MonitorActivity {
 
     static var cpuInterval: TimeInterval {
         if popoverOpen || CompileFarmDetector.shared.shouldForceSampling { return 1.0 }
+        if PolitePeer.shared.shouldEaseSampling { return idleProfile == .aggressive ? 8.0 : 5.0 }
         return idleProfile == .aggressive ? 4.0 : 2.0
     }
 
@@ -3399,10 +3402,19 @@ enum MonitorActivity {
     }
     static var memoryInterval: TimeInterval {
         if popoverOpen { return 2.0 }
+        if PolitePeer.shared.shouldEaseSampling { return 12.0 }
         return idleProfile == .aggressive ? 10.0 : 5.0
     }
-    static var diskInterval: TimeInterval { popoverOpen ? 5.0 : 8.0 }
-    static var sensorsInterval: TimeInterval { popoverOpen ? 3.0 : 8.0 }
+    static var diskInterval: TimeInterval {
+        if popoverOpen { return 5.0 }
+        if PolitePeer.shared.shouldEaseSampling { return 12.0 }
+        return 8.0
+    }
+    static var sensorsInterval: TimeInterval {
+        if popoverOpen { return 3.0 }
+        if PolitePeer.shared.shouldEaseSampling { return 10.0 }
+        return 8.0
+    }
     static var includePowerSample: Bool {
         popoverOpen || enabledSlots.contains(.power)
     }
@@ -6930,6 +6942,7 @@ enum MonitorPreferences {
     static let meetingCloakKey = "rnitro.meetingCloak"
     static let buildLedgerKey = "rnitro.buildLedger"
     static let powerReceiptResetKey = "rnitro.powerReceiptSessionStart"
+    static let politePeerKey = "rnitro.politePeer"
 }
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -7034,6 +7047,18 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
         "lab.alibi.copy": "Copy alibi",
         "lab.copied": "Copied",
+        "lab.toc.weather": "Weather", "lab.toc.detective": "Detective", "lab.toc.ghost": "Ghost",
+        "lab.toc.receipt": "Receipt", "lab.toc.whisper": "Whisper", "lab.toc.cloak": "Cloak",
+        "lab.toc.farm": "Farm", "lab.toc.alibi": "Alibi", "lab.toc.duel": "Duel", "lab.toc.scrub": "Scrub",
+        "lab.toc.peer": "Peer",
+        "lab.scrub": "Time-scrub",
+        "lab.scrub.hint": "Last ~90s of CPU, temperature, and package power. Drag to scrub.",
+        "lab.scrub.now": "Jump to now",
+        "lab.peer": "Polite peer",
+        "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
+        "lab.peer.active": "Peer active — sampling eased",
+        "lab.peer.idle": "No peer profilers detected",
+        "lab.jump": "Jump to",
         "chat.title": "AI Chat", "chat.subtitle": "Chat with your provider or manage API keys.",
         "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
         "settings.title": "Settings",
@@ -9998,6 +10023,164 @@ enum LabAlibi {
     }
 }
 
+
+// ── v1.2.2: time-scrub + polite peer ─────────────────────────────────────────
+
+struct LabMetricSample: Identifiable {
+    let id: Int
+    let t: Date
+    let cpu: Double
+    let temp: Double
+    let watts: Double
+}
+
+final class LabTimeScrubStore: ObservableObject {
+    static let shared = LabTimeScrubStore()
+    @Published private(set) var samples: [LabMetricSample] = []
+    @Published var scrubIndex: Double = 0 // 0...count-1
+    private var nextId = 0
+    private var timer: Timer?
+    private let capacity = 90
+    private init() {}
+
+    var scrubbed: LabMetricSample? {
+        guard !samples.isEmpty else { return nil }
+        let i = min(max(0, Int(scrubIndex.rounded())), samples.count - 1)
+        return samples[i]
+    }
+
+    var isAtLive: Bool {
+        samples.isEmpty || Int(scrubIndex.rounded()) >= samples.count - 1
+    }
+
+    func start() {
+        guard timer == nil else { return }
+        tick()
+        let t = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in self?.tick() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func tick() {
+        let cpu = CPUMonitor.shared
+        let s = LabMetricSample(
+            id: nextId,
+            t: Date(),
+            cpu: cpu.totalUsage,
+            temp: cpu.temperature,
+            watts: cpu.packagePowerWatts
+        )
+        nextId += 1
+        samples.append(s)
+        if samples.count > capacity {
+            samples.removeFirst(samples.count - capacity)
+        }
+        // Stay pinned to live edge when user was at end
+        if isAtLive || scrubIndex >= Double(max(0, samples.count - 2)) {
+            scrubIndex = Double(max(0, samples.count - 1))
+        }
+    }
+
+    func jumpToNow() {
+        scrubIndex = Double(max(0, samples.count - 1))
+    }
+}
+
+final class PolitePeer: ObservableObject {
+    static let shared = PolitePeer()
+    @Published private(set) var isPeerActive = false
+    @Published private(set) var peerName: String = ""
+    private var timer: Timer?
+
+    private let peers: Set<String> = [
+        "Activity Monitor", "Instruments", "powermetrics",
+        "sample", "spindump", "fs_usage", "leaks", "heap",
+        "MallocStackLogging", "sysdiagnose"
+    ]
+
+    private init() {}
+
+    var isEnabled: Bool {
+        if UserDefaults.standard.object(forKey: MonitorPreferences.politePeerKey) == nil {
+            return true // default on for beta
+        }
+        return UserDefaults.standard.bool(forKey: MonitorPreferences.politePeerKey)
+    }
+
+    var shouldEaseSampling: Bool {
+        RNITRO_FEATURE_BETA_UI && isEnabled && isPeerActive
+            && !CompileFarmDetector.shared.shouldForceSampling
+            && !MonitorActivity.popoverOpen
+    }
+
+    func startIfNeeded() {
+        guard RNITRO_FEATURE_BETA_UI else { return }
+        timer?.invalidate()
+        guard isEnabled else {
+            isPeerActive = false
+            peerName = ""
+            return
+        }
+        let t = Timer.scheduledTimer(withTimeInterval: 6.0, repeats: true) { [weak self] _ in self?.scan() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+        scan()
+    }
+
+    func applyPreferenceChange() {
+        startIfNeeded()
+        MonitorActivity.applyIdleProfileChange()
+    }
+
+    private func scan() {
+        guard isEnabled else {
+            let was = isPeerActive
+            isPeerActive = false
+            peerName = ""
+            if was { MonitorActivity.applyIdleProfileChange() }
+            return
+        }
+        let hit = Self.findPeer(peers)
+        let was = isPeerActive
+        isPeerActive = hit != nil
+        peerName = hit ?? ""
+        if was != isPeerActive {
+            MonitorActivity.applyIdleProfileChange()
+        }
+    }
+
+    private static func findPeer(_ targets: Set<String>) -> String? {
+        let cap = 4096
+        var buf = [pid_t](repeating: 0, count: cap)
+        let bytes = buf.withUnsafeMutableBufferPointer { ptr -> Int in
+            guard let base = ptr.baseAddress else { return 0 }
+            return Int(proc_listallpids(base, Int32(MemoryLayout<pid_t>.size * cap)))
+        }
+        guard bytes > 0 else { return nil }
+        let count = bytes / MemoryLayout<pid_t>.size
+        for pid in buf.prefix(count) where pid > 0 {
+            var nameBuf = [CChar](repeating: 0, count: 256)
+            guard proc_name(pid, &nameBuf, UInt32(nameBuf.count)) > 0 else { continue }
+            let raw = String(cString: nameBuf)
+            let base = (raw as NSString).lastPathComponent
+            if targets.contains(base) || targets.contains(raw) { return base }
+            let lower = base.lowercased()
+            if lower == "instruments" || lower.contains("activity monitor") { return base }
+        }
+        // Frontmost app name
+        if let front = NSWorkspace.shared.frontmostApplication?.localizedName {
+            if targets.contains(front) { return front }
+            if front == "Activity Monitor" || front == "Instruments" { return front }
+        }
+        return nil
+    }
+}
+
 struct LabTabView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
@@ -10008,44 +10191,101 @@ struct LabTabView: View {
     @ObservedObject private var receipt = PowerReceiptStore.shared
     @ObservedObject private var cloak = MeetingCloak.shared
     @ObservedObject private var ledger = BuildLedger.shared
+    @ObservedObject private var scrub = LabTimeScrubStore.shared
+    @ObservedObject private var peer = PolitePeer.shared
     @AppStorage(MonitorPreferences.whisperModeKey) private var whisperOn = false
     @AppStorage(MonitorPreferences.meetingCloakKey) private var meetingCloakOn = false
     @State private var report = ThermalDetective.analyze()
     @State private var whisperStatus = "—"
     @State private var showDuel = false
     @State private var toast = ""
+    @State private var jumpTarget: String? = nil
+
+    private let toc: [(String, String)] = [
+        ("weather", "lab.toc.weather"),
+        ("scrub", "lab.toc.scrub"),
+        ("detective", "lab.toc.detective"),
+        ("ghost", "lab.toc.ghost"),
+        ("receipt", "lab.toc.receipt"),
+        ("whisper", "lab.toc.whisper"),
+        ("cloak", "lab.toc.cloak"),
+        ("peer", "lab.toc.peer"),
+        ("farm", "lab.toc.farm"),
+        ("alibi", "lab.toc.alibi"),
+        ("duel", "lab.toc.duel"),
+    ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                header
-                statusStrip
-                presetsRow
-                weatherCard
-                detectiveCard
-                ghostCard
-                receiptCard
-                whisperCard
-                cloakCard
-                farmCard
-                alibiCard
-                duelCard
-                if !toast.isEmpty {
-                    Text(toast)
-                        .font(rNitroFont(.micro, metrics: metrics))
-                        .foregroundColor(.nOrange)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    header
+                    statusStrip
+                    tocBar(proxy: proxy)
+                    presetsRow
+                    weatherCard.id("weather")
+                    scrubCard.id("scrub")
+                    detectiveCard.id("detective")
+                    ghostCard.id("ghost")
+                    receiptCard.id("receipt")
+                    whisperCard.id("whisper")
+                    cloakCard.id("cloak")
+                    peerCard.id("peer")
+                    farmCard.id("farm")
+                    alibiCard.id("alibi")
+                    duelCard.id("duel")
+                    if !toast.isEmpty {
+                        Text(toast)
+                            .font(rNitroFont(.micro, metrics: metrics))
+                            .foregroundColor(.nOrange)
+                    }
                 }
+                .padding(.horizontal, metrics.hPad)
+                .padding(.vertical, 14)
             }
-            .padding(.horizontal, metrics.hPad)
-            .padding(.vertical, 14)
+            .onChange(of: jumpTarget) { _, id in
+                guard let id else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(id, anchor: .top)
+                }
+                jumpTarget = nil
+            }
         }
         .background(Color.bg)
         .onAppear { refreshAll() }
+        .onDisappear {
+            // Slow/stop Lab-only scrub when leaving tab
+            LabTimeScrubStore.shared.stop()
+            GhostLoadTracker.shared.stop()
+        }
         .onReceive(m.$temperature) { _ in tickWhisper() }
         .onReceive(m.$totalUsage) { _ in tickWhisper() }
         .onReceive(farm.$isBuilding) { _ in tickWhisper() }
         .onReceive(ProcessMonitor.shared.$topByCPU) { list in
             ghost.refreshFromProcesses(list)
+        }
+    }
+
+    private func tocBar(proxy: ScrollViewProxy) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(display.tr("lab.jump"))
+                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                .foregroundColor(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(toc, id: \.0) { item in
+                        Button(action: { jumpTarget = item.0 }) {
+                            Text(display.tr(item.1))
+                                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                                .foregroundColor(.nOrange)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Capsule().stroke(Color.nOrange.opacity(0.5), lineWidth: 0.8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
     }
 
@@ -10076,26 +10316,38 @@ struct LabTabView: View {
 
     private var statusStrip: some View {
         let wx = ThermalWeather.current()
-        return HStack(spacing: 8) {
-            Text("\(wx.emoji) \(wx.label)")
-                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-            Text("·").foregroundColor(.secondary)
-            Text(whisperOn ? (whisperStatus.contains("quiet") ? "Whisper quiet" : "Whisper live") : "Whisper off")
-                .font(rNitroFont(.micro, metrics: metrics))
-                .foregroundColor(.secondary)
-            Text("·").foregroundColor(.secondary)
-            Text(farm.isBuilding ? "Build" : (farm.isCoolingDown ? "Cool" : "Farm idle"))
-                .font(rNitroFont(.micro, metrics: metrics, weight: farm.isBuilding ? .semibold : .regular))
-                .foregroundColor(farm.isBuilding ? .nOrange : .secondary)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text("\(wx.emoji) \(wx.label)")
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                Text("·").foregroundColor(.secondary)
+                Text(whisperOn ? (whisperStatus.contains("quiet") ? "Whisper quiet" : "Whisper live") : "Whisper off")
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+                Text("·").foregroundColor(.secondary)
+                Text(farm.isBuilding ? "Build" : (farm.isCoolingDown ? "Cool" : "Farm idle"))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: farm.isBuilding ? .semibold : .regular))
+                    .foregroundColor(farm.isBuilding ? .nOrange : .secondary)
+                Spacer()
+                Text(String(format: "%.0f° · %.0f%%", m.temperature, m.totalUsage))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
             if cloak.shouldHushMenubar {
-                Text("· Meeting hush")
+                Text("Meeting hush active")
                     .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
             }
-            Spacer()
-            Text(String(format: "%.0f° · %.0f%%", m.temperature, m.totalUsage))
-                .font(rNitroFont(.micro, metrics: metrics))
-                .foregroundColor(.secondary)
+            if peer.shouldEaseSampling {
+                Text(display.tr("lab.peer.active") + (peer.peerName.isEmpty ? "" : " (\(peer.peerName))"))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nOrange)
+            }
+            if wx == .heatwave || wx == .storm || farm.isBuilding {
+                Text(farm.isBuilding ? "Urgency: compile farm running" : "Urgency: thermal weather elevated")
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.nOrange)
+            }
         }
         .padding(10)
         .background(
@@ -10143,6 +10395,46 @@ struct LabTabView: View {
         }
     }
 
+    private var scrubCard: some View {
+        labCard {
+            HStack {
+                Text(display.tr("lab.scrub"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Spacer()
+                MinimalButton(title: display.tr("lab.scrub.now"), action: { scrub.jumpToNow() })
+            }
+            Text(display.tr("lab.scrub.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            if scrub.samples.isEmpty {
+                Text("Collecting samples…")
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            } else {
+                // Mini filmstrip
+                GeometryReader { geo in
+                    let w = max(1, geo.size.width)
+                    let n = scrub.samples.count
+                    HStack(spacing: 1) {
+                        ForEach(Array(scrub.samples.enumerated()), id: \.element.id) { idx, s in
+                            Rectangle()
+                                .fill(Color.usage(s.cpu))
+                                .frame(width: max(1, w / CGFloat(n) - 1), height: 28)
+                                .opacity(idx == Int(scrub.scrubIndex.rounded()) ? 1 : 0.55)
+                        }
+                    }
+                }
+                .frame(height: 28)
+                Slider(value: $scrub.scrubIndex, in: 0...Double(max(0, scrub.samples.count - 1)), step: 1)
+                if let s = scrub.scrubbed {
+                    Text(String(format: "t−%ds · CPU %.0f%% · %.0f°C · %.1f W",
+                                max(0, Int(Date().timeIntervalSince(s.t))), s.cpu, s.temp, s.watts))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                }
+            }
+        }
+    }
+
     private var detectiveCard: some View {
         labCard {
             HStack {
@@ -10185,7 +10477,7 @@ struct LabTabView: View {
                 .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             if ghost.rows.isEmpty {
-                Text("Sampling… open Lab a minute while apps run.")
+                Text("Sampling… leave Lab open a minute while apps run.")
                     .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             } else {
@@ -10279,6 +10571,38 @@ struct LabTabView: View {
                     .foregroundColor(.nOrange)
             } else {
                 Text(meetingCloakOn ? "No meeting app detected" : "Off")
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var peerCard: some View {
+        labCard {
+            Text(display.tr("lab.peer"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.peer.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Toggle(isOn: Binding(
+                get: {
+                    if UserDefaults.standard.object(forKey: MonitorPreferences.politePeerKey) == nil { return true }
+                    return UserDefaults.standard.bool(forKey: MonitorPreferences.politePeerKey)
+                },
+                set: {
+                    UserDefaults.standard.set($0, forKey: MonitorPreferences.politePeerKey)
+                    PolitePeer.shared.applyPreferenceChange()
+                }
+            )) {
+                Text(display.tr("lab.peer")).font(rNitroFont(.caption, metrics: metrics))
+            }
+            .toggleStyle(.switch)
+            if peer.isPeerActive {
+                Text(display.tr("lab.peer.active") + (peer.peerName.isEmpty ? "" : " — \(peer.peerName)"))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nOrange)
+            } else {
+                Text(display.tr("lab.peer.idle"))
                     .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
@@ -10400,6 +10724,8 @@ struct LabTabView: View {
             GhostLoadTracker.shared.start()
             PowerReceiptStore.shared.start()
             MeetingCloak.shared.startIfNeeded()
+            LabTimeScrubStore.shared.start()
+            PolitePeer.shared.startIfNeeded()
         }
     }
 
@@ -10861,6 +11187,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             CompileFarmDetector.shared.startIfNeeded()
             PowerReceiptStore.shared.start()
             MeetingCloak.shared.startIfNeeded()
+            PolitePeer.shared.startIfNeeded()
         }
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -11176,8 +11503,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.2.1</string>
-    <key>CFBundleShortVersionString</key><string>v1.2.1</string>
+    <key>CFBundleVersion</key><string>v1.2.2</string>
+    <key>CFBundleShortVersionString</key><string>v1.2.2</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
