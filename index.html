@@ -2040,15 +2040,16 @@
 <!-- @end:download-linux -->
 </section>
 
-<section style="max-width:640px; margin:0 auto; padding:60px 24px 40px; text-align:center;">
+<section id="support" style="max-width:640px; margin:0 auto; padding:60px 24px 40px; text-align:center;">
   <div class="section-label">Support</div>
   <h2 style="margin:8px 0 12px;">Need help or found a bug?</h2>
   <p style="color:#9999AA; margin-bottom:28px; line-height:1.6;">
-    Send a message and your default mail app will open with the details pre-filled, addressed to our support inbox.
+    Fill this in and you’ll be <strong style="color:var(--text);">redirected to GitHub Issues</strong> with your message ready to submit.
+    That way the team actually receives it (no broken mail apps).
   </p>
 
-  <form id="support-form" style="text-align:left; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px;" onsubmit="return sendSupportEmail(event)">
-    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Your email (optional)</label>
+  <form id="support-form" style="text-align:left; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px;" onsubmit="return sendSupport(event)">
+    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Your email (optional — for follow-up)</label>
     <input id="support-email" type="email" placeholder="you@example.com"
       style="width:100%; padding:10px 12px; margin-bottom:16px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px;">
 
@@ -2057,10 +2058,15 @@
       style="width:100%; padding:10px 12px; margin-bottom:16px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px;">
 
     <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Message</label>
-    <textarea id="support-message" rows="5" placeholder="What's going on? Include your macOS version and chip (M1/M2/M3) if it's a bug." required
+    <textarea id="support-message" rows="5" placeholder="What's going on? Include your macOS version and chip (M1/M2/M3/M4) if it's a bug." required
       style="width:100%; padding:10px 12px; margin-bottom:20px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px; resize:vertical;"></textarea>
 
-    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Open in Mail →</button>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-bottom:10px;">Open GitHub Issue →</button>
+    <button type="button" class="btn btn-secondary" style="width:100%; justify-content:center;" onclick="return sendSupportMailto(event)">Or open email app →</button>
+    <p style="margin-top:14px; font-size:12px; color:var(--muted); line-height:1.5;">
+      Prefer a blank form?
+      <a href="https://github.com/ilikemacos/rNitro/issues/new" style="color:var(--cyan);">github.com/ilikemacos/rNitro/issues/new</a>
+    </p>
   </form>
 </section>
 
@@ -2076,8 +2082,10 @@
   <a href="/linux.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Linux</a>
   <a href="/windows.html" style="color:var(--muted); margin:0 8px; text-decoration:none;">Windows</a>
   <a href="/privacy.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Privacy</a>
+  <a href="#support" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Support</a>
   <a href="terms-and-conditions.txt" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Terms</a>
   <a href="https://github.com/ilikemacos/rNitro" style="color:var(--cyan); margin:0 8px; text-decoration:none;">GitHub</a>
+  <a href="https://github.com/ilikemacos/rNitro/issues/new" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Report issue</a>
 </footer>
 
 <div id="tc-overlay" class="tc-overlay" role="dialog" aria-modal="true" aria-labelledby="tc-title">
@@ -2684,17 +2692,65 @@
     });
   }
 
-  function sendSupportEmail(e) {
-    e.preventDefault();
-    const userEmail = document.getElementById('support-email').value.trim();
-    const subject = document.getElementById('support-subject').value.trim();
-    const message = document.getElementById('support-message').value.trim();
+  const SUPPORT_GITHUB_NEW = 'https://github.com/ilikemacos/rNitro/issues/new';
+  const SUPPORT_EMAIL = 'mica@lam.ws';
 
+  function supportFormFields() {
+    const userEmail = (document.getElementById('support-email') || {}).value || '';
+    const subject = ((document.getElementById('support-subject') || {}).value || '').trim();
+    const message = ((document.getElementById('support-message') || {}).value || '').trim();
+    return { userEmail: userEmail.trim(), subject, message };
+  }
+
+  function supportIssueBody(userEmail, message) {
+    let body = message || '';
+    body += '\n\n---\n';
+    body += '**Environment** (please fill):\n';
+    body += '- macOS version:\n';
+    body += '- Chip (M1/M2/M3/M4 / Intel):\n';
+    body += '- rNitro channel (Stable / Beta / Experimental):\n';
+    body += '- Install method (App ZIP / PKG / DMG / .sh):\n';
+    if (userEmail) body += `\n**Contact email:** ${userEmail}\n`;
+    body += '\n_Submitted from getrnitro.netlify.app support form_\n';
+    return body;
+  }
+
+  /** Primary: redirect to GitHub Issues with title + body prefilled. */
+  function sendSupport(e) {
+    if (e) e.preventDefault();
+    const { userEmail, subject, message } = supportFormFields();
+    if (!subject || !message) return false;
+
+    const title = subject.startsWith('[rNitro]') ? subject : `[rNitro] ${subject}`;
+    const body = supportIssueBody(userEmail, message);
+    // GitHub accepts title + body query params on /issues/new
+    const url = `${SUPPORT_GITHUB_NEW}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+    window.location.assign(url);
+    return false;
+  }
+
+  /** Fallback: open default mail app (often blocked/broken — prefer GitHub). */
+  function sendSupportMailto(e) {
+    if (e) e.preventDefault();
+    const { userEmail, subject, message } = supportFormFields();
+    if (!subject || !message) {
+      const form = document.getElementById('support-form');
+      if (form && typeof form.reportValidity === 'function') form.reportValidity();
+      return false;
+    }
     let body = message;
     if (userEmail) body += `\n\n— Reply to: ${userEmail}`;
-
-    const mailto = `mailto:mzx@lam.ws?subject=${encodeURIComponent('[rNitro] ' + subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailto;
+    const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[rNitro] ' + subject)}&body=${encodeURIComponent(body)}`;
+    // Use assign so it's a real navigation; keep GitHub as backup link in toast
+    window.location.assign(mailto);
+    setTimeout(() => {
+      const toast = document.getElementById('copy-toast');
+      if (toast) {
+        toast.textContent = 'If Mail did not open, use “Open GitHub Issue” above.';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 4000);
+      }
+    }, 600);
     return false;
   }
 
@@ -2815,7 +2871,7 @@
     { label: 'Is it safe to run?', kws: ['safe', 'malware', 'virus', 'trust', 'security'],
       a: "rNitro compiles from source directly on your machine — nothing prebuilt is ever downloaded. The installer verifies its own SHA-256 checksum before running, and you can read every line before executing it. No telemetry, no third-party dependencies." },
     { label: "It's crashing / not working", kws: ['crash', 'not working', 'broken', 'bug', 'error', 'issue'],
-      a: "Sorry about that! Please use the Support form below with details (macOS/Windows version, chip, and what happened) — that goes straight to the team." },
+      a: "Sorry about that! Scroll to Support (or open https://github.com/ilikemacos/rNitro/issues/new) — the form redirects you to a prefilled GitHub issue so we actually get it." },
     { label: 'How do I uninstall it?', kws: ['uninstall', 'remove', 'delete'],
       a: "macOS: quit rNitro, then delete it from /Applications (or wherever you installed it).\nLinux: quit rNitro, then run rm -rf ~/.local/share/rnitro ~/.local/bin/rnitro ~/.local/share/applications/rnitro.desktop\nWindows: right-click the tray icon → Exit, then delete the app from %LOCALAPPDATA%\\rNitro. If you enabled startup, also remove the entry via Task Manager → Startup." },
     { label: 'What is the game overlay / FPS HUD?', kws: ['overlay', 'game', 'fps', 'hud'],
