@@ -59,11 +59,6 @@ curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp
 ```bash
 curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.4.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
-
-**Experimental (v1.2.4 Experimental):**
-```bash
-curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.4-Experimental.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
-```
 <!-- @end:readme-curl -->
 
 ### Homebrew
@@ -97,14 +92,6 @@ Each macOS release includes **App ZIP** (`rNitro.app`), **PKG**, and **DMG**.
 | **App ZIP** | [rNitro-v1.2.4.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4/rNitro-v1.2.4.zip) |
 | **PKG** | [rNitro-v1.2.4.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4/rNitro-v1.2.4.pkg) |
 | **DMG** | [rNitro-v1.2.4.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4/rNitro-v1.2.4.dmg) |
-
-### Experimental — v1.2.4 Experimental
-
-| Format | File |
-|--------|------|
-| **App ZIP** | [rNitro-v1.2.4-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4-Experimental/rNitro-v1.2.4-Experimental.zip) |
-| **PKG** | [rNitro-v1.2.4-Experimental.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4-Experimental/rNitro-v1.2.4-Experimental.pkg) |
-| **DMG** | [rNitro-v1.2.4-Experimental.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4-Experimental/rNitro-v1.2.4-Experimental.dmg) |
 <!-- @end:readme-downloads -->
 
 [All releases →](https://github.com/ilikemacos/rNitro/releases)
