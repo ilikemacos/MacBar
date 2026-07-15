@@ -218,7 +218,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="32595a3f92c8a4bbaaa86b307e0676e8779ff137e7311aea196ee332fcb71b7a"
+EXPECTED_HASH="293bed5398178740f48407f9cf2f4e89fad98048bd8f43b3cac6840904a3ee0e"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -11610,6 +11610,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        // Policy change can clear mainMenu — reinstall Quit + ⌘Q.
+        if let delegate = NSApp.delegate as? AppDelegate {
+            delegate.installMainMenu()
+        }
         window?.makeKeyAndOrderFront(nil)
         if let userInfo, !userInfo.isEmpty {
             DispatchQueue.main.async {
@@ -11624,6 +11628,9 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         hosting = nil
         if NSApp.activationPolicy() == .regular {
             NSApp.setActivationPolicy(.accessory)
+            if let delegate = NSApp.delegate as? AppDelegate {
+                delegate.installMainMenu()
+            }
         }
     }
 }
@@ -11854,32 +11861,61 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     /// Accessory apps have no default main menu, so ⌘Q does nothing unless we install one.
-    private func installMainMenu() {
+    /// Re-call after activation-policy changes (.regular ↔ .accessory).
+    func installMainMenu() {
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem()
         mainMenu.addItem(appMenuItem)
         let appMenu = NSMenu(title: "rNitro")
         let quitItem = NSMenuItem(
             title: "Quit rNitro",
-            action: #selector(NSApplication.terminate(_:)),
+            action: #selector(quitApp(_:)),
             keyEquivalent: "q"
         )
+        quitItem.keyEquivalentModifierMask = .command
+        quitItem.target = self
         appMenu.addItem(quitItem)
         appMenuItem.submenu = appMenu
         NSApp.mainMenu = mainMenu
     }
 
-    /// Local monitor so ⌘Q still quits when focus is in popover/main window SwiftUI views.
+    /// True for ⌘Q only (ignores Caps Lock / function-key bits that break `flags == .command`).
+    private func isCommandQ(_ event: NSEvent) -> Bool {
+        let mods = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        guard mods == .command else { return false }
+        // kVK_ANSI_Q == 12 — reliable across layouts; characters as fallback
+        if event.keyCode == 12 { return true }
+        return event.charactersIgnoringModifiers?.lowercased() == "q"
+    }
+
+    /// Local monitor so ⌘Q quits when the popover or main window is key (SwiftUI often eats menu key equivalents).
     private func installQuitKeyMonitor() {
-        quitKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            guard flags == .command,
-                  event.charactersIgnoringModifiers?.lowercased() == "q" else {
-                return event
-            }
-            NSApp.terminate(nil)
+        if let quitKeyMonitor {
+            NSEvent.removeMonitor(quitKeyMonitor)
+            self.quitKeyMonitor = nil
+        }
+        quitKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.isCommandQ(event) else { return event }
+            self.quitApp(nil)
             return nil
         }
+    }
+
+    @objc func quitApp(_ sender: Any?) {
+        // Defer so we finish handling the key event before tearing down the app.
+        DispatchQueue.main.async {
+            NSApp.terminate(nil)
+        }
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        // Policy flips (main window) can drop the menu — keep Quit + ⌘Q wired.
+        installMainMenu()
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Menubar accessory: closing the main window must not quit the app.
+        false
     }
 
     @objc private func togglePopover() {
@@ -11914,8 +11950,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
             menu.addItem(slotsItem)
             menu.addItem(NSMenuItem.separator())
-            menu.addItem(withTitle: "Quit rNitro", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-            for i in menu.items { i.target = self }
+            // Do NOT set quit.target = self with NSApplication.terminate — AppDelegate has no terminate:.
+            let quitItem = menu.addItem(
+                withTitle: "Quit rNitro",
+                action: #selector(quitApp(_:)),
+                keyEquivalent: "q"
+            )
+            quitItem.target = self
+            for i in menu.items where i !== quitItem {
+                i.target = self
+            }
             statusItem?.menu = menu
             button.performClick(nil)
             statusItem?.menu = nil
@@ -11929,9 +11973,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 self?.releasePopoverContent()
             }
         } else {
+            // Activate so key events (⌘Q) are delivered to our local monitor / main menu.
+            NSApp.activate(ignoringOtherApps: true)
             attachPopoverContentIfNeeded()
             pop.show(relativeTo: .zero, of: button, preferredEdge: .minY)
-            pop.contentViewController?.view.window?.makeKey()
+            if let popWindow = pop.contentViewController?.view.window {
+                popWindow.makeKey()
+            }
             MonitorActivity.setPopoverOpen(true)
         }
     }
