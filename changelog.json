@@ -21,16 +21,12 @@
     },
     {
       "channel": "experimental",
-      "title": "v1.2.4 Experimental",
+      "title": "v1.2.5 Experimental",
       "accent": "purple",
       "items": [
         {
-          "strong": "Patched a bug",
-          "text": " \u2014 \u2318Q now quits the menu bar app (accessory policy previously ignored Quit)."
-        },
-        {
-          "strong": "Beta + toys",
-          "text": " \u2014 everything in Beta, plus duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets."
+          "strong": "Everything in Beta",
+          "text": " \u2014 customizable UI + Developer Mode, plus duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets."
         },
         {
           "strong": "Unstable",
@@ -40,20 +36,20 @@
     },
     {
       "channel": "beta",
-      "title": "v1.2.4 Beta",
+      "title": "v1.2.5 Beta",
       "accent": "orange",
       "items": [
         {
-          "strong": "Patched a bug",
-          "text": " \u2014 \u2318Q now quits the menu bar app (accessory policy previously ignored Quit)."
+          "strong": "Customizable UI",
+          "text": " \u2014 menubar density, slot reorder, accent color, section toggles, color thresholds, left-click popover vs window \u2014 no Dev Mode required."
         },
         {
-          "strong": "Slim Lab",
-          "text": " \u2014 weather, detective, whisper, compile-farm, time-scrub, power receipt. Toys moved to Experimental."
+          "strong": "Developer Mode",
+          "text": " \u2014 optional advanced sampling, verbose logs, sensor dump, JSON snapshot, Developer settings tab."
         },
         {
-          "strong": "All AI providers",
-          "text": " \u2014 full provider list + Advisor + Cleaner."
+          "strong": "Lab + AI",
+          "text": " \u2014 slim Lab, full AI providers, Advisor, Cleaner. \u2318Q quit fix retained."
         }
       ]
     },
@@ -63,8 +59,8 @@
       "accent": "cyan",
       "items": [
         {
-          "strong": "Screenshots",
-          "text": " \u2014 real macOS captures of Monitor, Advisors, Chat, Cleaner, Settings, and Benchmark."
+          "strong": "Chopsticks HQ",
+          "text": " \u2014 chopstickshq.com hub; full product site at getrnitro.netlify.app."
         },
         {
           "strong": "GitHub",
@@ -79,35 +75,39 @@
   ],
   "releases": [
     {
+      "title": "v1.2.5 Beta / Experimental",
+      "body_html": "<strong style=\"color:var(--orange);\">Customizable UI + Developer Mode</strong> \u2014 menubar builder, density, accents, thresholds for everyone; optional Dev tools for sampling/logs/dumps. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.5\" style=\"color:var(--cyan);\">GitHub</a>."
+    },
+    {
       "title": "v1.2.4 Beta / Experimental",
-      "body_html": "<strong style=\"color:var(--orange);\">Patched a bug</strong> \u2014 \u2318Q now quits the menu bar app. Lab crash fix (scrub slider) + Experimental Features sidebar. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.4\" style=\"color:var(--cyan);\">GitHub</a>."
+      "body_html": "<strong style=\"color:var(--orange);\">Patched a bug</strong> \u2014 \u2318Q now quits the menu bar app. Lab crash fix (scrub slider) + Experimental Features sidebar."
     },
     {
       "title": "v1.2.3 Beta",
-      "body_html": "<strong style=\"color:var(--orange);\">Beta</strong> \u2014 Lab: AirDrop card, SOC budget, cooling confession, desktop widget, <code>rnitro lab status</code>. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.3\" style=\"color:var(--cyan);\">GitHub</a>."
+      "body_html": "<strong style=\"color:var(--orange);\">Beta</strong> \u2014 Lab: AirDrop card, SOC budget, cooling confession, desktop widget, <code>rnitro lab status</code>."
     },
     {
       "title": "v1.1.0 Final Reloaded",
-      "body_html": "<strong style=\"color:var(--green);\">Stable channel</strong> \u2014 production-ready menu bar monitor for daily use. AI limited to OpenAI + OpenRouter. Latest release on <a href=\"https://github.com/ilikemacos/rNitro/releases/latest\" style=\"color:var(--cyan);\">GitHub</a>."
+      "body_html": "<strong style=\"color:var(--green);\">Stable channel</strong> \u2014 production-ready menu bar monitor for daily use. AI limited to OpenAI + OpenRouter."
     },
     {
       "title": "Platform notes",
-      "body_html": "<strong style=\"color:var(--cyan);\">macOS</strong> \u2014 Apple Silicon, macOS 12+. <strong>Linux</strong> \u2014 v0.1 pre-release on the Linux tab. <strong style=\"color:var(--orange);\">Windows</strong> \u2014 deprecated; last builds remain for download only."
+      "body_html": "<strong style=\"color:var(--cyan);\">macOS</strong> \u2014 Apple Silicon, macOS 12+. <strong>Linux</strong> \u2014 v0.1 pre-release. <strong style=\"color:var(--orange);\">Windows</strong> \u2014 deprecated."
     }
   ],
   "compare": {
     "title": "Stable vs Beta \u2014 which should I download?",
-    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.2.1 Beta adds every AI provider. See the Linux and Windows pages for other platforms.",
+    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.2.5 Beta adds customizable UI, Developer Mode, Lab, and every AI provider.",
     "rows": [
       {
         "feature": "Best for",
         "stable": "Daily CPU monitoring",
-        "beta": "Power users + AI chat"
+        "beta": "Power users + customization + AI"
       },
       {
         "feature": "Settings",
         "stable": "Subtabs: AI, Appearance, Menubar, Monitor, Alerts, General",
-        "beta": "Same subtabs + beta-only panel/weather options"
+        "beta": "Same + density/accents/thresholds + optional Developer Mode"
       },
       {
         "feature": "AI chat",
@@ -128,26 +128,6 @@
         "feature": "AES-256 key storage",
         "stable": "No",
         "beta": "Yes (GCM + Keychain)"
-      },
-      {
-        "feature": "First-launch tips",
-        "stable": "No",
-        "beta": "Yes"
-      },
-      {
-        "feature": "Low Power Mode badge",
-        "stable": "Yes",
-        "beta": "Yes"
-      },
-      {
-        "feature": "Risk level",
-        "stable": "Production-ready",
-        "beta": "Experimental \u2014 Terms required"
-      },
-      {
-        "feature": "Recommended file",
-        "stable": "App ZIP (green card)",
-        "beta": "App ZIP (orange card)"
       }
     ]
   }
