@@ -64,8 +64,8 @@
     }
   },
   "hashes": {
-    "stable_sh": "e0af935bbacc7da14b21f443f487393e8039e7db4be1034e9ff013bbdbf5451a",
-    "beta_sh": "23d7746d5c94c5b382f76fb8ea7861b9dd36e06de38dc3e9d56a2445bdee5de3",
+    "stable_sh": "cbc26690c002e300998e618deac6988c039634487c23f47f3086fb35b82bac07",
+    "beta_sh": "7eafe11104c20dec2953d2c752274a02d01efe4b29a4142f60b022bde7243ff4",
     "intel_beta_sh": "",
     "intel_stable_sh": ""
   },
