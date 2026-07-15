@@ -218,7 +218,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="bc06ce5c3f6044e6cfb89ccab9521921c96423a453c256ce46c6854b0845cb03"
+EXPECTED_HASH="32595a3f92c8a4bbaaa86b307e0676e8779ff137e7311aea196ee332fcb71b7a"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -380,7 +380,9 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
 let CURRENT_VERSION = "v1.2.3-Intel"
 let RNITRO_BUILD_CHANNEL = "beta"
-let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta")
+// beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
+let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
+let RNITRO_FEATURE_EXPERIMENTAL_UI = (RNITRO_BUILD_CHANNEL == "experimental")
 private let RNITRO_UI_FONT = "Varela Round"
 let UPDATE_CHECK_URL = URL(string: "https://getrnitro.netlify.app/version.json")!
 let UPDATE_PAGE_URL  = URL(string: "https://getrnitro.netlify.app")!
@@ -7021,6 +7023,7 @@ final class DisplayPreferencesStore: ObservableObject {
     private static let enStrings: [String: String] = [
         "tab.monitor": "Monitor", "tab.advisor": "Advisor", "tab.chat": "Chat",
         "tab.cleaner": "Cleaner", "tab.lab": "Lab", "tab.settings": "Settings",
+        "lab.sidebar.section": "Experimental Features",
         "lab.title": "Lab",
         "lab.subtitle": "Experimental tools (beta, local only) — weather, detective, ghost-load, power, whisper, meetings, builds, duel.",
         "lab.weather": "Thermal weather",
@@ -9088,35 +9091,101 @@ struct AppTabSidebar: View {
     var advisorHasWarnings: Bool
     let compact: Bool
 
+    private var primaryTabs: [AppTab] {
+        tabs.filter { $0 != .lab && $0 != .settings }
+    }
+
+    private var experimentalTabs: [AppTab] {
+        tabs.filter { $0 == .lab }
+    }
+
+    private var footerTabs: [AppTab] {
+        tabs.filter { $0 == .settings }
+    }
+
     var body: some View {
         VStack(spacing: 4) {
-            ForEach(tabs) { t in
-                Button(action: { tab = t }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: t.icon)
-                            .frame(width: 16)
-                        if !compact {
-                            Text(t.localizedTitle)
-                                .font(rNitroFont(.label, metrics: metrics, weight: tab == t ? .semibold : .regular))
-                        }
-                        if t == .advisor && advisorHasWarnings {
-                            Circle().fill(Color.nOrange).frame(width: 6, height: 6)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .foregroundColor(tab == t ? .accent : .secondary)
-                    .padding(.horizontal, compact ? 6 : 10)
-                    .padding(.vertical, 8)
-                    .background(tab == t ? Color.accent.opacity(0.12) : Color.clear)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
+            ForEach(primaryTabs) { t in
+                tabButton(t)
             }
+
+            if !experimentalTabs.isEmpty {
+                experimentalSectionHeader
+                ForEach(experimentalTabs) { t in
+                    tabButton(t)
+                }
+            }
+
+            if !footerTabs.isEmpty {
+                sidebarDivider
+                    .padding(.vertical, 4)
+                ForEach(footerTabs) { t in
+                    tabButton(t)
+                }
+            }
+
             Spacer(minLength: 0)
         }
         .padding(.vertical, 8)
         .frame(width: compact ? 48 : 156)
         .background(Color.card.opacity(0.35))
+    }
+
+    private var experimentalSectionHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            sidebarDivider
+                .padding(.top, 6)
+            if compact {
+                Image(systemName: "flask.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.nOrange)
+                    .frame(maxWidth: .infinity)
+                    .help(display.tr("lab.sidebar.section"))
+            } else {
+                Text(display.tr("lab.sidebar.section"))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
+                    .foregroundColor(.nOrange)
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 2)
+            }
+        }
+        .padding(.bottom, 2)
+    }
+
+    private var sidebarDivider: some View {
+        Rectangle()
+            .fill(Color.border.opacity(0.7))
+            .frame(height: 1)
+            .padding(.horizontal, compact ? 6 : 10)
+    }
+
+    private func tabButton(_ t: AppTab) -> some View {
+        Button(action: { tab = t }) {
+            HStack(spacing: 8) {
+                Image(systemName: t.icon)
+                    .frame(width: 16)
+                if !compact {
+                    Text(t.localizedTitle)
+                        .font(rNitroFont(.label, metrics: metrics, weight: tab == t ? .semibold : .regular))
+                }
+                if t == .advisor && advisorHasWarnings {
+                    Circle().fill(Color.nOrange).frame(width: 6, height: 6)
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundColor(tab == t ? (t == .lab ? .nOrange : .accent) : .secondary)
+            .padding(.horizontal, compact ? 6 : 10)
+            .padding(.vertical, 8)
+            .background(
+                tab == t
+                    ? (t == .lab ? Color.nOrange.opacity(0.14) : Color.accent.opacity(0.12))
+                    : Color.clear
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -9908,11 +9977,11 @@ final class MeetingCloak: ObservableObject {
     }
 
     var shouldHushMenubar: Bool {
-        RNITRO_FEATURE_BETA_UI && isEnabled && isMeetingActive
+        RNITRO_FEATURE_EXPERIMENTAL_UI && isEnabled && isMeetingActive
     }
 
     func startIfNeeded() {
-        guard RNITRO_FEATURE_BETA_UI else { return }
+        guard RNITRO_FEATURE_EXPERIMENTAL_UI else { return }
         timer?.invalidate()
         guard isEnabled else {
             isMeetingActive = false
@@ -10068,8 +10137,14 @@ final class LabTimeScrubStore: ObservableObject {
 
     var scrubbed: LabMetricSample? {
         guard !samples.isEmpty else { return nil }
-        let i = min(max(0, Int(scrubIndex.rounded())), samples.count - 1)
+        let last = samples.count - 1
+        let i = min(max(0, Int(scrubIndex.rounded())), last)
         return samples[i]
+    }
+
+    /// Safe closed range for stepped Slider — never empty / inverted.
+    var sliderUpper: Double {
+        Double(max(1, samples.count - 1))
     }
 
     var isAtLive: Bool {
@@ -10136,13 +10211,13 @@ final class PolitePeer: ObservableObject {
     }
 
     var shouldEaseSampling: Bool {
-        RNITRO_FEATURE_BETA_UI && isEnabled && isPeerActive
+        RNITRO_FEATURE_EXPERIMENTAL_UI && isEnabled && isPeerActive
             && !CompileFarmDetector.shared.shouldForceSampling
             && !MonitorActivity.popoverOpen
     }
 
     func startIfNeeded() {
-        guard RNITRO_FEATURE_BETA_UI else { return }
+        guard RNITRO_FEATURE_EXPERIMENTAL_UI else { return }
         timer?.invalidate()
         guard isEnabled else {
             isPeerActive = false
@@ -10571,23 +10646,36 @@ struct LabTabView: View {
     @State private var toast = ""
     @State private var jumpTarget: String? = nil
 
-    private let toc: [(String, String)] = [
-        ("weather", "lab.toc.weather"),
-        ("scrub", "lab.toc.scrub"),
-        ("detective", "lab.toc.detective"),
-        ("ghost", "lab.toc.ghost"),
-        ("receipt", "lab.toc.receipt"),
-        ("budget", "lab.toc.budget"),
-        ("snapshot", "lab.toc.snapshot"),
-        ("confess", "lab.toc.confess"),
-        ("widget", "lab.toc.widget"),
-        ("whisper", "lab.toc.whisper"),
-        ("cloak", "lab.toc.cloak"),
-        ("peer", "lab.toc.peer"),
-        ("farm", "lab.toc.farm"),
-        ("alibi", "lab.toc.alibi"),
-        ("duel", "lab.toc.duel"),
-    ]
+    private var toc: [(String, String)] {
+        var items: [(String, String)] = [
+            ("weather", "lab.toc.weather"),
+            ("scrub", "lab.toc.scrub"),
+            ("detective", "lab.toc.detective"),
+            ("receipt", "lab.toc.receipt"),
+            ("whisper", "lab.toc.whisper"),
+            ("farm", "lab.toc.farm"),
+        ]
+        if RNITRO_FEATURE_EXPERIMENTAL_UI {
+            items = [
+                ("weather", "lab.toc.weather"),
+                ("scrub", "lab.toc.scrub"),
+                ("detective", "lab.toc.detective"),
+                ("ghost", "lab.toc.ghost"),
+                ("receipt", "lab.toc.receipt"),
+                ("budget", "lab.toc.budget"),
+                ("snapshot", "lab.toc.snapshot"),
+                ("confess", "lab.toc.confess"),
+                ("widget", "lab.toc.widget"),
+                ("whisper", "lab.toc.whisper"),
+                ("cloak", "lab.toc.cloak"),
+                ("peer", "lab.toc.peer"),
+                ("farm", "lab.toc.farm"),
+                ("alibi", "lab.toc.alibi"),
+                ("duel", "lab.toc.duel"),
+            ]
+        }
+        return items
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -10596,22 +10684,32 @@ struct LabTabView: View {
                     header
                     statusStrip
                     tocBar(proxy: proxy)
-                    presetsRow
+                    if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                        presetsRow
+                    }
                     weatherCard.id("weather")
                     scrubCard.id("scrub")
                     detectiveCard.id("detective")
-                    ghostCard.id("ghost")
+                    if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                        ghostCard.id("ghost")
+                    }
                     receiptCard.id("receipt")
-                    budgetCard.id("budget")
-                    snapshotCard.id("snapshot")
-                    confessCard.id("confess")
-                    widgetCard.id("widget")
+                    if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                        budgetCard.id("budget")
+                        snapshotCard.id("snapshot")
+                        confessCard.id("confess")
+                        widgetCard.id("widget")
+                    }
                     whisperCard.id("whisper")
-                    cloakCard.id("cloak")
-                    peerCard.id("peer")
+                    if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                        cloakCard.id("cloak")
+                        peerCard.id("peer")
+                    }
                     farmCard.id("farm")
-                    alibiCard.id("alibi")
-                    duelCard.id("duel")
+                    if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                        alibiCard.id("alibi")
+                        duelCard.id("duel")
+                    }
                     if !toast.isEmpty {
                         Text(toast)
                             .font(rNitroFont(.micro, metrics: metrics))
@@ -10674,12 +10772,12 @@ struct LabTabView: View {
                     .foregroundColor(.nOrange)
                 Text(display.tr("lab.title"))
                     .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
-                Text("BETA")
+                Text(RNITRO_FEATURE_EXPERIMENTAL_UI ? "EXPERIMENTAL" : "BETA")
                     .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.nOrange))
+                    .background(Capsule().fill(RNITRO_FEATURE_EXPERIMENTAL_UI ? Color.nPurple : Color.nOrange))
                 Spacer()
                 Text(CURRENT_VERSION)
                     .font(rNitroFont(.micro, metrics: metrics))
@@ -10792,7 +10890,7 @@ struct LabTabView: View {
                 // Mini filmstrip
                 GeometryReader { geo in
                     let w = max(1, geo.size.width)
-                    let n = scrub.samples.count
+                    let n = max(1, scrub.samples.count)
                     HStack(spacing: 1) {
                         ForEach(Array(scrub.samples.enumerated()), id: \.element.id) { idx, s in
                             Rectangle()
@@ -10803,7 +10901,22 @@ struct LabTabView: View {
                     }
                 }
                 .frame(height: 28)
-                Slider(value: $scrub.scrubIndex, in: 0...Double(max(0, scrub.samples.count - 1)), step: 1)
+                // Stepped Slider traps if upperBound <= lowerBound (e.g. one sample → 0...0).
+                if scrub.samples.count >= 2 {
+                    let upper = Double(scrub.samples.count - 1)
+                    Slider(
+                        value: Binding(
+                            get: { min(max(0, scrub.scrubIndex), upper) },
+                            set: { scrub.scrubIndex = min(max(0, $0), upper) }
+                        ),
+                        in: 0...upper,
+                        step: 1
+                    )
+                } else {
+                    Text("Need a few more seconds of history to scrub…")
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.secondary)
+                }
                 if let s = scrub.scrubbed {
                     Text(String(format: "t−%ds · CPU %.0f%% · %.0f°C · %.1f W",
                                 max(0, Int(Date().timeIntervalSince(s.t))), s.cpu, s.temp, s.watts))
@@ -10967,9 +11080,9 @@ struct LabTabView: View {
                     .font(rNitroFont(.caption, metrics: metrics))
                 Spacer()
                 Slider(value: Binding(
-                    get: { budget.goalWh },
-                    set: { budget.setGoal($0) }
-                ), in: 5...80, step: 1)
+                    get: { min(80, max(5, budget.goalWh)) },
+                    set: { budget.setGoal(min(80, max(5, $0))) }
+                ), in: 5.0...80.0, step: 1)
                 .frame(maxWidth: 160)
                 Text(String(format: "%.0f Wh", budget.goalWh))
                     .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
@@ -11197,14 +11310,16 @@ struct LabTabView: View {
         tickWhisper()
         if RNITRO_FEATURE_BETA_UI {
             CompileFarmDetector.shared.startIfNeeded()
-            GhostLoadTracker.shared.start()
             PowerReceiptStore.shared.start()
-            MeetingCloak.shared.startIfNeeded()
             LabTimeScrubStore.shared.start()
-            PolitePeer.shared.startIfNeeded()
-            SOCBudgetStore.shared.start()
-            CoolingConfessionStore.shared.start()
             LabStatusWriter.shared.start()
+            if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                GhostLoadTracker.shared.start()
+                MeetingCloak.shared.startIfNeeded()
+                PolitePeer.shared.startIfNeeded()
+                SOCBudgetStore.shared.start()
+                CoolingConfessionStore.shared.start()
+            }
         }
     }
 
@@ -11648,6 +11763,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var subscriptions = Set<AnyCancellable>()
     private let menuBarRefreshTrigger = PassthroughSubject<Void, Never>()
     private var hotkeyMonitor: Any?
+    private var quitKeyMonitor: Any?
     private var modeObserver: NSObjectProtocol?
     private var powerModeObserver: NSObjectProtocol?
 
@@ -11658,6 +11774,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        installMainMenu() // enables ⌘Q Quit (accessory apps have no menu otherwise)
+        installQuitKeyMonitor()
         MonitorActivity.setPopoverOpen(false)
         UNUserNotificationCenter.current().delegate = self
         AdvisorNotificationCenter.configure()
@@ -11665,11 +11783,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         if RNITRO_FEATURE_BETA_UI {
             CompileFarmDetector.shared.startIfNeeded()
             PowerReceiptStore.shared.start()
-            MeetingCloak.shared.startIfNeeded()
-            PolitePeer.shared.startIfNeeded()
-            SOCBudgetStore.shared.start()
-            CoolingConfessionStore.shared.start()
             LabStatusWriter.shared.start()
+            if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                MeetingCloak.shared.startIfNeeded()
+                PolitePeer.shared.startIfNeeded()
+                SOCBudgetStore.shared.start()
+                CoolingConfessionStore.shared.start()
+            }
         }
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -11731,6 +11851,35 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound])
+    }
+
+    /// Accessory apps have no default main menu, so ⌘Q does nothing unless we install one.
+    private func installMainMenu() {
+        let mainMenu = NSMenu()
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+        let appMenu = NSMenu(title: "rNitro")
+        let quitItem = NSMenuItem(
+            title: "Quit rNitro",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        appMenu.addItem(quitItem)
+        appMenuItem.submenu = appMenu
+        NSApp.mainMenu = mainMenu
+    }
+
+    /// Local monitor so ⌘Q still quits when focus is in popover/main window SwiftUI views.
+    private func installQuitKeyMonitor() {
+        quitKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard flags == .command,
+                  event.charactersIgnoringModifiers?.lowercased() == "q" else {
+                return event
+            }
+            NSApp.terminate(nil)
+            return nil
+        }
     }
 
     @objc private func togglePopover() {
@@ -11898,6 +12047,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         if let modeObserver { NotificationCenter.default.removeObserver(modeObserver) }
         if let powerModeObserver { NotificationCenter.default.removeObserver(powerModeObserver) }
         if let hotkeyMonitor { NSEvent.removeMonitor(hotkeyMonitor) }
+        if let quitKeyMonitor { NSEvent.removeMonitor(quitKeyMonitor) }
         subscriptions.removeAll()
         CPUMonitor.shared.stopMonitoring()
         BatteryMonitor.shared.stopMonitoring()

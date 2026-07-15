@@ -37,14 +37,16 @@ def channel_assets(data: dict, channel: str) -> tuple[dict, list[Path]]:
 
 
 def release_notes(data: dict, channel: str) -> str:
-    rel = v.stable_release(data) if channel == "stable" else v.beta_release(data)
-    other = v.beta_release(data) if channel == "stable" else v.stable_release(data)
     if channel == "stable":
+        rel = v.stable_release(data)
         channel_label = "Stable (Release)"
     elif channel == "experimental":
+        rel = v.experimental_release(data)
         channel_label = "Experimental"
     else:
+        rel = v.beta_release(data)
         channel_label = "Beta"
+    other = v.beta_release(data) if channel == "stable" else v.stable_release(data)
     lines = [
         f"## rNitro {rel['label']} — {channel_label}",
         "",
@@ -63,11 +65,17 @@ def release_notes(data: dict, channel: str) -> str:
     if channel == "beta":
         lines += [
             "### What’s new in this beta",
-            "- **Lab tab** (sidebar) — dedicated home for thermal weather, **Why hot?** detective, Whisper, compile-farm, and LAN stress duel",
-            "- **Whisper menubar** — calm glyph until load/heat/battery/build (toggle on Lab or Settings → Menubar)",
-            "- **Compile-farm mode** — detects swiftc/clang/xcodebuild; boost sampling while building",
-            "- **Stress duel (LAN)** — host/join room code on the Lab tab (local network only)",
+            "- **Patched a bug** — ⌘Q now quits the menu bar app",
+            "- **Lab tab** (sidebar) — thermal weather, detective, Whisper, compile-farm, time-scrub, power receipt",
             "- Full AI provider list + System Advisor + Cleaner",
+            "",
+        ]
+    if channel == "experimental":
+        lines += [
+            "### What’s new in Experimental",
+            "- **Patched a bug** — ⌘Q now quits the menu bar app",
+            "- Everything in Beta, plus duel, ghost-load, SOC budget, meeting cloak, polite peer, toys",
+            "- Unstable playground channel — expect breakage",
             "",
         ]
     lines += [

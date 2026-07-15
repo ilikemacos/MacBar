@@ -25,6 +25,10 @@
       "accent": "purple",
       "items": [
         {
+          "strong": "Patched a bug",
+          "text": " \u2014 \u2318Q now quits the menu bar app (accessory policy previously ignored Quit)."
+        },
+        {
           "strong": "Beta + toys",
           "text": " \u2014 everything in Beta, plus duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets."
         },
@@ -39,6 +43,10 @@
       "title": "v1.2.4 Beta",
       "accent": "orange",
       "items": [
+        {
+          "strong": "Patched a bug",
+          "text": " \u2014 \u2318Q now quits the menu bar app (accessory policy previously ignored Quit)."
+        },
         {
           "strong": "Slim Lab",
           "text": " \u2014 weather, detective, whisper, compile-farm, time-scrub, power receipt. Toys moved to Experimental."
@@ -70,6 +78,10 @@
     }
   ],
   "releases": [
+    {
+      "title": "v1.2.4 Beta / Experimental",
+      "body_html": "<strong style=\"color:var(--orange);\">Patched a bug</strong> \u2014 \u2318Q now quits the menu bar app. Lab crash fix (scrub slider) + Experimental Features sidebar. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.4\" style=\"color:var(--cyan);\">GitHub</a>."
+    },
     {
       "title": "v1.2.3 Beta",
       "body_html": "<strong style=\"color:var(--orange);\">Beta</strong> \u2014 Lab: AirDrop card, SOC budget, cooling confession, desktop widget, <code>rnitro lab status</code>. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.3\" style=\"color:var(--cyan);\">GitHub</a>."

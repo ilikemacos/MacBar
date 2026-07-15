@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="bd21aaa91cf127e4dfd231edcec89e99619b4237db7729ad2af46f0f8590cbb7"
+EXPECTED_HASH="3525c3332364a783d771338516c69f3f303230446a0a4e02b7b6281e738b810b"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -11759,6 +11759,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var subscriptions = Set<AnyCancellable>()
     private let menuBarRefreshTrigger = PassthroughSubject<Void, Never>()
     private var hotkeyMonitor: Any?
+    private var quitKeyMonitor: Any?
     private var modeObserver: NSObjectProtocol?
     private var powerModeObserver: NSObjectProtocol?
 
@@ -11769,6 +11770,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        installMainMenu() // enables ⌘Q Quit (accessory apps have no menu otherwise)
+        installQuitKeyMonitor()
         MonitorActivity.setPopoverOpen(false)
         UNUserNotificationCenter.current().delegate = self
         AdvisorNotificationCenter.configure()
@@ -11844,6 +11847,35 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound])
+    }
+
+    /// Accessory apps have no default main menu, so ⌘Q does nothing unless we install one.
+    private func installMainMenu() {
+        let mainMenu = NSMenu()
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+        let appMenu = NSMenu(title: "rNitro")
+        let quitItem = NSMenuItem(
+            title: "Quit rNitro",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        appMenu.addItem(quitItem)
+        appMenuItem.submenu = appMenu
+        NSApp.mainMenu = mainMenu
+    }
+
+    /// Local monitor so ⌘Q still quits when focus is in popover/main window SwiftUI views.
+    private func installQuitKeyMonitor() {
+        quitKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard flags == .command,
+                  event.charactersIgnoringModifiers?.lowercased() == "q" else {
+                return event
+            }
+            NSApp.terminate(nil)
+            return nil
+        }
     }
 
     @objc private func togglePopover() {
@@ -12011,6 +12043,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         if let modeObserver { NotificationCenter.default.removeObserver(modeObserver) }
         if let powerModeObserver { NotificationCenter.default.removeObserver(powerModeObserver) }
         if let hotkeyMonitor { NSEvent.removeMonitor(hotkeyMonitor) }
+        if let quitKeyMonitor { NSEvent.removeMonitor(quitKeyMonitor) }
         subscriptions.removeAll()
         CPUMonitor.shared.stopMonitoring()
         BatteryMonitor.shared.stopMonitoring()
