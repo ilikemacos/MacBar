@@ -1,8 +1,15 @@
 # rNitro
 
-> Free menubar system monitor for Apple Silicon Macs — CPU, temperature, battery, GPU, RAM, and per-core stats. Open source, no account, no telemetry.
+> Free menu bar system monitor for Apple Silicon Macs — CPU, temperature, battery, GPU, RAM, and network. Open source. No account. No telemetry.
 
-**[→ getrnitro.netlify.app](https://getrnitro.netlify.app/)** · **[CLI](https://getrnitro.netlify.app/cli)** · **[Linux](https://getrnitro.netlify.app/linux)** · **[Windows](https://getrnitro.netlify.app/windows)** · **[Privacy](https://getrnitro.netlify.app/privacy.html)** · **[Releases](https://github.com/ilikemacos/rNitro/releases)**
+**[Download](https://getrnitro.netlify.app/)** · **[Chopsticks HQ](https://chopstickshq.netlify.app/rnitro/)** · **[CLI](https://getrnitro.netlify.app/cli.html)** · **[Linux](https://getrnitro.netlify.app/linux.html)** · **[Windows](https://getrnitro.netlify.app/windows.html)** · **[Privacy](https://getrnitro.netlify.app/privacy.html)** · **[Releases](https://github.com/ilikemacos/rNitro/releases)**
+
+[![Stable](https://img.shields.io/badge/stable-v1.1.0%20Final%20Reloaded-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.1.0-Final-Reloaded)
+[![Beta](https://img.shields.io/badge/beta-v1.2.4-ff8c1a)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.4)
+[![Experimental](https://img.shields.io/badge/experimental-v1.2.4--Exp-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.4-Experimental)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+---
 
 ## Screenshots
 
@@ -18,7 +25,29 @@
 |:---:|:---:|
 | <img src="screenshots/feature-app-cleaner.png" alt="App cleaner" width="240"> | <img src="screenshots/feature-settings.png" alt="Settings" width="240"> |
 
-### Quick install (Terminal)
+---
+
+## Channels
+
+| Channel | Version | Best for |
+|---------|---------|----------|
+| **Stable** | v1.1.0 Final Reloaded | Daily CPU / temp / battery / GPU / RAM monitoring |
+| **Beta** | v1.2.4 | Slim Lab + full AI provider list + Advisor + Cleaner |
+| **Experimental** | v1.2.4 Experimental | Beta + toys (duel, cloak, SOC budget, widgets, …) — expect breakage |
+
+**Recent:** ⌘Q now quits the menu bar app · Lab scrub-slider crash fixed · Experimental Features sidebar on Experimental builds.
+
+---
+
+## Quick install (macOS)
+
+### App ZIP (recommended — no admin password)
+
+1. Download **App ZIP** from [getrnitro.netlify.app](https://getrnitro.netlify.app/) or [Releases](https://github.com/ilikemacos/rNitro/releases)
+2. Unzip → drag **rNitro.app** into **Applications**
+3. First launch: right-click → **Open** → **Open** if Gatekeeper blocks it
+
+### Terminal (compile on your Mac)
 
 <!-- @sync:readme-curl -->
 **Stable (v1.1.0 Final Reloaded):**
@@ -26,9 +55,14 @@
 curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 
-**Beta (v1.2.3 Beta):**
+**Beta (v1.2.4 Beta):**
 ```bash
-curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.3.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.4.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+```
+
+**Experimental (v1.2.4 Experimental):**
+```bash
+curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.4-Experimental.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 <!-- @end:readme-curl -->
 
@@ -39,13 +73,13 @@ brew tap ilikemacos/rnitro
 brew install rnitro
 ```
 
-If Homebrew reports permission errors on `/opt/homebrew`, run `sudo chown -R "$(whoami)" /opt/homebrew/Cellar /opt/homebrew/Library` and try again. Or use the [install script](https://github.com/ilikemacos/homebrew-rnitro/blob/main/install.sh) (same result, no Homebrew).
+If Homebrew reports permission errors on `/opt/homebrew`, run `sudo chown -R "$(whoami)" /opt/homebrew/Cellar /opt/homebrew/Library` and try again. Or use the [install script](https://github.com/ilikemacos/homebrew-rnitro/blob/main/install.sh).
 
 ---
 
 ## Download (GitHub Releases)
 
-Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
+Each macOS release includes **App ZIP** (`rNitro.app`), **PKG**, and **DMG**.
 
 <!-- @sync:readme-downloads -->
 ### Stable — v1.1.0 Final Reloaded
@@ -56,80 +90,135 @@ Each release includes **App ZIP** (with `rNitro.app`), **PKG**, and **DMG**.
 | **PKG** | [rNitro-v1.1.0-Final-Reloaded.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.pkg) |
 | **DMG** | [rNitro-v1.1.0-Final-Reloaded.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.dmg) |
 
-### Beta — v1.2.3 Beta
+### Beta — v1.2.4 Beta
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v1.2.3.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.3/rNitro-v1.2.3.zip) |
-| **PKG** | [rNitro-v1.2.3.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.3/rNitro-v1.2.3.pkg) |
-| **DMG** | [rNitro-v1.2.3.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.3/rNitro-v1.2.3.dmg) |
+| **App ZIP** | [rNitro-v1.2.4.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4/rNitro-v1.2.4.zip) |
+| **PKG** | [rNitro-v1.2.4.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4/rNitro-v1.2.4.pkg) |
+| **DMG** | [rNitro-v1.2.4.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4/rNitro-v1.2.4.dmg) |
+
+### Experimental — v1.2.4 Experimental
+
+| Format | File |
+|--------|------|
+| **App ZIP** | [rNitro-v1.2.4-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4-Experimental/rNitro-v1.2.4-Experimental.zip) |
+| **PKG** | [rNitro-v1.2.4-Experimental.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4-Experimental/rNitro-v1.2.4-Experimental.pkg) |
+| **DMG** | [rNitro-v1.2.4-Experimental.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.4-Experimental/rNitro-v1.2.4-Experimental.dmg) |
 <!-- @end:readme-downloads -->
 
 [All releases →](https://github.com/ilikemacos/rNitro/releases)
 
-### Install from App ZIP
-
-1. Download the `.zip` for Stable or Beta
-2. Unzip → drag **rNitro.app** into **Applications**
-3. First launch: right-click → **Open** → **Open** (once) if Gatekeeper blocks it
-
 ---
 
-## What it shows
+## Features
 
+### Monitor
 - **CPU** — total usage, load average, per-core bars, base/boost MHz, package power (watts)
 - **Temperature** — die temperature via SMC / IOHID sensors
-- **Battery** — charge %, time remaining, charging state (MacBooks; direct IOKit read in v8.3.6+)
+- **Battery** — charge %, time remaining, charging state (MacBooks; direct IOKit)
 - **GPU & RAM** — usage, memory pressure, swap
-- **Network** — live upload/download speeds on the active interface
-- **Menubar** — configurable slots (CPU, temp, RAM, power, battery, BTC, and more)
-- **System Advisor** — threshold warnings for temp, CPU, RAM, GPU, and battery (no API key)
-- **Extras** — stress test, benchmark, app cleaner, optional AI chat (beta: 9 providers; stable: OpenAI + OpenRouter)
+- **Network** — live upload/download on the active interface
+- **Menubar** — configurable slots (CPU, temp, RAM, power, battery, and more)
+
+### Tools
+- **System Advisor** — threshold warnings for temp, CPU, RAM, GPU, battery (no API key)
+- **App Cleaner** — find leftover app files
+- **Stress test / benchmark** — load the machine on purpose
+- **AI chat** (optional, bring your own keys)
+  - Stable: OpenAI + OpenRouter
+  - Beta / Experimental: Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes
+
+### Lab (Beta+)
+Weather-style thermal glance, **Why hot?** detective, Whisper menubar glyph, compile-farm detection, time-scrub, power receipt.
+
+### Experimental only
+Stress duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets — for people who want the full playground.
 
 ---
 
-## Requirements
+## Platforms
 
-- macOS 12 Ventura or later
-- Apple Silicon (M1 / M2 / M3 / M4)
+| Platform | Status |
+|----------|--------|
+| **macOS** (Apple Silicon) | Primary — Stable / Beta / Experimental |
+| **macOS** (Intel) | Source installers (Intel EOL banner after v1.2.5-Beta planning) |
+| **Linux** | v0.1 pre-release (GTK4) |
+| **Windows** | Deprecated last builds available |
+| **CLI** | Terminal companion (`rNitro-CLI.tar.gz`) |
+
+---
+
+## Requirements (macOS app)
+
+- macOS 12 Monterey or later  
+- Apple Silicon (M1 / M2 / M3 / M4) for official App ZIP / PKG / DMG  
+- Launch at Login needs macOS 13+  
 
 ---
 
 ## Open source
 
-This repository contains the full rNitro source tree:
+This repository holds the rNitro site, installers, and tooling:
 
 | Path | What it is |
 |------|------------|
-| `install-rNitro.sh` | Main macOS app — Swift UI, updater, monitors, AI chat (compiled by the script) |
+| `install-rNitro.sh` | Main macOS app (SwiftUI) — compile-on-install installer |
+| `install-rNitro-experimental.sh` | Experimental channel installer |
+| `install-rNitro-intel.sh` | Intel macOS source installer |
 | `install-rNitro-linux.sh` | Linux companion installer |
 | `linux/` | Linux monitor source |
-| `windows/` | Windows tray app (C# / WinForms) |
-| `homebrew/` | Homebrew formula (also published at [ilikemacos/homebrew-rnitro](https://github.com/ilikemacos/homebrew-rnitro)) |
-| `build-*.py`, `sync-versions.py`, `deploy-netlify.py` | Build, release, and site deploy tooling |
-| `rNitro-v*.sh` | Generated on build (`sync-versions.py`) — older builds on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases) |
+| `windows/` | Windows tray app (legacy) |
+| `cli/` | Terminal CLI |
+| `homebrew/` | Homebrew formula ([ilikemacos/homebrew-rnitro](https://github.com/ilikemacos/homebrew-rnitro)) |
+| `build-*.py`, `sync-versions.py`, `deploy-netlify.py` | Build, release, and site deploy |
+| `docs/launch/` | Product Hunt + AlternativeTo copy |
 | `index.html` | Download website |
 
-Pre-built `.zip`, `.pkg`, and `.dmg` files are published on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases), not committed here.
+Pre-built `.zip`, `.pkg`, and `.dmg` files ship on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases), not in git.
 
 ### Build from source (macOS)
 
 ```bash
 git clone https://github.com/ilikemacos/rNitro.git
 cd rNitro
-bash install-rNitro.sh
+bash install-rNitro.sh          # Beta
+# bash install-rNitro-experimental.sh
 ```
 
-Requires Xcode Command Line Tools (`xcode-select --install`). The script compiles with `swiftc` and installs `rNitro.app` to `~/Applications`.
+Requires Xcode Command Line Tools (`xcode-select --install`). Installs `rNitro.app` to `~/Applications`.
 
 ### Build a release ZIP locally
 
 ```bash
-python3 sync-versions.py          # writes rNitro-v{version}.sh from install-rNitro.sh
-python3 build-app-zip.py --variant beta   # or stable / all
+python3 sync-versions.py
+python3 build-app-zip.py --variant beta   # or stable / experimental / all
 ```
 
-Older macOS `.sh` installers and all binaries live on [GitHub Releases](https://github.com/ilikemacos/rNitro/releases) — they are not stored in this repo.
+---
+
+## Privacy
+
+- No accounts  
+- No telemetry  
+- API keys you add stay on your Mac (Keychain / encrypted storage on beta paths)  
+
+See [Privacy](https://getrnitro.netlify.app/privacy.html).
+
+---
+
+## Launch materials
+
+Ready-to-paste posts:
+
+- [Product Hunt](docs/launch/product-hunt.md)  
+- [AlternativeTo](docs/launch/alternativeto.md)  
+
+---
+
+## Part of Chopsticks HQ
+
+rNitro is the first product under [Chopsticks HQ](https://chopstickshq.netlify.app/) — independent tools, no nonsense.
 
 ---
 
