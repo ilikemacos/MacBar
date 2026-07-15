@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="c6e26f48736c04939e6dc1d15e2ea7d3349421d0162b4bec952f3b55859c5f77"
+EXPECTED_HASH="8f3c3cb0ac0774fcb2101a88e922590928f468e8016942f9839fe152570a63d7"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -374,7 +374,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v1.2.4-Experimental"
+let CURRENT_VERSION = "v1.2.5-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -3315,20 +3315,272 @@ extension Color {
     static let bg      = Color(red:0.05,green:0.05,blue:0.08)
     static let card    = Color(red:0.10,green:0.10,blue:0.14)
     static let border  = Color(red:0.20,green:0.20,blue:0.28)
-    static let accent  = Color(red:0.0, green:0.85,blue:1.0)
+    /// Dynamic accent from UI customization (default cyan).
+    static var accent: Color { UICustomizationStore.shared.accentColor }
     static let nGreen  = Color(red:0.1, green:1.0, blue:0.5)
     static let nOrange = Color(red:1.0, green:0.55,blue:0.1)
     static let nRed    = Color(red:1.0, green:0.25,blue:0.25)
     static let nPurple = Color(red:0.72, green:0.45, blue:1.0)
     static let nBlue   = Color(red:0.35, green:0.55, blue:1.0)
-    static func usage(_ p: Double) -> Color { p < 40 ? .nGreen : p < 70 ? .accent : p < 90 ? .nOrange : .nRed }
-    static func temp(_ t: Double)  -> Color { t < 60  ? .nGreen : t < 80  ? .nOrange : .nRed }
+    static let nPink   = Color(red:0.96, green:0.45, blue:0.71)
+    static func usage(_ p: Double) -> Color {
+        let ui = UICustomizationStore.shared
+        if p < ui.cpuGreenMax { return .nGreen }
+        if p < ui.cpuOrangeMax { return .accent }
+        if p < ui.cpuRedMin { return .nOrange }
+        return .nRed
+    }
+    static func temp(_ t: Double)  -> Color {
+        let ui = UICustomizationStore.shared
+        if t < ui.tempGreenMax { return .nGreen }
+        if t < ui.tempOrangeMax { return .nOrange }
+        return .nRed
+    }
     static func pressure(_ label: String) -> Color {
         switch label {
         case "Critical": return .nRed
         case "Warning": return .nOrange
         default: return .nGreen
         }
+    }
+}
+
+// ── Developer Mode + UI customization (v1.2.5) ──────────────────────────────
+
+enum MenubarDensity: String, CaseIterable, Identifiable {
+    case compact, comfortable, spacious
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .compact: return "Compact"
+        case .comfortable: return "Comfortable"
+        case .spacious: return "Spacious"
+        }
+    }
+    /// Separator between menubar values
+    var separator: String {
+        switch self {
+        case .compact: return " "
+        case .comfortable: return " · "
+        case .spacious: return "  ·  "
+        }
+    }
+}
+
+enum AccentPreset: String, CaseIterable, Identifiable {
+    case cyan, green, orange, purple, pink, blue
+    var id: String { rawValue }
+    var label: String { rawValue.capitalized }
+    var color: Color {
+        switch self {
+        case .cyan: return Color(red: 0.0, green: 0.85, blue: 1.0)
+        case .green: return Color(red: 0.1, green: 1.0, blue: 0.5)
+        case .orange: return Color(red: 1.0, green: 0.55, blue: 0.1)
+        case .purple: return Color(red: 0.72, green: 0.45, blue: 1.0)
+        case .pink: return Color(red: 0.96, green: 0.45, blue: 0.71)
+        case .blue: return Color(red: 0.35, green: 0.55, blue: 1.0)
+        }
+    }
+}
+
+enum MenubarClickBehavior: String, CaseIterable, Identifiable {
+    case popover, mainWindow
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .popover: return "Open popover"
+        case .mainWindow: return "Open main window"
+        }
+    }
+}
+
+/// Opt-in power-user tools. Off by default; never hides basic customization.
+final class DeveloperModeStore: ObservableObject {
+    static let shared = DeveloperModeStore()
+    private let key = "rnitro.developerModeEnabled"
+    private let verboseLogKey = "rnitro.dev.verboseLogging"
+    private let showRawSensorsKey = "rnitro.dev.showRawSensors"
+    private let forceHighSampleKey = "rnitro.dev.forceHighSample"
+
+    @Published var isEnabled: Bool {
+        didSet { UserDefaults.standard.set(isEnabled, forKey: key) }
+    }
+    @Published var verboseLogging: Bool {
+        didSet { UserDefaults.standard.set(verboseLogging, forKey: verboseLogKey) }
+    }
+    @Published var showRawSensors: Bool {
+        didSet { UserDefaults.standard.set(showRawSensors, forKey: showRawSensorsKey) }
+    }
+    @Published var forceHighSampleRate: Bool {
+        didSet {
+            UserDefaults.standard.set(forceHighSampleRate, forKey: forceHighSampleKey)
+            MonitorActivity.applyIdleProfileChange()
+        }
+    }
+
+    private init() {
+        isEnabled = UserDefaults.standard.bool(forKey: key)
+        verboseLogging = UserDefaults.standard.bool(forKey: verboseLogKey)
+        showRawSensors = UserDefaults.standard.bool(forKey: showRawSensorsKey)
+        forceHighSampleRate = UserDefaults.standard.bool(forKey: forceHighSampleKey)
+    }
+
+    func log(_ message: String) {
+        guard verboseLogging else { return }
+        let dir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Logs/rNitro", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let file = dir.appendingPathComponent("verbose.log")
+        let line = "\(ISO8601DateFormatter().string(from: Date()))  \(message)\n"
+        if let data = line.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: file.path),
+               let handle = try? FileHandle(forWritingTo: file) {
+                defer { try? handle.close() }
+                try? handle.seekToEnd()
+                try? handle.write(contentsOf: data)
+            } else {
+                try? data.write(to: file)
+            }
+        }
+    }
+
+    func openLogFolder() {
+        let dir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Logs/rNitro", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(dir)
+    }
+
+    func copySensorDump() {
+        let cpu = CPUMonitor.shared
+        let bat = BatteryMonitor.shared
+        let lines = [
+            "rNitro \(CURRENT_VERSION) sensor dump",
+            "CPU: \(String(format: "%.1f", cpu.totalUsage))%  temp: \(String(format: "%.1f", cpu.temperature))°C  power: \(String(format: "%.2f", cpu.packagePowerWatts))W",
+            "RAM: \(String(format: "%.1f", cpu.memoryUsedPercent))%",
+            "Battery present: \(bat.isPresent)  level: \(bat.levelPercent)%  charging: \(bat.isCharging)",
+            "Channel: \(RNITRO_BUILD_CHANNEL)",
+            "DevMode: \(isEnabled)"
+        ]
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+    }
+
+    func copySnapshotJSON() {
+        let cpu = CPUMonitor.shared
+        let bat = BatteryMonitor.shared
+        let dict: [String: Any] = [
+            "version": CURRENT_VERSION,
+            "channel": RNITRO_BUILD_CHANNEL,
+            "cpuPercent": cpu.totalUsage,
+            "tempC": cpu.temperature,
+            "powerW": cpu.packagePowerWatts,
+            "ramPercent": cpu.memoryUsedPercent,
+            "batteryPercent": bat.levelPercent,
+            "batteryPresent": bat.isPresent,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys]),
+           let str = String(data: data, encoding: .utf8) {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(str, forType: .string)
+        }
+    }
+}
+
+/// Customization available to everyone (no Developer Mode required).
+final class UICustomizationStore: ObservableObject {
+    static let shared = UICustomizationStore()
+
+    private let densityKey = "rnitro.ui.density"
+    private let accentKey = "rnitro.ui.accent"
+    private let clickKey = "rnitro.ui.menubarClick"
+    private let showPerCoreKey = "rnitro.ui.showPerCore"
+    private let showFansKey = "rnitro.ui.showFans"
+    private let showProcessesKey = "rnitro.ui.showProcesses"
+    private let cpuGreenKey = "rnitro.ui.cpuGreenMax"
+    private let cpuOrangeKey = "rnitro.ui.cpuOrangeMax"
+    private let cpuRedKey = "rnitro.ui.cpuRedMin"
+    private let tempGreenKey = "rnitro.ui.tempGreenMax"
+    private let tempOrangeKey = "rnitro.ui.tempOrangeMax"
+    private let defaultTabKey = "rnitro.ui.defaultTab"
+
+    @Published var density: MenubarDensity {
+        didSet {
+            UserDefaults.standard.set(density.rawValue, forKey: densityKey)
+            NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+        }
+    }
+    @Published var accentPreset: AccentPreset {
+        didSet {
+            UserDefaults.standard.set(accentPreset.rawValue, forKey: accentKey)
+            objectWillChange.send()
+        }
+    }
+    @Published var menubarClick: MenubarClickBehavior {
+        didSet { UserDefaults.standard.set(menubarClick.rawValue, forKey: clickKey) }
+    }
+    @Published var showPerCore: Bool {
+        didSet { UserDefaults.standard.set(showPerCore, forKey: showPerCoreKey) }
+    }
+    @Published var showFans: Bool {
+        didSet { UserDefaults.standard.set(showFans, forKey: showFansKey) }
+    }
+    @Published var showProcesses: Bool {
+        didSet { UserDefaults.standard.set(showProcesses, forKey: showProcessesKey) }
+    }
+    @Published var cpuGreenMax: Double {
+        didSet { UserDefaults.standard.set(cpuGreenMax, forKey: cpuGreenKey) }
+    }
+    @Published var cpuOrangeMax: Double {
+        didSet { UserDefaults.standard.set(cpuOrangeMax, forKey: cpuOrangeKey) }
+    }
+    @Published var cpuRedMin: Double {
+        didSet { UserDefaults.standard.set(cpuRedMin, forKey: cpuRedKey) }
+    }
+    @Published var tempGreenMax: Double {
+        didSet { UserDefaults.standard.set(tempGreenMax, forKey: tempGreenKey) }
+    }
+    @Published var tempOrangeMax: Double {
+        didSet { UserDefaults.standard.set(tempOrangeMax, forKey: tempOrangeKey) }
+    }
+    @Published var defaultTabRaw: String {
+        didSet { UserDefaults.standard.set(defaultTabRaw, forKey: defaultTabKey) }
+    }
+
+    var accentColor: Color { accentPreset.color }
+
+    private init() {
+        let d = UserDefaults.standard
+        density = MenubarDensity(rawValue: d.string(forKey: densityKey) ?? "") ?? .comfortable
+        accentPreset = AccentPreset(rawValue: d.string(forKey: accentKey) ?? "") ?? .cyan
+        menubarClick = MenubarClickBehavior(rawValue: d.string(forKey: clickKey) ?? "") ?? .popover
+        showPerCore = d.object(forKey: showPerCoreKey) as? Bool ?? true
+        showFans = d.object(forKey: showFansKey) as? Bool ?? true
+        showProcesses = d.object(forKey: showProcessesKey) as? Bool ?? true
+        cpuGreenMax = d.object(forKey: cpuGreenKey) as? Double ?? 40
+        cpuOrangeMax = d.object(forKey: cpuOrangeKey) as? Double ?? 70
+        cpuRedMin = d.object(forKey: cpuRedKey) as? Double ?? 90
+        tempGreenMax = d.object(forKey: tempGreenKey) as? Double ?? 60
+        tempOrangeMax = d.object(forKey: tempOrangeKey) as? Double ?? 80
+        defaultTabRaw = d.string(forKey: defaultTabKey) ?? AppTab.monitor.rawValue
+    }
+
+    func resetMenubarDefaults() {
+        density = .comfortable
+        MenuBarConfig.resetToDefaults()
+    }
+
+    func resetAppearanceDefaults() {
+        accentPreset = .cyan
+        showPerCore = true
+        showFans = true
+        showProcesses = true
+    }
+
+    func resetColorThresholds() {
+        cpuGreenMax = 40; cpuOrangeMax = 70; cpuRedMin = 90
+        tempGreenMax = 60; tempOrangeMax = 80
     }
 }
 
@@ -3391,6 +3643,7 @@ enum MonitorActivity {
     }
 
     static var cpuInterval: TimeInterval {
+        if DeveloperModeStore.shared.forceHighSampleRate { return 0.75 }
         if popoverOpen || CompileFarmDetector.shared.shouldForceSampling { return 1.0 }
         if PolitePeer.shared.shouldEaseSampling { return idleProfile == .aggressive ? 8.0 : 5.0 }
         return idleProfile == .aggressive ? 4.0 : 2.0
@@ -5106,20 +5359,26 @@ enum ChatSection: String, CaseIterable, Identifiable {
     }
 }
 
-enum SettingsSection: String, CaseIterable, Identifiable {
-    case appearance, menubar, monitor, alerts, general
+enum SettingsSection: String, Identifiable {
+    case appearance, menubar, monitor, alerts, general, developer
     var id: String { rawValue }
 
+    /// Developer tab only when Developer Mode is on.
+    static var visibleCases: [SettingsSection] {
+        var cases: [SettingsSection] = [.appearance, .menubar, .monitor, .alerts, .general]
+        if DeveloperModeStore.shared.isEnabled { cases.append(.developer) }
+        return cases
+    }
+
     var label: String {
-        let key: String
         switch self {
-        case .appearance: key = "settings.appearance"
-        case .menubar: key = "settings.menubar"
-        case .monitor: key = "settings.monitor"
-        case .alerts: key = "settings.alerts"
-        case .general: key = "settings.general"
+        case .appearance: return DisplayPreferencesStore.shared.tr("settings.appearance")
+        case .menubar: return DisplayPreferencesStore.shared.tr("settings.menubar")
+        case .monitor: return DisplayPreferencesStore.shared.tr("settings.monitor")
+        case .alerts: return DisplayPreferencesStore.shared.tr("settings.alerts")
+        case .general: return DisplayPreferencesStore.shared.tr("settings.general")
+        case .developer: return "Developer"
         }
-        return DisplayPreferencesStore.shared.tr(key)
     }
 
     var icon: String {
@@ -5129,6 +5388,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .monitor: return "gauge"
         case .alerts: return "bell.badge"
         case .general: return "gearshape"
+        case .developer: return "hammer"
         }
     }
 }
@@ -5201,13 +5461,24 @@ struct ChatTabView: View {
 struct SettingsView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
+    @ObservedObject private var devMode = DeveloperModeStore.shared
     @State private var section: SettingsSection = .appearance
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(display.tr("settings.title"))
-                    .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+                HStack(spacing: 8) {
+                    Text(display.tr("settings.title"))
+                        .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+                    if devMode.isEnabled {
+                        Text("DEV")
+                            .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                            .foregroundColor(.bg)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.nOrange))
+                    }
+                }
                 Text(display.tr("settings.subtitle"))
                     .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
@@ -5218,7 +5489,7 @@ struct SettingsView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(SettingsSection.allCases) { s in
+                    ForEach(SettingsSection.visibleCases) { s in
                         Button(action: { section = s }) {
                             HStack(spacing: 5) {
                                 Image(systemName: s.icon)
@@ -5249,12 +5520,16 @@ struct SettingsView: View {
                 case .monitor: SettingsMonitorSection()
                 case .alerts: SettingsAlertsSection()
                 case .general: SettingsGeneralSection()
+                case .developer: SettingsDeveloperSection()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(Color.bg)
+        .onChange(of: devMode.isEnabled) { _, on in
+            if !on && section == .developer { section = .general }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .rNitroOpenMainWindow)) { note in
             if let raw = note.userInfo?["settingsSection"] as? String,
                let s = SettingsSection(rawValue: raw) {
@@ -5337,6 +5612,7 @@ struct ChatAPISection: View {
 struct SettingsAppearanceSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
+    @ObservedObject private var ui = UICustomizationStore.shared
     @AppStorage(MonitorPreferences.uiStyleKey) private var uiStyleRaw = MonitorUIStyle.modern.rawValue
 
     var body: some View {
@@ -5357,6 +5633,19 @@ struct SettingsAppearanceSection: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                Text("Accent color")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 4)
+                Picker("Accent", selection: $ui.accentPreset) {
+                    ForEach(AccentPreset.allCases) { p in
+                        Text(p.label).tag(p)
+                    }
+                }
+                .pickerStyle(.segmented)
+                HStack(spacing: 8) {
+                    Circle().fill(ui.accentColor).frame(width: 14, height: 14)
+                    Text("Preview accent").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                }
                 Text(display.tr("appearance.language"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
@@ -5380,6 +5669,26 @@ struct SettingsAppearanceSection: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                Text("Monitor sections")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 6)
+                Toggle(isOn: $ui.showPerCore) {
+                    Text("Show per-core bars").font(rNitroFont(.label, metrics: metrics))
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $ui.showFans) {
+                    Text("Show fans / sensors detail").font(rNitroFont(.label, metrics: metrics))
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $ui.showProcesses) {
+                    Text("Show top processes").font(rNitroFont(.label, metrics: metrics))
+                }
+                .toggleStyle(.switch)
+                Button("Reset appearance defaults") { ui.resetAppearanceDefaults() }
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -5389,7 +5698,16 @@ struct SettingsAppearanceSection: View {
 struct SettingsMenubarSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
+    @ObservedObject private var ui = UICustomizationStore.shared
     @AppStorage(MonitorPreferences.menuBarLayoutKey) private var menuBarLayoutRaw = MenuBarLayout.inline.rawValue
+    @State private var slotOrderTick = 0
+
+    private var availableSlots: [MenuBarSlot] {
+        MenuBarSlot.allCases.filter { slot in
+            if slot == .weather { return RNITRO_FEATURE_BETA_UI }
+            return true
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -5409,18 +5727,68 @@ struct SettingsMenubarSection: View {
                         MenuBarConfig.setLayout(layout)
                     }
                 }
-                ForEach(MenuBarSlot.allCases.filter { slot in
-                    if slot == .weather { return RNITRO_FEATURE_BETA_UI }
-                    return true
-                }) { slot in
+                Text("Density")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Picker("Density", selection: $ui.density) {
+                    ForEach(MenubarDensity.allCases) { d in
+                        Text(d.label).tag(d)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text("Left-click action")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Picker("Click", selection: $ui.menubarClick) {
+                    ForEach(MenubarClickBehavior.allCases) { b in
+                        Text(b.label).tag(b)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text("Slots (toggle + reorder)")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 4)
+                // Stable id with tick so reorder refreshes list
+                let _ = slotOrderTick
+                ForEach(MenuBarConfig.enabledSlots.filter { availableSlots.contains($0) }, id: \.rawValue) { slot in
+                    HStack(spacing: 8) {
+                        Toggle(isOn: Binding(
+                            get: { MenuBarConfig.isSlotEnabled(slot) },
+                            set: { MenuBarConfig.setSlot(slot, enabled: $0); slotOrderTick += 1 }
+                        )) {
+                            Text(slot.label).font(rNitroFont(.label, metrics: metrics))
+                        }
+                        .toggleStyle(.switch)
+                        Spacer(minLength: 4)
+                        Button {
+                            MenuBarConfig.moveSlot(slot, direction: -1)
+                            slotOrderTick += 1
+                        } label: {
+                            Image(systemName: "arrow.up").font(.system(size: 11, weight: .semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+                        Button {
+                            MenuBarConfig.moveSlot(slot, direction: 1)
+                            slotOrderTick += 1
+                        } label: {
+                            Image(systemName: "arrow.down").font(.system(size: 11, weight: .semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+                    }
+                }
+                ForEach(availableSlots.filter { !MenuBarConfig.isSlotEnabled($0) }, id: \.rawValue) { slot in
                     Toggle(isOn: Binding(
-                        get: { MenuBarConfig.isSlotEnabled(slot) },
-                        set: { MenuBarConfig.setSlot(slot, enabled: $0) }
+                        get: { false },
+                        set: { MenuBarConfig.setSlot(slot, enabled: $0); slotOrderTick += 1 }
                     )) {
-                        Text(slot.label).font(rNitroFont(.label, metrics: metrics))
+                        Text(slot.label).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                     }
                     .toggleStyle(.switch)
                 }
+                Text("Preview: \(MenuBarStatusFormatter.render(layout: MenuBarConfig.layout))")
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.accent)
+                    .padding(.top, 2)
                 if RNITRO_FEATURE_BETA_UI {
                     Divider().padding(.vertical, 4)
                     Text(display.tr("menubar.whisper"))
@@ -5444,6 +5812,14 @@ struct SettingsMenubarSection: View {
                     }
                     .pickerStyle(.segmented)
                 }
+                Button("Reset menubar defaults") {
+                    ui.resetMenubarDefaults()
+                    menuBarLayoutRaw = MenuBarLayout.inline.rawValue
+                    slotOrderTick += 1
+                }
+                .font(rNitroFont(.caption, metrics: metrics))
+                .foregroundColor(.secondary)
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -5523,6 +5899,7 @@ struct SettingsAlertsSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var advisor = SystemAdvisorModel.shared
+    @ObservedObject private var ui = UICustomizationStore.shared
 
     var body: some View {
         ScrollView {
@@ -5549,6 +5926,20 @@ struct SettingsAlertsSection: View {
                 }
                 .toggleStyle(.switch)
                 .onChange(of: advisor.thresholds.criticalTempBannersEnabled) { _, _ in advisor.refreshThresholds() }
+                Text("Color thresholds (rings & menubar)")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 8)
+                Text("Customize when CPU % and temp turn green / orange / red. Available without Developer Mode.")
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                colorThresholdRow("CPU green below %", value: $ui.cpuGreenMax, range: 10...60)
+                colorThresholdRow("CPU orange below %", value: $ui.cpuOrangeMax, range: 40...90)
+                colorThresholdRow("CPU red from %", value: $ui.cpuRedMin, range: 70...100)
+                colorThresholdRow("Temp green below °C", value: $ui.tempGreenMax, range: 40...75)
+                colorThresholdRow("Temp orange below °C", value: $ui.tempOrangeMax, range: 55...95)
+                Button("Reset color thresholds") { ui.resetColorThresholds() }
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+                    .buttonStyle(.plain)
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -5570,11 +5961,23 @@ struct SettingsAlertsSection: View {
                 .frame(width: 28, alignment: .trailing)
         }
     }
+
+    private func colorThresholdRow(_ label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+        HStack {
+            Text(label).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+            Spacer()
+            Slider(value: value, in: range, step: 1).frame(maxWidth: 200)
+            Text("\(Int(value.wrappedValue))")
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                .frame(width: 28, alignment: .trailing)
+        }
+    }
 }
 
 struct SettingsGeneralSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
+    @ObservedObject private var devMode = DeveloperModeStore.shared
     @State private var launchAtLogin = LaunchAtLoginManager.isEnabled()
 
     var body: some View {
@@ -5626,6 +6029,15 @@ struct SettingsGeneralSection: View {
                     .toggleStyle(.switch)
                     Text(display.tr("general.compileFarm.hint"))
                         .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    Divider().padding(.vertical, 4)
+                    Toggle(isOn: $devMode.isEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Developer Mode").font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                            Text("Unlock advanced sampling, sensor dump, logging, and a Developer settings tab. Basic UI customization stays available either way.")
+                                .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
                 }
                 MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
                 MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
@@ -5635,6 +6047,51 @@ struct SettingsGeneralSection: View {
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
         .onAppear { launchAtLogin = LaunchAtLoginManager.isEnabled() }
+    }
+}
+
+struct SettingsDeveloperSection: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var dev = DeveloperModeStore.shared
+    @State private var copiedNote = ""
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Developer")
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
+                Text("Power tools for debugging and advanced sampling. Turn off Developer Mode in General to hide this tab.")
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Toggle(isOn: $dev.forceHighSampleRate) {
+                    Text("Force high sample rate (~0.75s CPU)").font(rNitroFont(.label, metrics: metrics))
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $dev.verboseLogging) {
+                    Text("Verbose logging to ~/Library/Logs/rNitro").font(rNitroFont(.label, metrics: metrics))
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $dev.showRawSensors) {
+                    Text("Prefer raw sensor detail in Monitor").font(rNitroFont(.label, metrics: metrics))
+                }
+                .toggleStyle(.switch)
+                MinimalButton(title: "Copy sensor dump", action: {
+                    dev.copySensorDump()
+                    copiedNote = "Sensor dump copied"
+                    dev.log("sensor dump copied")
+                })
+                MinimalButton(title: "Copy snapshot JSON", action: {
+                    dev.copySnapshotJSON()
+                    copiedNote = "JSON snapshot copied"
+                })
+                MinimalButton(title: "Open log folder", action: { dev.openLogFolder() })
+                if !copiedNote.isEmpty {
+                    Text(copiedNote).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.nGreen)
+                }
+                Text("Channel: \(RNITRO_BUILD_CHANNEL) · \(CURRENT_VERSION)")
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+            }
+            .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
+        }
     }
 }
 
@@ -7506,6 +7963,23 @@ enum MenuBarConfig {
     static func isSlotEnabled(_ slot: MenuBarSlot) -> Bool {
         enabledSlots.contains(slot)
     }
+
+    /// direction: -1 up, +1 down
+    static func moveSlot(_ slot: MenuBarSlot, direction: Int) {
+        var slots = enabledSlots
+        guard let idx = slots.firstIndex(of: slot) else { return }
+        let newIdx = idx + direction
+        guard slots.indices.contains(newIdx) else { return }
+        slots.swapAt(idx, newIdx)
+        UserDefaults.standard.set(slots.map(\.rawValue), forKey: MonitorPreferences.menuBarSlotsKey)
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+    }
+
+    static func resetToDefaults() {
+        UserDefaults.standard.set(defaultSlots.map(\.rawValue), forKey: MonitorPreferences.menuBarSlotsKey)
+        setLayout(.inline)
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+    }
 }
 
 extension Notification.Name {
@@ -7550,7 +8024,8 @@ enum MenuBarStatusFormatter {
         case .inline, .combined:
             // Single-line values only — stacked labels clip in the macOS menu bar.
             if slots.isEmpty { return "\(Int(cpu.totalUsage.rounded()))%" }
-            return slots.map { slotLabel($0) }.joined(separator: " · ")
+            let sep = UICustomizationStore.shared.density.separator
+            return slots.map { slotLabel($0) }.joined(separator: sep)
         }
     }
 
@@ -9577,6 +10052,8 @@ struct MonitorModernTabView: View {
     @Binding var statDetail: StatDetailKind?
     @AppStorage(MonitorPreferences.networkKey) private var showNetworkUI = true
     @AppStorage(MonitorPreferences.showWeatherKey) private var showWeather = true
+    @ObservedObject private var ui = UICustomizationStore.shared
+    @ObservedObject private var dev = DeveloperModeStore.shared
 
     private func toggleStatDetail(_ kind: StatDetailKind) {
         statDetail = statDetail == kind ? nil : kind
@@ -9597,7 +10074,9 @@ struct MonitorModernTabView: View {
                 if showNetworkUI {
                     MonitorNetworkSectionView(showWeather: showWeather)
                 }
-                MonitorSensorsSectionView()
+                if ui.showFans || dev.showRawSensors {
+                    MonitorSensorsSectionView()
+                }
                 MonitorToolsSectionView()
             }
         }
@@ -11969,6 +12448,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 self?.releasePopoverContent()
             }
         } else {
+            // Optional: open full window instead of popover (Settings → Menubar).
+            if UICustomizationStore.shared.menubarClick == .mainWindow {
+                MainWindowController.shared.show()
+                return
+            }
             // Activate so key events (⌘Q) are delivered to our local monitor / main menu.
             NSApp.activate(ignoringOtherApps: true)
             attachPopoverContentIfNeeded()
@@ -12179,8 +12663,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.2.4-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.2.4-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.2.5-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.2.5-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
