@@ -170,6 +170,16 @@
     background: rgba(0,217,255,0.08);
   }
 
+  .nav-link-home {
+    color: var(--wood, #e8a86a);
+    border-color: rgba(232, 168, 106, 0.45);
+  }
+  .nav-link-home:hover {
+    border-color: var(--wood, #e8a86a);
+    background: rgba(232, 168, 106, 0.1);
+    color: var(--wood, #e8a86a);
+  }
+
   .nav-badge {
     font-family: var(--mono);
     font-size: var(--text-sm);
@@ -1157,6 +1167,7 @@
   <div class="nav-logo">rNitro</div>
 <!-- @sync:nav-right -->
   <div class="nav-right">
+    <a class="nav-link nav-link-home" href="https://chopstickshq.com/">← Back to homepage</a>
     <a class="nav-link" href="/privacy.html">Privacy</a>
     <div class="nav-badge">v1.2.0 Final · v1.2.6 Beta · Apple Silicon + Intel</div>
   </div>
@@ -1258,7 +1269,7 @@
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.0-Final.zip')">⬇ Download App ZIP</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.0-Final.zip')">⬇ Download App ZIP · 2.1 MB</button>
       </div>
       <div id="hero-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-stable-other')" aria-expanded="false">
@@ -1267,8 +1278,8 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.pkg')">PKG installer</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.dmg')">DMG disk image</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.pkg')">PKG installer · 2.1 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.dmg')">DMG disk image · 2.4 MB</button>
             <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v1.2.0-Final.sh')">Shell installer (.sh) · 557 KB</button>
             <button class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy curl install</button>
             <button class="btn btn-secondary" onclick="copyCmd('stable')">⎘ Copy bash command</button>
@@ -1899,7 +1910,7 @@
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
         <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.0-Final.zip')">⬇ Download App ZIP</button>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.0-Final.zip')">⬇ Download App ZIP · 2.1 MB</button>
       </div>
       <div id="dl-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-stable-other')" aria-expanded="false">
@@ -1908,8 +1919,8 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.pkg')">PKG installer</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.dmg')">DMG disk image</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.pkg')">PKG installer · 2.1 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.2.0-Final.dmg')">DMG disk image · 2.4 MB</button>
             <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v1.2.0-Final.sh')">Shell installer (.sh) · 557 KB</button>
           </div>
           <div class="dl-other-note"><strong>Don't trust the PKG?</strong> The .sh compiles from readable source on your Mac.</div>

@@ -200,6 +200,7 @@ def nav_right(data: dict) -> str:
         else ""
     )
     return f"""  <div class="nav-right">
+    <a class="nav-link nav-link-home" href="https://chopstickshq.com/">← Back to homepage</a>
 {archives_link}    <a class="nav-link" href="/privacy.html">Privacy</a>
     <div class="nav-badge">{stable["label"]} · {beta["label"]} · Apple Silicon + Intel</div>
   </div>"""
