@@ -1,9 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://getrnitro.netlify.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://getrnitro.netlify.app/cli.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://getrnitro.netlify.app/linux.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://getrnitro.netlify.app/windows.html</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://getrnitro.netlify.app/privacy.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://getrnitro.netlify.app/archives.html</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <!-- Canonical product URLs (getrnitro pages 301 here) -->
+  <url>
+    <loc>https://chopstickshq.com/rnitro/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://chopstickshq.com/rnitro/cli.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://chopstickshq.com/rnitro/linux.html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://chopstickshq.com/rnitro/windows.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://chopstickshq.com/rnitro/privacy.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://chopstickshq.com/rnitro/archives.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.35</priority>
+  </url>
+  <url>
+    <loc>https://github.com/ilikemacos/rNitro</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

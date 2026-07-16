@@ -79,7 +79,7 @@ def other_downloads_panel(
       </div>"""
 
 
-def sync_region(html: str, name: str, content: str) -> str:
+def sync_region(html: str, name: str, content: str, *, required: bool = True) -> str:
     if name in ("js-versions", "js-settab", "chat-whats-new", "chat-kb-platform"):
         start = f"// @sync:{name}\n"
         end_token = f"// @end:{name}"
@@ -88,11 +88,17 @@ def sync_region(html: str, name: str, content: str) -> str:
         end_token = f"<!-- @end:{name} -->"
     start_idx = html.find(start)
     if start_idx == -1:
-        raise SystemExit(f"sync region @{name} start marker not found in index.html")
+        if not required:
+            print(f"  (skip @{name}: start marker not found)")
+            return html
+        raise SystemExit(f"sync region @{name} start marker not found")
     content_start = start_idx + len(start)
     end_idx = html.find(end_token, content_start)
     if end_idx == -1:
-        raise SystemExit(f"sync region @{name} end marker not found in index.html")
+        if not required:
+            print(f"  (skip @{name}: end marker not found)")
+            return html
+        raise SystemExit(f"sync region @{name} end marker not found")
     line_start = html.rfind("\n", content_start, end_idx) + 1
     return html[:content_start] + content.rstrip() + "\n" + html[line_start:]
 
@@ -427,7 +433,11 @@ def download_card_full(data: dict) -> str:
   </div>"""
 
 
+# CDN for binaries / version.json / curl installers
 SITE_URL = "https://getrnitro.netlify.app"
+# Public marketing URL (Google indexes this; getrnitro 301s pages here)
+PUBLIC_SITE_URL = "https://chopstickshq.com/rnitro"
+GITHUB_URL = "https://github.com/ilikemacos/rNitro"
 
 
 def curl_install_cmd(sh_name: str) -> str:
@@ -468,38 +478,111 @@ def hero_head(data: dict) -> str:
     beta = v.beta_release(data)
     linux = v.linux_release(data)
     desc = (
-        f"rNitro — free menu bar system monitor for Apple Silicon Macs "
-        f"({stable['short']} Stable / {beta['short']} Beta). CPU, temperature, MacBook battery %, "
-        f"GPU, RAM. rNitro CLI terminal monitor (btop-style). Linux {linux['short']} pre-release. No account, no telemetry."
+        f"rNitro — free open source macOS menu bar CPU monitor "
+        f"({stable['short']} Stable / {beta['short']} Beta). Real-time CPU, temperature, "
+        f"MacBook battery %, GPU, RAM, network. rNitro CLI (btop-style). Linux {linux['short']} "
+        f"pre-release. No account, no telemetry. Apple Silicon &amp; Intel."
+    )
+    keywords = (
+        "rNitro, rnitro, open source macos cpu monitor, free mac menu bar monitor, "
+        "macOS system monitor, Apple Silicon temperature monitor, mac activity menu bar, "
+        "cpu temp mac free, open source menu bar app, btop mac alternative, iStat alternative free"
     )
     og_image = f"{SITE_URL}/screenshots/hero-monitor.png"
+    public = PUBLIC_SITE_URL.rstrip("/") + "/"
     ld_json = json.dumps(
         {
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
             "name": "rNitro",
-            "operatingSystem": "macOS, Linux, Windows",
+            "alternateName": ["r Nitro", "getrnitro", "rNitro Monitor"],
+            "description": (
+                "Free open-source menu bar system monitor for macOS (Apple Silicon & Intel). "
+                "Live CPU, temperature, GPU, RAM, battery, and network. Optional CLI and Linux builds."
+            ),
+            "operatingSystem": "macOS 12+, Linux, Windows",
             "applicationCategory": "UtilitiesApplication",
+            "applicationSubCategory": "System Monitor",
             "softwareVersion": stable["id"],
-            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+            "isAccessibleForFree": True,
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD",
+            },
+            "url": public,
             "downloadUrl": SITE_URL,
+            "screenshot": og_image,
+            "author": {"@type": "Organization", "name": "chopsticks", "url": "https://chopstickshq.com/"},
+            "publisher": {"@type": "Organization", "name": "chopsticks", "url": "https://chopstickshq.com/"},
+            "sameAs": [GITHUB_URL, SITE_URL + "/", public],
+            "license": GITHUB_URL,
+            "keywords": keywords.replace(", ", ","),
         },
         ensure_ascii=False,
     )
-    return f"""<title>rNitro — CPU Monitor for macOS, Linux &amp; Windows</title>
+    faq_json = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "What is rNitro?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": (
+                            "rNitro is a free, open-source menu bar system monitor for macOS. "
+                            "It shows live CPU, temperature, memory, battery, GPU, and network stats."
+                        ),
+                    },
+                },
+                {
+                    "@type": "Question",
+                    "name": "Is rNitro free and open source?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": (
+                            "Yes. rNitro is free, has no account requirement and no telemetry. "
+                            f"Source and releases are on GitHub: {GITHUB_URL}"
+                        ),
+                    },
+                },
+                {
+                    "@type": "Question",
+                    "name": "Does rNitro work on Apple Silicon Macs?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": (
+                            "Yes. Primary builds target Apple Silicon (arm64). Intel Mac installers "
+                            "are also available for older machines."
+                        ),
+                    },
+                },
+            ],
+        },
+        ensure_ascii=False,
+    )
+    return f"""<title>rNitro — Free Open Source macOS CPU &amp; System Monitor</title>
 <meta name="description" content="{desc}">
-<link rel="canonical" href="{SITE_URL}/">
+<meta name="keywords" content="{keywords}">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="chopsticks">
+<link rel="canonical" href="{public}">
 <meta property="og:type" content="website">
-<meta property="og:title" content="rNitro — Menu Bar System Monitor">
+<meta property="og:site_name" content="rNitro">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="rNitro — Free Open Source macOS Menu Bar CPU Monitor">
 <meta property="og:description" content="{desc}">
-<meta property="og:url" content="{SITE_URL}/">
+<meta property="og:url" content="{public}">
 <meta property="og:image" content="{og_image}">
+<meta property="og:image:alt" content="rNitro menu bar system monitor on macOS">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="rNitro — Menu Bar System Monitor">
+<meta name="twitter:title" content="rNitro — Free Open Source macOS CPU Monitor">
 <meta name="twitter:description" content="{desc}">
 <meta name="twitter:image" content="{og_image}">
-<script type="application/ld+json">{ld_json}</script>"""
-
+<script type="application/ld+json">{ld_json}</script>
+<script type="application/ld+json">{faq_json}</script>"""
 
 def hero_copy(data: dict) -> str:
     stable = v.stable_release(data)
@@ -1824,7 +1907,8 @@ def sync_readme(data: dict) -> None:
         ("readme-curl", readme_curl(data)),
         ("readme-downloads", readme_downloads(data)),
     ):
-        text = sync_region(text, name, content)
+        # README markers are optional (badges/tables may be hand-maintained).
+        text = sync_region(text, name, content, required=False)
     README.write_text(text, encoding="utf-8")
     print(f"Updated {README.name}")
 
