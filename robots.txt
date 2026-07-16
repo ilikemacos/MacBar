@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
+# Public product site (preferred for search)
+Sitemap: https://chopstickshq.com/sitemap.xml
+Sitemap: https://chopstickshq.com/rnitro/sitemap.xml
+
+# Download CDN also hosts a sitemap (same URLs)
 Sitemap: https://getrnitro.netlify.app/sitemap.xml
