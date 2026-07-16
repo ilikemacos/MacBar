@@ -2,16 +2,16 @@
   "whats_new": [
     {
       "channel": "stable",
-      "title": "v1.2.0 Final",
+      "title": "v1.2.6 Final",
       "accent": "green",
       "items": [
         {
-          "strong": "Modern stable",
-          "text": " \u2014 rebuilt from current codebase: customizable menubar/UI, accent colors, thresholds, \u2318Q quit."
+          "strong": "UI font library",
+          "text": " \u2014 Appearance picker with 50+ Google Fonts (EB Garamond, Audiowide, Caveat, Inter, \u2026), OFL, offline."
         },
         {
-          "strong": "AI chat",
-          "text": " \u2014 OpenAI + OpenRouter only (bring your own keys)."
+          "strong": "Modern stable",
+          "text": " \u2014 customizable menubar/UI, accents, thresholds, \u2318Q; OpenAI + OpenRouter only."
         },
         {
           "strong": "No Lab noise",
@@ -25,35 +25,35 @@
     },
     {
       "channel": "experimental",
-      "title": "v1.2.7 Experimental",
+      "title": "v1.3.0 Experimental",
       "accent": "purple",
       "items": [
         {
-          "strong": "Toys TOC",
-          "text": " \u2014 experimental chips collapsed by default; expand Show experimental toys."
+          "strong": "50+ UI fonts",
+          "text": " \u2014 Appearance \u2192 UI font: EB Garamond, Audiowide, Caveat, and many more (Google Fonts OFL)."
         },
         {
           "strong": "All prior toys",
-          "text": " \u2014 forecast, haiku, cosplay, overnight, roulette, chaos + classic playground."
+          "text": " \u2014 TOC chips, forecast, haiku, cosplay, overnight, roulette, chaos + classic playground."
         }
       ]
     },
     {
       "channel": "beta",
-      "title": "v1.2.7 Beta",
+      "title": "v1.2.9 Beta",
       "accent": "orange",
       "items": [
         {
+          "strong": "UI font library",
+          "text": " \u2014 50+ Google Fonts in Appearance (offline bundled)."
+        },
+        {
           "strong": "Process intelligence",
-          "text": " \u2014 top processes with Why hot? (Beta); Dev Mode adds Copy PID / Reveal / Quit."
+          "text": " \u2014 Why hot?; Dev Mode kill/reveal/Copy PID."
         },
         {
           "strong": "Developer Mode",
-          "text": " \u2014 UI config import/export, raw sensor keys, dumps, high sample rate."
-        },
-        {
-          "strong": "Custom UI",
-          "text": " \u2014 density, slots, accents, thresholds (from 1.2.5+)."
+          "text": " \u2014 UI config import/export, dumps, high sample rate."
         }
       ]
     },
@@ -78,6 +78,10 @@
     }
   ],
   "releases": [
+    {
+      "title": "v1.3.0 Experimental / v1.2.9 Beta / v1.2.6 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">UI font library</strong> \u2014 50+ Google Fonts (OFL) in Appearance, including EB Garamond, Audiowide, and Caveat. Experimental 1.3.0 keeps all Lab toys; Beta 1.2.9 ships fonts + process tools; Stable 1.2.6 Final gets fonts without Lab."
+    },
     {
       "title": "v1.2.7 Beta / Experimental",
       "body_html": "<strong style=\"color:var(--orange);\">Process tools + Dev Mode finish</strong> \u2014 Why hot?, kill/reveal (Dev), UI config JSON, Lab toys TOC collapsed. Gatekeeper guide on site."

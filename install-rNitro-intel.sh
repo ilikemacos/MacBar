@@ -218,7 +218,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="1dbeeda39f91fe6b95f3f4640d711f85297044f130fb9dc2cd1537ca538a48d4"
+EXPECTED_HASH="c1b8b9a6852bbb00e878507bf558ffa75cc6c97e04df7d6d7e1bd44beb5510c0"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -383,7 +383,7 @@ let RNITRO_BUILD_CHANNEL = "beta"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
 let RNITRO_FEATURE_EXPERIMENTAL_UI = (RNITRO_BUILD_CHANNEL == "experimental")
-private let RNITRO_UI_FONT = "Varela Round"
+private let RNITRO_UI_FONT_DEFAULT = "Varela Round"
 let UPDATE_CHECK_URL = URL(string: "https://getrnitro.netlify.app/version.json")!
 let UPDATE_PAGE_URL  = URL(string: "https://getrnitro.netlify.app")!
 
@@ -5688,6 +5688,25 @@ struct SettingsAppearanceSection: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                Text(display.tr("appearance.fontFamily"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 4)
+                Text(display.tr("appearance.fontFamily.hint"))
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Picker(display.tr("appearance.fontFamily"), selection: Binding(
+                    get: { display.fontFamilyID },
+                    set: { display.setFontFamily($0) }
+                )) {
+                    ForEach(UIFontCatalog.all) { font in
+                        Text(font.family)
+                            .font(.custom(font.family, size: 13))
+                            .tag(font.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                Text("The quick brown fox — 0123456789")
+                    .font(rNitroFont(.body, metrics: metrics))
+                    .padding(.vertical, 2)
                 Text("Accent color")
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
@@ -7426,7 +7445,8 @@ extension EnvironmentValues {
 }
 
 func rNitroFont(_ role: FontRole, metrics: UIMetrics, weight: Font.Weight = .regular) -> Font {
-    .custom(RNITRO_UI_FONT, size: metrics.size(role)).weight(weight)
+    let name = DisplayPreferencesStore.shared.uiFontName
+    return .custom(name, size: metrics.size(role)).weight(weight)
 }
 
 struct MetricsReader<Content: View>: View {
@@ -7436,6 +7456,7 @@ struct MetricsReader<Content: View>: View {
 
     var body: some View {
         GeometryReader { geo in
+            let _ = display.fontFamilyID // invalidate UI when font family changes
             let metrics = UIMetrics.forWidth(geo.size.width, layout: layout, fontScale: display.fontSize.scale)
             content(metrics)
                 .frame(width: geo.size.width, height: geo.size.height)
@@ -7473,6 +7494,7 @@ enum MonitorPreferences {
     static let firstLaunchTipsKey = "rnitro.firstLaunchTipsSeen"
     static let idleProfileKey = "rnitro.idleProfile"
     static let fontSizeKey = "rnitro.fontSize"
+    static let fontFamilyKey = "rnitro.fontFamily"
     static let languageKey = "rnitro.language"
     // Beta experimental features (1·2·3·4·6)
     static let whisperModeKey = "rnitro.whisperMode"
@@ -7509,6 +7531,77 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     }
 }
 
+
+// Google Fonts (OFL) bundled UI catalog — regular weight; pick in Appearance.
+enum UIFontCatalog {
+    struct Choice: Identifiable, Hashable {
+        let id: String
+        let family: String
+        var fileStem: String { id }
+    }
+    static let defaultID = "VarelaRound"
+    static let all: [Choice] = [
+        Choice(id: "VarelaRound", family: "Varela Round"),
+        Choice(id: "EBGaramond", family: "EB Garamond"),
+        Choice(id: "Audiowide", family: "Audiowide"),
+        Choice(id: "Caveat", family: "Caveat"),
+        Choice(id: "Roboto", family: "Roboto"),
+        Choice(id: "OpenSans", family: "Open Sans"),
+        Choice(id: "Lato", family: "Lato"),
+        Choice(id: "Montserrat", family: "Montserrat"),
+        Choice(id: "Poppins", family: "Poppins"),
+        Choice(id: "Inter", family: "Inter"),
+        Choice(id: "Nunito", family: "Nunito"),
+        Choice(id: "NunitoSans", family: "Nunito Sans"),
+        Choice(id: "Raleway", family: "Raleway"),
+        Choice(id: "Oswald", family: "Oswald"),
+        Choice(id: "Merriweather", family: "Merriweather"),
+        Choice(id: "PlayfairDisplay", family: "Playfair Display"),
+        Choice(id: "SourceSans3", family: "Source Sans 3"),
+        Choice(id: "Ubuntu", family: "Ubuntu"),
+        Choice(id: "Rubik", family: "Rubik"),
+        Choice(id: "WorkSans", family: "Work Sans"),
+        Choice(id: "FiraSans", family: "Fira Sans"),
+        Choice(id: "NotoSans", family: "Noto Sans"),
+        Choice(id: "NotoSerif", family: "Noto Serif"),
+        Choice(id: "PTSans", family: "PT Sans"),
+        Choice(id: "PTSerif", family: "PT Serif"),
+        Choice(id: "LibreBaskerville", family: "Libre Baskerville"),
+        Choice(id: "CrimsonText", family: "Crimson Text"),
+        Choice(id: "CormorantGaramond", family: "Cormorant Garamond"),
+        Choice(id: "SpaceGrotesk", family: "Space Grotesk"),
+        Choice(id: "DMSans", family: "DM Sans"),
+        Choice(id: "Outfit", family: "Outfit Thin"),
+        Choice(id: "Manrope", family: "Manrope"),
+        Choice(id: "PlusJakartaSans", family: "Plus Jakarta Sans"),
+        Choice(id: "JosefinSans", family: "Josefin Sans"),
+        Choice(id: "Comfortaa", family: "Comfortaa"),
+        Choice(id: "Quicksand", family: "Quicksand Light"),
+        Choice(id: "Pacifico", family: "Pacifico"),
+        Choice(id: "DancingScript", family: "Dancing Script"),
+        Choice(id: "GreatVibes", family: "Great Vibes"),
+        Choice(id: "Satisfy", family: "Satisfy"),
+        Choice(id: "PermanentMarker", family: "Permanent Marker"),
+        Choice(id: "Bangers", family: "Bangers"),
+        Choice(id: "Lobster", family: "Lobster"),
+        Choice(id: "Righteous", family: "Righteous"),
+        Choice(id: "Orbitron", family: "Orbitron"),
+        Choice(id: "PressStart2P", family: "Press Start 2P"),
+        Choice(id: "SpaceMono", family: "Space Mono"),
+        Choice(id: "Inconsolata", family: "Inconsolata"),
+        Choice(id: "JetBrainsMono", family: "JetBrains Mono"),
+        Choice(id: "IBMPlexSans", family: "IBM Plex Sans"),
+        Choice(id: "IBMPlexMono", family: "IBM Plex Mono"),
+        Choice(id: "BebasNeue", family: "Bebas Neue"),
+        Choice(id: "Anton", family: "Anton"),
+        Choice(id: "ArchivoBlack", family: "Archivo Black"),
+        Choice(id: "Barlow", family: "Barlow"),
+        Choice(id: "Exo2", family: "Exo 2"),
+    ]
+    static func choice(id: String) -> Choice {
+        all.first(where: { $0.id == id }) ?? all[0]
+    }
+}
 enum FontSizePreset: String, CaseIterable, Identifiable {
     case small, medium, large, xlarge
     var id: String { rawValue }
@@ -7528,12 +7621,19 @@ final class DisplayPreferencesStore: ObservableObject {
 
     @Published var language: AppLanguage
     @Published var fontSize: FontSizePreset
+    @Published var fontFamilyID: String
 
     private init() {
         let langRaw = UserDefaults.standard.string(forKey: MonitorPreferences.languageKey) ?? AppLanguage.english.rawValue
         language = AppLanguage(rawValue: langRaw) ?? .english
         let sizeRaw = UserDefaults.standard.string(forKey: MonitorPreferences.fontSizeKey) ?? FontSizePreset.medium.rawValue
         fontSize = FontSizePreset(rawValue: sizeRaw) ?? .medium
+        let famRaw = UserDefaults.standard.string(forKey: MonitorPreferences.fontFamilyKey) ?? UIFontCatalog.defaultID
+        fontFamilyID = UIFontCatalog.all.contains(where: { $0.id == famRaw }) ? famRaw : UIFontCatalog.defaultID
+    }
+
+    var uiFontName: String {
+        UIFontCatalog.choice(id: fontFamilyID).family
     }
 
     func setLanguage(_ lang: AppLanguage) {
@@ -7544,6 +7644,12 @@ final class DisplayPreferencesStore: ObservableObject {
     func setFontSize(_ size: FontSizePreset) {
         fontSize = size
         UserDefaults.standard.set(size.rawValue, forKey: MonitorPreferences.fontSizeKey)
+    }
+
+    func setFontFamily(_ id: String) {
+        let resolved = UIFontCatalog.all.contains(where: { $0.id == id }) ? id : UIFontCatalog.defaultID
+        fontFamilyID = resolved
+        UserDefaults.standard.set(resolved, forKey: MonitorPreferences.fontFamilyKey)
     }
 
     func tr(_ key: String) -> String {
@@ -7642,8 +7748,8 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.subtitle": "Monitor layout, menubar, alerts, and startup options.",
         "settings.appearance": "Appearance", "settings.menubar": "Menubar",
         "settings.monitor": "Monitor", "settings.alerts": "Alerts", "settings.general": "General",
-        "appearance.title": "Display", "appearance.subtitle": "Font size, language, and monitor layout style.",
-        "appearance.fontSize": "Font size", "appearance.language": "Language",
+        "appearance.title": "Display", "appearance.subtitle": "UI font, size, language, and monitor layout style.",
+        "appearance.fontSize": "Font size", "appearance.fontFamily": "UI font", "appearance.fontFamily.hint": "50+ Google Fonts (OFL) bundled offline. Preview updates immediately.", "appearance.language": "Language",
         "font.small": "Small", "font.medium": "Medium", "font.large": "Large", "font.xlarge": "Extra Large",
         "appearance.monitorUI": "Monitor UI", "appearance.monitorUI.hint": "Modern uses iStats-style accordion sections. Legacy is the compact classic layout.",
         "ui.modern": "Modern (iStats-style)", "ui.legacy": "Legacy",
@@ -7700,7 +7806,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.appearance": "外觀", "settings.menubar": "選單列",
         "settings.monitor": "監控", "settings.alerts": "提醒", "settings.general": "一般",
         "appearance.title": "顯示", "appearance.subtitle": "字體大小、語言與監控介面樣式。",
-        "appearance.fontSize": "字體大小", "appearance.language": "語言",
+        "appearance.fontSize": "字體大小", "appearance.fontFamily": "介面字型", "appearance.fontFamily.hint": "內建 50+ Google Fonts（OFL）。", "appearance.language": "語言",
         "font.small": "小", "font.medium": "中", "font.large": "大", "font.xlarge": "特大",
         "appearance.monitorUI": "監控介面", "appearance.monitorUI.hint": "現代模式使用 iStats 風格摺疊分區；經典模式為緊湊版面。",
         "ui.modern": "現代 (iStats 風格)", "ui.legacy": "經典",
@@ -7751,7 +7857,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.appearance": "Apariencia", "settings.menubar": "Barra de menú",
         "settings.monitor": "Monitor", "settings.alerts": "Alertas", "settings.general": "General",
         "appearance.title": "Pantalla", "appearance.subtitle": "Tamaño de fuente, idioma y estilo del monitor.",
-        "appearance.fontSize": "Tamaño de fuente", "appearance.language": "Idioma",
+        "appearance.fontSize": "Tamaño de fuente", "appearance.fontFamily": "Fuente de la UI", "appearance.fontFamily.hint": "Más de 50 Google Fonts (OFL) incluidas.", "appearance.language": "Idioma",
         "font.small": "Pequeño", "font.medium": "Mediano", "font.large": "Grande", "font.xlarge": "Extra grande",
         "appearance.monitorUI": "Interfaz del monitor", "appearance.monitorUI.hint": "Moderno usa secciones plegables estilo iStats. Clásico es el diseño compacto.",
         "ui.modern": "Moderno (estilo iStats)", "ui.legacy": "Clásico",
@@ -7802,7 +7908,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.appearance": "Darstellung", "settings.menubar": "Menüleiste",
         "settings.monitor": "Monitor", "settings.alerts": "Warnungen", "settings.general": "Allgemein",
         "appearance.title": "Anzeige", "appearance.subtitle": "Schriftgröße, Sprache und Monitor-Stil.",
-        "appearance.fontSize": "Schriftgröße", "appearance.language": "Sprache",
+        "appearance.fontSize": "Schriftgröße", "appearance.fontFamily": "UI-Schrift", "appearance.fontFamily.hint": "50+ Google Fonts (OFL) offline gebündelt.", "appearance.language": "Sprache",
         "font.small": "Klein", "font.medium": "Mittel", "font.large": "Groß", "font.xlarge": "Sehr groß",
         "appearance.monitorUI": "Monitor-Oberfläche", "appearance.monitorUI.hint": "Modern nutzt iStats-ähnliche Abschnitte. Legacy ist das kompakte Layout.",
         "ui.modern": "Modern (iStats-Stil)", "ui.legacy": "Legacy",
@@ -12845,13 +12951,27 @@ final class MenuBarIconManager {
 
 enum FontRegistrar {
     static func registerVarelaRound() {
+        registerAll()
+    }
+
+    static func registerAll() {
+        for choice in UIFontCatalog.all {
+            registerFont(stem: choice.fileStem)
+        }
+        // Always ensure default is present even if catalog misses it
+        registerFont(stem: "VarelaRound")
+    }
+
+    private static func registerFont(stem: String) {
         let candidates = [
-            Bundle.main.url(forResource: "VarelaRound", withExtension: "ttf", subdirectory: "Fonts"),
-            Bundle.main.url(forResource: "VarelaRound", withExtension: "ttf")
+            Bundle.main.url(forResource: stem, withExtension: "ttf", subdirectory: "Fonts"),
+            Bundle.main.url(forResource: stem, withExtension: "ttf"),
+            Bundle.main.url(forResource: stem, withExtension: "otf", subdirectory: "Fonts"),
+            Bundle.main.url(forResource: stem, withExtension: "otf")
         ]
         for url in candidates.compactMap({ $0 }) {
             var err: Unmanaged<CFError>?
-            if CTFontManagerRegisterFontsForURL(url as CFURL, .process, &err) { return }
+            _ = CTFontManagerRegisterFontsForURL(url as CFURL, .process, &err)
         }
     }
 }
@@ -13320,30 +13440,52 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
 PLIST
 chmod 644 "$APP_DEST/Contents/Info.plist"
 
-# ── Bundle Varela Round font ──────────────────────────────────────────────────
-echo "🔤 Installing Varela Round font..."
+# ── Bundle UI fonts (Google Fonts OFL catalog) ────────────────────────────────
+echo "🔤 Installing UI fonts (Google Fonts catalog)..."
 FONT_DIR="$APP_DEST/Contents/Resources/Fonts"
 mkdir -p "$FONT_DIR"
-UI_FONT="$FONT_DIR/VarelaRound.ttf"
-UI_FONT_SRC=""
-for candidate in \
-  "$INSTALLER_DIR/VarelaRound.ttf" \
-  "$INSTALLER_DIR/fonts/VarelaRound.ttf" \
-  "$HOME/Downloads/VarelaRound.ttf" \
-  "$HOME/rnitro-site-work/rnitro-site/VarelaRound.ttf" \
-  "$HOME/rnitro-site-work/rnitro-site/fonts/VarelaRound.ttf" \
-  "$HOME/Applications/rNitro.app/Contents/Resources/Fonts/VarelaRound.ttf"; do
-  if [[ -f "$candidate" ]]; then
-    UI_FONT_SRC="$candidate"
-    break
+FONT_SRC_DIRS=(
+  "$INSTALLER_DIR/fonts/ui"
+  "$INSTALLER_DIR/../fonts/ui"
+  "$HOME/rnitro-site-work/rnitro-site/fonts/ui"
+  "$HOME/Applications/rNitro.app/Contents/Resources/Fonts"
+)
+COPIED=0
+for dir in "${FONT_SRC_DIRS[@]}"; do
+  if [[ -d "$dir" ]]; then
+    shopt -s nullglob
+    for f in "$dir"/*.ttf "$dir"/*.otf; do
+      base="$(basename "$f")"
+      cp "$f" "$FONT_DIR/$base"
+      chmod 644 "$FONT_DIR/$base"
+      COPIED=$((COPIED + 1))
+    done
+    shopt -u nullglob
+    if [[ $COPIED -gt 0 ]]; then
+      echo "   bundled $COPIED font file(s) from $dir"
+      break
+    fi
   fi
 done
-if [[ -n "$UI_FONT_SRC" ]]; then
-  cp "$UI_FONT_SRC" "$UI_FONT"
-else
-  echo "⚠️  VarelaRound.ttf not found beside installer (non-fatal); UI will fall back to system font."
+# Always try single-file VarelaRound fallbacks
+if [[ ! -f "$FONT_DIR/VarelaRound.ttf" ]]; then
+  for candidate in \
+    "$INSTALLER_DIR/VarelaRound.ttf" \
+    "$INSTALLER_DIR/fonts/VarelaRound.ttf" \
+    "$HOME/Downloads/VarelaRound.ttf" \
+    "$HOME/rnitro-site-work/rnitro-site/VarelaRound.ttf" \
+    "$HOME/rnitro-site-work/rnitro-site/fonts/VarelaRound.ttf"; do
+    if [[ -f "$candidate" ]]; then
+      cp "$candidate" "$FONT_DIR/VarelaRound.ttf"
+      chmod 644 "$FONT_DIR/VarelaRound.ttf"
+      COPIED=$((COPIED + 1))
+      break
+    fi
+  done
 fi
-[[ -f "$UI_FONT" ]] && chmod 644 "$UI_FONT"
+if [[ $COPIED -eq 0 ]]; then
+  echo "⚠️  No UI fonts found beside installer (non-fatal); UI will fall back to system fonts."
+fi
 
 # ── Generate and embed an app icon ───────────────────────────────────────────
 # Drawn programmatically (no binary image assets shipped in this script) so

@@ -82,7 +82,18 @@ def create_dmg(
         )
 
         shutil.copy2(SCRIPT_DIR / sh_name, stage / sh_name)
-        shutil.copy2(SCRIPT_DIR / "VarelaRound.ttf", stage / "VarelaRound.ttf")
+        varela = SCRIPT_DIR / "VarelaRound.ttf"
+        if varela.is_file():
+            shutil.copy2(varela, stage / "VarelaRound.ttf")
+        ui_fonts = SCRIPT_DIR / "fonts" / "ui"
+        if ui_fonts.is_dir():
+            dest_fonts = stage / "fonts" / "ui"
+            dest_fonts.mkdir(parents=True, exist_ok=True)
+            for f in ui_fonts.glob("*.ttf"):
+                shutil.copy2(f, dest_fonts / f.name)
+            man = ui_fonts / "manifest.json"
+            if man.is_file():
+                shutil.copy2(man, dest_fonts / "manifest.json")
         (stage / "Applications").symlink_to("/Applications")
         write_install_command(stage, sh_name)
         write_fix_open_command(stage)
