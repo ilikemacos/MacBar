@@ -1,26 +1,26 @@
 {
-  "latest": "v1.2.0-Final",
-  "beta": "v1.2.7",
+  "latest": "v1.2.6-Final",
+  "beta": "v1.2.9",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
   "cli": "v0.2-cli",
   "releases": {
     "stable": {
-      "label": "v1.2.0 Final",
-      "short": "v1.2.0",
-      "sh": "rNitro-v1.2.0-Final.sh",
-      "pkg": "rNitro-v1.2.0-Final.pkg",
-      "dmg": "rNitro-v1.2.0-Final.dmg",
-      "zip": "rNitro-v1.2.0-Final.zip"
+      "label": "v1.2.6 Final",
+      "short": "v1.2.6",
+      "sh": "rNitro-v1.2.6-Final.sh",
+      "pkg": "rNitro-v1.2.6-Final.pkg",
+      "dmg": "rNitro-v1.2.6-Final.dmg",
+      "zip": "rNitro-v1.2.6-Final.zip"
     },
     "beta": {
-      "label": "v1.2.7 Beta",
-      "short": "v1.2.7",
-      "sh": "rNitro-v1.2.7.sh",
+      "label": "v1.2.9 Beta",
+      "short": "v1.2.9",
+      "sh": "rNitro-v1.2.9.sh",
       "source_sh": "install-rNitro.sh",
-      "pkg": "rNitro-v1.2.7.pkg",
-      "dmg": "rNitro-v1.2.7.dmg",
-      "zip": "rNitro-v1.2.7.zip"
+      "pkg": "rNitro-v1.2.9.pkg",
+      "dmg": "rNitro-v1.2.9.dmg",
+      "zip": "rNitro-v1.2.9.zip"
     },
     "linux": {
       "label": "v0.1 Linux Beta Pre-release",
@@ -54,23 +54,23 @@
       "sh": "rNitro-v1.1.0-Intel.sh"
     },
     "experimental": {
-      "label": "v1.2.7 Experimental",
-      "short": "v1.2.7-Exp",
-      "sh": "rNitro-v1.2.7-Experimental.sh",
+      "label": "v1.3.0 Experimental",
+      "short": "v1.3.0-Exp",
+      "sh": "rNitro-v1.3.0-Experimental.sh",
       "source_sh": "install-rNitro-experimental.sh",
-      "pkg": "rNitro-v1.2.7-Experimental.pkg",
-      "dmg": "rNitro-v1.2.7-Experimental.dmg",
-      "zip": "rNitro-v1.2.7-Experimental.zip"
+      "pkg": "rNitro-v1.3.0-Experimental.pkg",
+      "dmg": "rNitro-v1.3.0-Experimental.dmg",
+      "zip": "rNitro-v1.3.0-Experimental.zip"
     }
   },
   "hashes": {
-    "stable_sh": "9d3554dec3668ed018414c4a977bb38c5bde9d3de472c18433cc95bdaab6caf0",
-    "beta_sh": "6162db3e174b70aa4cfcb66c04ac5d40086eb40e8659f43c11fe8adb2f3de6f2",
+    "stable_sh": "c342bf90e986d42b12a2c6d17bde22f61626e137e53f8242e7c5c4aab6e6af66",
+    "beta_sh": "6058e7384204362f0b556116c570ac15eb46e5dfcb7f4dc73d9ac58ba8679dbc",
     "intel_beta_sh": "",
     "intel_stable_sh": ""
   },
   "archive": [],
   "intel_beta": "v1.2.3-Intel",
   "intel_stable": "v1.1.0-Intel",
-  "experimental": "v1.2.7-Experimental"
+  "experimental": "v1.3.0-Experimental"
 }
