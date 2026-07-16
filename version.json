@@ -1,6 +1,6 @@
 {
   "latest": "v1.2.0-Final",
-  "beta": "v1.2.6",
+  "beta": "v1.2.7",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
   "cli": "v0.2-cli",
@@ -14,13 +14,13 @@
       "zip": "rNitro-v1.2.0-Final.zip"
     },
     "beta": {
-      "label": "v1.2.6 Beta",
-      "short": "v1.2.6",
-      "sh": "rNitro-v1.2.6.sh",
+      "label": "v1.2.7 Beta",
+      "short": "v1.2.7",
+      "sh": "rNitro-v1.2.7.sh",
       "source_sh": "install-rNitro.sh",
-      "pkg": "rNitro-v1.2.6.pkg",
-      "dmg": "rNitro-v1.2.6.dmg",
-      "zip": "rNitro-v1.2.6.zip"
+      "pkg": "rNitro-v1.2.7.pkg",
+      "dmg": "rNitro-v1.2.7.dmg",
+      "zip": "rNitro-v1.2.7.zip"
     },
     "linux": {
       "label": "v0.1 Linux Beta Pre-release",
@@ -54,23 +54,23 @@
       "sh": "rNitro-v1.1.0-Intel.sh"
     },
     "experimental": {
-      "label": "v1.2.6 Experimental",
-      "short": "v1.2.6-Exp",
-      "sh": "rNitro-v1.2.6-Experimental.sh",
+      "label": "v1.2.7 Experimental",
+      "short": "v1.2.7-Exp",
+      "sh": "rNitro-v1.2.7-Experimental.sh",
       "source_sh": "install-rNitro-experimental.sh",
-      "pkg": "rNitro-v1.2.6-Experimental.pkg",
-      "dmg": "rNitro-v1.2.6-Experimental.dmg",
-      "zip": "rNitro-v1.2.6-Experimental.zip"
+      "pkg": "rNitro-v1.2.7-Experimental.pkg",
+      "dmg": "rNitro-v1.2.7-Experimental.dmg",
+      "zip": "rNitro-v1.2.7-Experimental.zip"
     }
   },
   "hashes": {
-    "stable_sh": "10a42765bc9db79cbc1d5b269ee69d465b48c88d47cbb3fa4094c6e6d2069c99",
-    "beta_sh": "c3e294b4a9974deafa8503c40895e27a49225391b3c23e69e5042d4a2f20763f",
+    "stable_sh": "9d3554dec3668ed018414c4a977bb38c5bde9d3de472c18433cc95bdaab6caf0",
+    "beta_sh": "6162db3e174b70aa4cfcb66c04ac5d40086eb40e8659f43c11fe8adb2f3de6f2",
     "intel_beta_sh": "",
     "intel_stable_sh": ""
   },
   "archive": [],
   "intel_beta": "v1.2.3-Intel",
   "intel_stable": "v1.1.0-Intel",
-  "experimental": "v1.2.6-Experimental"
+  "experimental": "v1.2.7-Experimental"
 }
