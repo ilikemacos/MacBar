@@ -2,7 +2,7 @@
   "whats_new": [
     {
       "channel": "stable",
-      "title": "v1.2.6 Final",
+      "title": "v1.2.7 Final",
       "accent": "green",
       "items": [
         {
@@ -25,7 +25,7 @@
     },
     {
       "channel": "experimental",
-      "title": "v1.3.0 Experimental",
+      "title": "v1.3.1 Experimental",
       "accent": "purple",
       "items": [
         {
@@ -40,7 +40,7 @@
     },
     {
       "channel": "beta",
-      "title": "v1.2.9 Beta",
+      "title": "v1.2.10 Beta",
       "accent": "orange",
       "items": [
         {
@@ -78,6 +78,10 @@
     }
   ],
   "releases": [
+    {
+      "title": "v1.3.1 Experimental / v1.2.10 Beta / v1.2.7 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">Version bump</strong> \u2014 same UI font library (50+ Google Fonts OFL). Patch release for channel versioning and distribution."
+    },
     {
       "title": "v1.3.0 Experimental / v1.2.9 Beta / v1.2.6 Final",
       "body_html": "<strong style=\"color:var(--orange);\">UI font library</strong> \u2014 50+ Google Fonts (OFL) in Appearance, including EB Garamond, Audiowide, and Caveat. Experimental 1.3.0 keeps all Lab toys; Beta 1.2.9 ships fonts + process tools; Stable 1.2.6 Final gets fonts without Lab."
