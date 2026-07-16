@@ -21,24 +21,32 @@
     },
     {
       "channel": "experimental",
-      "title": "v1.2.5 Experimental",
+      "title": "v1.2.6 Experimental",
       "accent": "purple",
       "items": [
         {
-          "strong": "Everything in Beta",
-          "text": " \u2014 customizable UI + Developer Mode, plus duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets."
+          "strong": "New toys",
+          "text": " \u2014 thermal forecast, heat haiku, throttle cosplay, overnight watch, core roulette, chaos blip."
+        },
+        {
+          "strong": "Plus prior toys",
+          "text": " \u2014 duel, ghost-load, SOC budget, cloak, peer, AirDrop card, widget, confession, alibi, presets."
         },
         {
           "strong": "Unstable",
-          "text": " \u2014 expect breakage; for people who want the full playground."
+          "text": " \u2014 expect breakage."
         }
       ]
     },
     {
       "channel": "beta",
-      "title": "v1.2.5 Beta",
+      "title": "v1.2.6 Beta",
       "accent": "orange",
       "items": [
+        {
+          "strong": "v1.2.6",
+          "text": " \u2014 shared build with Experimental; no new Lab toys on Beta (toys stay Experimental-only)."
+        },
         {
           "strong": "Customizable UI",
           "text": " \u2014 menubar density, slot reorder, accent color, section toggles, color thresholds, left-click popover vs window \u2014 no Dev Mode required."
@@ -74,6 +82,10 @@
     }
   ],
   "releases": [
+    {
+      "title": "v1.2.6 Experimental",
+      "body_html": "<strong style=\"color:#9b7bff;\">New Lab toys</strong> \u2014 thermal forecast, heat haiku, throttle cosplay, overnight watch, core roulette, chaos blip. Beta keeps slim Lab."
+    },
     {
       "title": "v1.2.5 Beta / Experimental",
       "body_html": "<strong style=\"color:var(--orange);\">Customizable UI + Developer Mode</strong> \u2014 menubar builder, density, accents, thresholds for everyone; optional Dev tools for sampling/logs/dumps. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.5\" style=\"color:var(--cyan);\">GitHub</a>."
