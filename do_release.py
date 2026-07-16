@@ -153,13 +153,24 @@ def release_homebrew() -> None:
         run("build-homebrew.py")
 
 
+def restore_and_launch_experimental() -> None:
+    """Reinstall Experimental into ~/Applications and launch it.
+
+    Packaging installers for stable/beta overwrite the local app; this Mac
+    always runs Experimental after build/ship (override with --no-launch-experimental).
+    """
+    run("launch-experimental.py")
+
+
 def print_summary() -> None:
     v, data = load_versions()
     stable = v.stable_release(data)
     beta = v.beta_release(data)
+    exp = v.experimental_release(data)
     print("\n=== Release summary ===")
     print(f"  Stable: {stable['id']}  →  {stable['zip']}")
     print(f"  Beta:   {beta['id']}  →  {beta['zip']}")
+    print(f"  Exp:    {exp['id']}  →  {exp['zip']}")
     print(f"  Site:   {SITE / 'index.html'}")
     print(f"  Stage:  {SITE / 'netlify-deploy'}")
     print("  Next:   git add README.md version.json && git commit && git push origin main")
@@ -192,7 +203,17 @@ def main() -> None:
     parser.add_argument(
         "--launch-beta",
         action="store_true",
-        help="Install and launch beta on this Mac at the end",
+        help="Install and launch beta on this Mac at the end (overrides experimental)",
+    )
+    parser.add_argument(
+        "--no-launch-experimental",
+        action="store_true",
+        help="Do not reinstall/launch Experimental after build/ship (default: always do)",
+    )
+    parser.add_argument(
+        "--launch-experimental",
+        action="store_true",
+        help="Force Experimental reinstall/launch (default after build/ship anyway)",
     )
     args = parser.parse_args()
 
@@ -253,10 +274,20 @@ def main() -> None:
 
     print_summary()
 
-    if args.launch_beta or args.mode in ("ship",) and False:
-        pass
+    # This Mac always runs Experimental after packaging (stable/beta installers
+    # otherwise leave ~/Applications on the last channel built).
+    want_exp = (
+        args.launch_experimental
+        or (
+            args.mode in ("build", "quick", "ship")
+            and not args.no_launch_experimental
+            and not args.launch_beta
+        )
+    )
     if args.launch_beta:
         run("launch-beta.py")
+    elif want_exp:
+        restore_and_launch_experimental()
 
 
 if __name__ == "__main__":
