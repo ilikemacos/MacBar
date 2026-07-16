@@ -52,9 +52,9 @@
 ### Terminal (compile on your Mac)
 
 <!-- @sync:readme-curl -->
-**Stable (v1.1.0 Final Reloaded):**
+**Stable (v1.2.0 Final):**
 ```bash
-curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.0-Final.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 
 **Beta (v1.2.6 Beta):**
@@ -79,13 +79,13 @@ If Homebrew reports permission errors on `/opt/homebrew`, run `sudo chown -R "$(
 Each macOS release includes **App ZIP** (`rNitro.app`), **PKG**, and **DMG**.
 
 <!-- @sync:readme-downloads -->
-### Stable — v1.1.0 Final Reloaded
+### Stable — v1.2.0 Final
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v1.1.0-Final-Reloaded.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.zip) |
-| **PKG** | [rNitro-v1.1.0-Final-Reloaded.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.pkg) |
-| **DMG** | [rNitro-v1.1.0-Final-Reloaded.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.dmg) |
+| **App ZIP** | [rNitro-v1.2.0-Final.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.0-Final/rNitro-v1.2.0-Final.zip) |
+| **PKG** | [rNitro-v1.2.0-Final.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.0-Final/rNitro-v1.2.0-Final.pkg) |
+| **DMG** | [rNitro-v1.2.0-Final.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.0-Final/rNitro-v1.2.0-Final.dmg) |
 
 ### Beta — v1.2.6 Beta
 

@@ -2,20 +2,24 @@
   "whats_new": [
     {
       "channel": "stable",
-      "title": "v1.1.0 Final Reloaded",
+      "title": "v1.2.0 Final",
       "accent": "green",
       "items": [
         {
-          "strong": "Relaunch",
-          "text": " \u2014 clean stable channel for daily CPU, temperature, battery, GPU, and RAM monitoring on Apple Silicon."
+          "strong": "Modern stable",
+          "text": " \u2014 rebuilt from current codebase: customizable menubar/UI, accent colors, thresholds, \u2318Q quit."
         },
         {
           "strong": "AI chat",
-          "text": " \u2014 OpenAI (GPT) + OpenRouter only (bring your own keys)."
+          "text": " \u2014 OpenAI + OpenRouter only (bring your own keys)."
+        },
+        {
+          "strong": "No Lab noise",
+          "text": " \u2014 Lab, Dev Mode, and Experimental toys stay on Beta/Experimental."
         },
         {
           "strong": "Install",
-          "text": " \u2014 App ZIP recommended (no admin password); PKG/DMG/.sh also available."
+          "text": " \u2014 App ZIP recommended; PKG/DMG/.sh also available."
         }
       ]
     },
@@ -83,6 +87,10 @@
   ],
   "releases": [
     {
+      "title": "v1.2.0 Final (Stable)",
+      "body_html": "<strong style=\"color:var(--green);\">Stable catch-up</strong> \u2014 customizable UI + \u2318Q from modern builds; OpenAI/OpenRouter only; no Lab. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.0-Final\" style=\"color:var(--cyan);\">GitHub</a>."
+    },
+    {
       "title": "v1.2.6 Experimental",
       "body_html": "<strong style=\"color:#9b7bff;\">New Lab toys</strong> \u2014 thermal forecast, heat haiku, throttle cosplay, overnight watch, core roulette, chaos blip. Beta keeps slim Lab."
     },
@@ -109,17 +117,17 @@
   ],
   "compare": {
     "title": "Stable vs Beta \u2014 which should I download?",
-    "subtitle": "New here? Start with the green Recommended Download (App ZIP). v1.1.0 Final Reloaded is production-ready; v1.2.5 Beta adds customizable UI, Developer Mode, Lab, and every AI provider.",
+    "subtitle": "Start with Stable v1.2.0 Final (App ZIP). Beta v1.2.6 adds Lab, Developer Mode, and every AI provider.",
     "rows": [
       {
         "feature": "Best for",
-        "stable": "Daily CPU monitoring",
-        "beta": "Power users + customization + AI"
+        "stable": "Daily monitoring + light customization",
+        "beta": "Lab, Dev Mode, every AI provider"
       },
       {
         "feature": "Settings",
-        "stable": "Subtabs: AI, Appearance, Menubar, Monitor, Alerts, General",
-        "beta": "Same + density/accents/thresholds + optional Developer Mode"
+        "stable": "Appearance, Menubar (density/slots), Monitor, Alerts, General + custom UI",
+        "beta": "Same + Lab + Developer Mode + full AI list"
       },
       {
         "feature": "AI chat",
