@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="2a82c53b89d70ffe260ea70649127f0f6f33e3ceb55703e2711892508943c74a"
+EXPECTED_HASH="c1691c6e5e9bc0940b83ef4be9719b085c74889026f9d49f8b188cf15a7c09e1"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -374,7 +374,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v1.2.5"
+let CURRENT_VERSION = "v1.2.6"
 let RNITRO_BUILD_CHANNEL = "beta"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -7406,6 +7406,9 @@ enum MonitorPreferences {
     static let socBudgetDayKey = "rnitro.socBudgetDay"
     static let socBudgetUsedWhKey = "rnitro.socBudgetUsedWh"
     static let socBudgetHeatMinKey = "rnitro.socBudgetHeatMin"
+    // Experimental toys (v1.2.6)
+    static let throttleCosplayKey = "rnitro.exp.throttleCosplay"
+    static let forecastHorizonKey = "rnitro.exp.forecastHorizonMin"
 }
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -7523,6 +7526,20 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.peer.active": "Peer active — sampling eased",
         "lab.peer.idle": "No peer profilers detected",
         "lab.toc.snapshot": "Share", "lab.toc.budget": "Budget", "lab.toc.confess": "Confess", "lab.toc.widget": "Widget",
+        "lab.toc.forecast": "Forecast", "lab.toc.haiku": "Haiku", "lab.toc.cosplay": "Cosplay",
+        "lab.toc.overnight": "Overnight", "lab.toc.roulette": "Roulette", "lab.toc.chaos": "Chaos",
+        "lab.forecast": "Thermal forecast",
+        "lab.forecast.hint": "Naive slope from recent temps — not weather science. Experimental only.",
+        "lab.haiku": "Heat haiku",
+        "lab.haiku.hint": "Three-line nonsense from temp, load, weather, and top process.",
+        "lab.cosplay": "Throttle cosplay",
+        "lab.cosplay.hint": "Menubar flair when hot/busy. Pure theater — does not throttle your Mac.",
+        "lab.overnight": "Overnight watch",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.roulette": "Core roulette",
+        "lab.roulette.hint": "Pick the busiest (or a random) core. No stakes.",
+        "lab.chaos": "Chaos blip",
+        "lab.chaos.hint": "⚠️ Short self-stress (0.5–2s) to demo sensors. Off by default. Do not spam.",
         "lab.snapshot": "AirDrop snapshot card",
         "lab.snapshot.hint": "One-shot local snapshot (.rnitrocard). Share via AirDrop or Files — no cloud, no fleet server.",
         "lab.snapshot.export": "Export & share",
@@ -8041,6 +8058,10 @@ enum MenuBarStatusFormatter {
                 base = "Build · " + base
             } else if farm.isCoolingDown {
                 base = "Cool · " + base
+            }
+            // Experimental: throttle cosplay flair (does not affect real thermal state)
+            if let cosplay = ThrottleCosplay.menubarPrefix() {
+                base = cosplay + " " + base
             }
             // Meeting cloak: hush menubar while conferencing apps run
             if MeetingCloak.shared.shouldHushMenubar {
@@ -10952,6 +10973,246 @@ final class CoolingConfessionStore: ObservableObject {
     }
 }
 
+// ── Experimental toys v1.2.6: forecast · haiku · cosplay · overnight · roulette · chaos ──
+
+final class ThermalForecastStore: ObservableObject {
+    static let shared = ThermalForecastStore()
+    private var temps: [Double] = []
+    private let maxSamples = 45
+    private var timer: Timer?
+    @Published private(set) var slopePerMin: Double = 0
+    @Published private(set) var forecastTemp: Double = 0
+    @Published private(set) var outlook: String = "—"
+    @Published private(set) var outlookEmoji: String = "🌤️"
+
+    private init() {}
+
+    func start() {
+        guard RNITRO_FEATURE_EXPERIMENTAL_UI, timer == nil else { return }
+        sample()
+        let t = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in self?.sample() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func sample() {
+        let t = CPUMonitor.shared.temperature
+        temps.append(t)
+        if temps.count > maxSamples { temps.removeFirst(temps.count - maxSamples) }
+        recompute()
+    }
+
+    private func recompute() {
+        guard temps.count >= 3 else {
+            forecastTemp = CPUMonitor.shared.temperature
+            outlook = "Warming up samples…"
+            outlookEmoji = "🌤️"
+            return
+        }
+        // Simple linear slope over last samples (each ~20s)
+        let n = Double(temps.count)
+        var sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0
+        for (i, y) in temps.enumerated() {
+            let x = Double(i)
+            sumX += x; sumY += y; sumXY += x * y; sumX2 += x * x
+        }
+        let denom = n * sumX2 - sumX * sumX
+        let slopePerSample = denom != 0 ? (n * sumXY - sumX * sumY) / denom : 0
+        slopePerMin = slopePerSample * 3 // ~3 samples/min at 20s
+        let horizonMin = UserDefaults.standard.object(forKey: MonitorPreferences.forecastHorizonKey) as? Double ?? 30
+        let now = temps.last ?? CPUMonitor.shared.temperature
+        forecastTemp = min(110, max(20, now + slopePerMin * horizonMin))
+        if slopePerMin > 0.4 {
+            outlook = "Heating · ~\(Int(forecastTemp))° in \(Int(horizonMin))m"
+            outlookEmoji = forecastTemp > 85 ? "⛈️" : "🔥"
+        } else if slopePerMin < -0.35 {
+            outlook = "Cooling · ~\(Int(forecastTemp))° in \(Int(horizonMin))m"
+            outlookEmoji = "🍃"
+        } else {
+            outlook = "Steady · ~\(Int(forecastTemp))°"
+            outlookEmoji = "🌤️"
+        }
+        objectWillChange.send()
+    }
+}
+
+enum HeatHaiku {
+    static func generate() -> String {
+        let t = Int(CPUMonitor.shared.temperature.rounded())
+        let u = Int(CPUMonitor.shared.totalUsage.rounded())
+        let wx = ThermalWeather.current()
+        let top = ProcessMonitor.shared.topByCPU.first?.name ?? "the kernel"
+        let lines = [
+            "\(wx.emoji) \(wx.label) sky hums",
+            "\(t)° · \(u)% — \(top) dreams",
+            slopeLine(t: t, u: u)
+        ]
+        return lines.joined(separator: "\n")
+    }
+
+    private static func slopeLine(t: Int, u: Int) -> String {
+        if t > 88 { return "silicon sings fire" }
+        if u > 80 { return "cores race the sunrise" }
+        if t < 50 { return "quiet circuits rest" }
+        return "fans keep soft secrets"
+    }
+}
+
+enum ThrottleCosplay {
+    static var isEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: MonitorPreferences.throttleCosplayKey) }
+        set {
+            UserDefaults.standard.set(newValue, forKey: MonitorPreferences.throttleCosplayKey)
+            NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+        }
+    }
+
+    /// Pure flair — does not affect real thermal behavior.
+    static func menubarPrefix() -> String? {
+        guard RNITRO_FEATURE_EXPERIMENTAL_UI, isEnabled else { return nil }
+        let temp = CPUMonitor.shared.temperature
+        let cpu = CPUMonitor.shared.totalUsage
+        if temp >= 92 || cpu >= 95 { return "🔥THRTL" }
+        if temp >= 85 || cpu >= 85 { return "🔥" }
+        return nil
+    }
+}
+
+final class OvernightWatchStore: ObservableObject {
+    static let shared = OvernightWatchStore()
+    @Published private(set) var maxTemp: Double = 0
+    @Published private(set) var maxCPU: Double = 0
+    @Published private(set) var minutesAboveWarn: Double = 0
+    @Published private(set) var samples: Int = 0
+    @Published private(set) var dayKey: String = ""
+    private var timer: Timer?
+    private let warnTemp = 80.0
+
+    private init() { loadToday() }
+
+    func start() {
+        guard RNITRO_FEATURE_EXPERIMENTAL_UI, timer == nil else { return }
+        loadToday()
+        let t = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.tick() }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+        tick()
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func todayKey() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
+    private func loadToday() {
+        dayKey = todayKey()
+        let ud = UserDefaults.standard
+        let prefix = "rnitro.overnight.\(dayKey)."
+        maxTemp = ud.double(forKey: prefix + "maxTemp")
+        maxCPU = ud.double(forKey: prefix + "maxCPU")
+        minutesAboveWarn = ud.double(forKey: prefix + "minsWarn")
+        samples = ud.integer(forKey: prefix + "samples")
+    }
+
+    private func persist() {
+        let ud = UserDefaults.standard
+        let prefix = "rnitro.overnight.\(dayKey)."
+        ud.set(maxTemp, forKey: prefix + "maxTemp")
+        ud.set(maxCPU, forKey: prefix + "maxCPU")
+        ud.set(minutesAboveWarn, forKey: prefix + "minsWarn")
+        ud.set(samples, forKey: prefix + "samples")
+    }
+
+    private func tick() {
+        let key = todayKey()
+        if key != dayKey {
+            dayKey = key
+            maxTemp = 0; maxCPU = 0; minutesAboveWarn = 0; samples = 0
+        }
+        let temp = CPUMonitor.shared.temperature
+        let cpu = CPUMonitor.shared.totalUsage
+        maxTemp = max(maxTemp, temp)
+        maxCPU = max(maxCPU, cpu)
+        if temp >= warnTemp { minutesAboveWarn += 1 }
+        samples += 1
+        persist()
+        objectWillChange.send()
+    }
+
+    var report: String {
+        """
+        Overnight watch (\(dayKey))
+        Samples: \(samples) (~min)
+        Max temp: \(String(format: "%.1f", maxTemp))°C
+        Max CPU: \(String(format: "%.0f", maxCPU))%
+        Minutes ≥ \(Int(warnTemp))°C: \(Int(minutesAboveWarn))
+        """
+    }
+}
+
+final class CoreRouletteStore: ObservableObject {
+    static let shared = CoreRouletteStore()
+    @Published var selectedIndex: Int? = nil
+    @Published var spinning = false
+
+    func spin() {
+        let cores = CPUMonitor.shared.cores
+        guard !cores.isEmpty else { return }
+        spinning = true
+        // Prefer hottest core; else random
+        if let hot = cores.enumerated().max(by: { $0.element.usage < $1.element.usage }) {
+            selectedIndex = hot.offset
+        } else {
+            selectedIndex = Int.random(in: 0..<cores.count)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.spinning = false
+        }
+    }
+}
+
+final class ChaosBlip: ObservableObject {
+    static let shared = ChaosBlip()
+    @Published private(set) var isRunning = false
+    @Published var lastNote = ""
+    private var workItem: DispatchWorkItem?
+
+    /// Short busy-loop on a background queue. Default never auto-runs.
+    func fire(seconds: Double = 1.0) {
+        guard RNITRO_FEATURE_EXPERIMENTAL_UI else { return }
+        let dur = min(2.0, max(0.5, seconds))
+        guard !isRunning else { return }
+        isRunning = true
+        lastNote = String(format: "Chaos blip %.1fs…", dur)
+        let item = DispatchWorkItem { [weak self] in
+            let end = Date().addingTimeInterval(dur)
+            var x = 0.0
+            while Date() < end {
+                x += sin(x + 1.01)
+                if x > 1e9 { x = 0 }
+            }
+            DispatchQueue.main.async {
+                self?.isRunning = false
+                self?.lastNote = String(format: "Blip done (%.1fs). Sensors should have twitched.", dur)
+                _ = x
+            }
+        }
+        workItem = item
+        DispatchQueue.global(qos: .userInitiated).async(execute: item)
+    }
+}
+
 final class LabDesktopWidgetController: NSObject {
     static let shared = LabDesktopWidgetController()
     private var panel: NSPanel?
@@ -11113,13 +11374,20 @@ struct LabTabView: View {
     @ObservedObject private var peer = PolitePeer.shared
     @ObservedObject private var budget = SOCBudgetStore.shared
     @ObservedObject private var confess = CoolingConfessionStore.shared
+    @ObservedObject private var forecast = ThermalForecastStore.shared
+    @ObservedObject private var overnight = OvernightWatchStore.shared
+    @ObservedObject private var roulette = CoreRouletteStore.shared
+    @ObservedObject private var chaos = ChaosBlip.shared
     @AppStorage(MonitorPreferences.whisperModeKey) private var whisperOn = false
     @AppStorage(MonitorPreferences.meetingCloakKey) private var meetingCloakOn = false
+    @AppStorage(MonitorPreferences.throttleCosplayKey) private var throttleCosplayOn = false
     @State private var report = ThermalDetective.analyze()
     @State private var whisperStatus = "—"
     @State private var showDuel = false
     @State private var toast = ""
     @State private var jumpTarget: String? = nil
+    @State private var haikuText = ""
+    @State private var chaosSeconds: Double = 1.0
 
     private var toc: [(String, String)] {
         var items: [(String, String)] = [
@@ -11147,6 +11415,12 @@ struct LabTabView: View {
                 ("farm", "lab.toc.farm"),
                 ("alibi", "lab.toc.alibi"),
                 ("duel", "lab.toc.duel"),
+                ("forecast", "lab.toc.forecast"),
+                ("haiku", "lab.toc.haiku"),
+                ("cosplay", "lab.toc.cosplay"),
+                ("overnight", "lab.toc.overnight"),
+                ("roulette", "lab.toc.roulette"),
+                ("chaos", "lab.toc.chaos"),
             ]
         }
         return items
@@ -11184,6 +11458,12 @@ struct LabTabView: View {
                     if RNITRO_FEATURE_EXPERIMENTAL_UI {
                         alibiCard.id("alibi")
                         duelCard.id("duel")
+                        forecastCard.id("forecast")
+                        haikuCard.id("haiku")
+                        cosplayCard.id("cosplay")
+                        overnightCard.id("overnight")
+                        rouletteCard.id("roulette")
+                        chaosCard.id("chaos")
                     }
                     if !toast.isEmpty {
                         Text(toast)
@@ -11757,6 +12037,150 @@ struct LabTabView: View {
         }
     }
 
+    private var forecastCard: some View {
+        labCard {
+            Text(display.tr("lab.forecast"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.forecast.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Text("\(forecast.outlookEmoji)  \(forecast.outlook)")
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+            Text(String(format: "Slope ~%.2f °C/min · now %.0f°", forecast.slopePerMin, m.temperature))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            HStack {
+                Text("Horizon (min)")
+                    .font(rNitroFont(.micro, metrics: metrics))
+                Slider(value: Binding(
+                    get: {
+                        UserDefaults.standard.object(forKey: MonitorPreferences.forecastHorizonKey) as? Double ?? 30
+                    },
+                    set: { UserDefaults.standard.set($0, forKey: MonitorPreferences.forecastHorizonKey) }
+                ), in: 15...60, step: 5)
+            }
+        }
+    }
+
+    private var haikuCard: some View {
+        labCard {
+            Text(display.tr("lab.haiku"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.haiku.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            if !haikuText.isEmpty {
+                Text(haikuText)
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.nPurple)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                MinimalButton(title: "Compose", action: {
+                    haikuText = HeatHaiku.generate()
+                })
+                if !haikuText.isEmpty {
+                    MinimalButton(title: "Copy", action: {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(haikuText, forType: .string)
+                        toast = "Haiku copied"
+                    })
+                }
+            }
+        }
+    }
+
+    private var cosplayCard: some View {
+        labCard {
+            Text(display.tr("lab.cosplay"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.cosplay.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Toggle(isOn: $throttleCosplayOn) {
+                Text("Enable menubar flair").font(rNitroFont(.caption, metrics: metrics))
+            }
+            .toggleStyle(.switch)
+            .onChange(of: throttleCosplayOn) { _, v in
+                ThrottleCosplay.isEnabled = v
+            }
+            if let p = ThrottleCosplay.menubarPrefix() {
+                Text("Active prefix: \(p)")
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nOrange)
+            } else {
+                Text("Idle — fires when temp/CPU get spicy")
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var overnightCard: some View {
+        labCard {
+            Text(display.tr("lab.overnight"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.overnight.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Text(String(format: "Max temp %.1f°C · max CPU %.0f%%", overnight.maxTemp, overnight.maxCPU))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+            Text(String(format: "Minutes ≥ 80°C: %.0f · samples: %d · day %@", overnight.minutesAboveWarn, overnight.samples, overnight.dayKey))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            MinimalButton(title: "Copy morning report", action: {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(overnight.report, forType: .string)
+                toast = "Overnight report copied"
+            })
+        }
+    }
+
+    private var rouletteCard: some View {
+        labCard {
+            Text(display.tr("lab.roulette"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.roulette.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            if let idx = roulette.selectedIndex, idx < m.cores.count {
+                let c = m.cores[idx]
+                Text(String(format: "Core %d · %.0f%% · %.0f MHz", idx, c.usage, c.clockMHz))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                    .foregroundColor(roulette.spinning ? .nPurple : .accent)
+            } else {
+                Text("Spin to pick a core")
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+            MinimalButton(title: roulette.spinning ? "Spinning…" : "Spin", action: { roulette.spin() })
+        }
+    }
+
+    private var chaosCard: some View {
+        labCard {
+            Text(display.tr("lab.chaos"))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            Text(display.tr("lab.chaos.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.nOrange)
+            HStack {
+                Text(String(format: "%.1fs", chaosSeconds))
+                    .font(rNitroFont(.caption, metrics: metrics))
+                Slider(value: $chaosSeconds, in: 0.5...2.0, step: 0.25)
+            }
+            MinimalButton(
+                title: chaos.isRunning ? "Running…" : "Fire chaos blip",
+                action: { chaos.fire(seconds: chaosSeconds) }
+            )
+            if !chaos.lastNote.isEmpty {
+                Text(chaos.lastNote)
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
     private var farmStatusLine: String {
         if farm.isBuilding {
             let names = farm.matchedNames.joined(separator: ", ")
@@ -11783,6 +12207,11 @@ struct LabTabView: View {
         ProcessMonitor.shared.start()
         report = ThermalDetective.analyze()
         tickWhisper()
+        if RNITRO_FEATURE_EXPERIMENTAL_UI {
+            ThermalForecastStore.shared.start()
+            OvernightWatchStore.shared.start()
+            throttleCosplayOn = ThrottleCosplay.isEnabled
+        }
         if RNITRO_FEATURE_BETA_UI {
             CompileFarmDetector.shared.startIfNeeded()
             PowerReceiptStore.shared.start()
@@ -12271,6 +12700,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 PolitePeer.shared.startIfNeeded()
                 SOCBudgetStore.shared.start()
                 CoolingConfessionStore.shared.start()
+                ThermalForecastStore.shared.start()
+                OvernightWatchStore.shared.start()
             }
         }
 
@@ -12663,8 +13094,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.2.5</string>
-    <key>CFBundleShortVersionString</key><string>v1.2.5</string>
+    <key>CFBundleVersion</key><string>v1.2.6</string>
+    <key>CFBundleShortVersionString</key><string>v1.2.6</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

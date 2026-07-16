@@ -1,6 +1,6 @@
 {
   "latest": "v1.1.0-Final-Reloaded",
-  "beta": "v1.2.5",
+  "beta": "v1.2.6",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
   "cli": "v0.2-cli",
@@ -14,13 +14,13 @@
       "zip": "rNitro-v1.1.0-Final-Reloaded.zip"
     },
     "beta": {
-      "label": "v1.2.5 Beta",
-      "short": "v1.2.5",
-      "sh": "rNitro-v1.2.5.sh",
+      "label": "v1.2.6 Beta",
+      "short": "v1.2.6",
+      "sh": "rNitro-v1.2.6.sh",
       "source_sh": "install-rNitro.sh",
-      "pkg": "rNitro-v1.2.5.pkg",
-      "dmg": "rNitro-v1.2.5.dmg",
-      "zip": "rNitro-v1.2.5.zip"
+      "pkg": "rNitro-v1.2.6.pkg",
+      "dmg": "rNitro-v1.2.6.dmg",
+      "zip": "rNitro-v1.2.6.zip"
     },
     "linux": {
       "label": "v0.1 Linux Beta Pre-release",
@@ -54,23 +54,23 @@
       "sh": "rNitro-v1.1.0-Intel.sh"
     },
     "experimental": {
-      "label": "v1.2.5 Experimental",
-      "short": "v1.2.5-Exp",
-      "sh": "rNitro-v1.2.5-Experimental.sh",
+      "label": "v1.2.6 Experimental",
+      "short": "v1.2.6-Exp",
+      "sh": "rNitro-v1.2.6-Experimental.sh",
       "source_sh": "install-rNitro-experimental.sh",
-      "pkg": "rNitro-v1.2.5-Experimental.pkg",
-      "dmg": "rNitro-v1.2.5-Experimental.dmg",
-      "zip": "rNitro-v1.2.5-Experimental.zip"
+      "pkg": "rNitro-v1.2.6-Experimental.pkg",
+      "dmg": "rNitro-v1.2.6-Experimental.dmg",
+      "zip": "rNitro-v1.2.6-Experimental.zip"
     }
   },
   "hashes": {
-    "stable_sh": "596ce9e9a3ac3dc73959567a80f8ffecdc284acc92c209a795e18f36f4822071",
-    "beta_sh": "25e71e32e4694f3ffbbbfbd2f3cf5303601dcc6b53a5ce1efcd3ec395091be9f",
+    "stable_sh": "ef3717f481b2cdb20bd6640986b77f67e4eb9b46ba1aa40db5335bbb01f02723",
+    "beta_sh": "c3e294b4a9974deafa8503c40895e27a49225391b3c23e69e5042d4a2f20763f",
     "intel_beta_sh": "",
     "intel_stable_sh": ""
   },
   "archive": [],
   "intel_beta": "v1.2.3-Intel",
   "intel_stable": "v1.1.0-Intel",
-  "experimental": "v1.2.5-Experimental"
+  "experimental": "v1.2.6-Experimental"
 }

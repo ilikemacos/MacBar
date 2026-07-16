@@ -57,9 +57,9 @@
 curl -fsSL https://getrnitro.netlify.app/rNitro-v1.1.0-Final-Reloaded.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 
-**Beta (v1.2.5 Beta):**
+**Beta (v1.2.6 Beta):**
 ```bash
-curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.5.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
+curl -fsSL https://getrnitro.netlify.app/rNitro-v1.2.6.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
 ```
 <!-- @end:readme-curl -->
 
@@ -87,13 +87,13 @@ Each macOS release includes **App ZIP** (`rNitro.app`), **PKG**, and **DMG**.
 | **PKG** | [rNitro-v1.1.0-Final-Reloaded.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.pkg) |
 | **DMG** | [rNitro-v1.1.0-Final-Reloaded.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.1.0-Final-Reloaded/rNitro-v1.1.0-Final-Reloaded.dmg) |
 
-### Beta — v1.2.5 Beta
+### Beta — v1.2.6 Beta
 
 | Format | File |
 |--------|------|
-| **App ZIP** | [rNitro-v1.2.5.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.5/rNitro-v1.2.5.zip) |
-| **PKG** | [rNitro-v1.2.5.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.5/rNitro-v1.2.5.pkg) |
-| **DMG** | [rNitro-v1.2.5.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.5/rNitro-v1.2.5.dmg) |
+| **App ZIP** | [rNitro-v1.2.6.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.2.6/rNitro-v1.2.6.zip) |
+| **PKG** | [rNitro-v1.2.6.pkg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.6/rNitro-v1.2.6.pkg) |
+| **DMG** | [rNitro-v1.2.6.dmg](https://github.com/ilikemacos/rNitro/releases/download/v1.2.6/rNitro-v1.2.6.dmg) |
 <!-- @end:readme-downloads -->
 
 [All releases →](https://github.com/ilikemacos/rNitro/releases)
