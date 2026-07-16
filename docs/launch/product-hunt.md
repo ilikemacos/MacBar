@@ -35,7 +35,7 @@ Open-source menubar stats for Apple Silicon Macs
 - **Website:** https://getrnitro.netlify.app/  
 - **GitHub:** https://github.com/ilikemacos/rNitro  
 - **Download (Stable ZIP):** https://github.com/ilikemacos/rNitro/releases/tag/v1.1.0-Final-Reloaded  
-- **Beta:** https://github.com/ilikemacos/rNitro/releases/tag/v1.2.4  
+- **Beta:** https://github.com/ilikemacos/rNitro/releases/tag/v1.2.7  
 - **HQ:** https://chopstickshq.netlify.app/rnitro/  
 
 ---
@@ -55,9 +55,9 @@ It shows live **CPU**, **temperature**, **battery**, **GPU**, **RAM**, and **net
 - Open source — inspect the installer and app source on GitHub  
 
 ### Channels
-- **Stable v1.1.0 Final Reloaded** — clean daily driver  
-- **Beta v1.2.4** — Slim Lab (weather, detective, Whisper, compile-farm, power receipt) + full AI list  
-- **Experimental v1.2.4** — everything in Beta plus duel, cloak, SOC budget, widgets, more  
+- **Stable v1.2.0 Final** — clean daily driver  
+- **Beta v1.2.7** — Slim Lab (weather, detective, Whisper, compile-farm, power receipt) + full AI list  
+- **Experimental v1.2.7** — everything in Beta plus duel, cloak, SOC budget, widgets, more  
 
 ### Platforms
 macOS (primary) · Linux pre-release · Windows last builds available  
@@ -123,3 +123,6 @@ rNitro is free on Product Hunt — menu bar CPU, temp, battery & more for Mac.
 No account. No telemetry. Open source.
 https://getrnitro.netlify.app/
 ```
+
+
+Also: https://chopstickshq.com/rnitro/ (same UI) · Support via GitHub Issues.

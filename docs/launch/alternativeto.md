@@ -44,9 +44,9 @@ It lives in your menu bar and shows live **CPU**, **temperature**, **battery**, 
 ### Channels
 | Channel | Best for |
 |---------|----------|
-| **Stable** (v1.1.0 Final Reloaded) | Daily monitoring |
-| **Beta** (v1.2.4) | Lab + every AI provider |
-| **Experimental** (v1.2.4-Exp) | Full playground (expect breakage) |
+| **Stable** (v1.2.0 Final) | Daily monitoring |
+| **Beta** (v1.2.7) | Lab + every AI provider |
+| **Experimental** (v1.2.7-Exp) | Full playground (expect breakage) |
 
 ### Downloads
 - Website: https://getrnitro.netlify.app/  
@@ -97,3 +97,6 @@ Use screenshots from the repo:
 - `screenshots/feature-advisor.png`  
 - `screenshots/feature-settings.png`  
 Hosted: https://getrnitro.netlify.app/screenshots/hero-monitor.png
+
+
+Also: https://chopstickshq.com/rnitro/ (same UI) · Support via GitHub Issues.

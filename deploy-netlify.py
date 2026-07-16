@@ -204,11 +204,17 @@ def deploy_authenticated() -> bool:
 
     target = f"https://{SITE_NAME}.netlify.app"
     print(f"\nDeployed to {target}")
-    if verify_deploy(target):
+    ok = verify_deploy(target)
+    if ok:
         print(f"✅ Live at {target}/")
-        return True
-    print("Deploy finished but URL not reachable yet — check Netlify dashboard.")
-    return False
+    else:
+        print("Deploy finished but URL not reachable yet — check Netlify dashboard.")
+    # Always refresh Chopsticks HQ /rnitro mirror after product site ship
+    try:
+        update_chopstickshq_mirror()
+    except Exception as exc:
+        print(f"⚠ HQ mirror step failed (product site still live): {exc}")
+    return ok
 
 
 def deploy_anonymous() -> None:
@@ -305,6 +311,67 @@ def launch_beta_mac() -> None:
         return
     print("\n→ Installing and launching rNitro Beta on this Mac...")
     subprocess.run([sys.executable, str(launcher)], cwd=SITE, check=False)
+
+
+def update_chopstickshq_mirror() -> None:
+    """Rebuild chopstickshq.com/rnitro product mirror; optionally deploy HQ site."""
+    import os
+
+    hq = SITE.parent / "chopstickshq-site"
+    mirror_script = hq / "build-rnitro-mirror.py"
+    if not mirror_script.is_file():
+        print("  (skip HQ mirror: build-rnitro-mirror.py not found)")
+        return
+    print("\n→ Rebuilding Chopsticks HQ /rnitro mirror...")
+    subprocess.run([sys.executable, str(mirror_script)], cwd=hq, check=True)
+    print("  HQ /rnitro mirror files updated")
+
+    # Deploy HQ unless explicitly disabled
+    if os.environ.get("RNITRO_SKIP_HQ_DEPLOY", "").strip().lower() in ("1", "true", "yes"):
+        print("  (skip HQ Netlify deploy: RNITRO_SKIP_HQ_DEPLOY set)")
+        return
+
+    netlify_bin = SITE / "node_modules" / ".bin" / "netlify"
+    if not netlify_bin.is_file():
+        print("  (skip HQ deploy: netlify CLI missing)")
+        return
+
+    print("→ Deploying Chopsticks HQ site...")
+    draft = subprocess.run(
+        [str(netlify_bin), "deploy", "--dir", ".", "--message", "Auto mirror after getrnitro deploy"],
+        cwd=hq,
+        text=True,
+        capture_output=True,
+    )
+    out = (draft.stdout or "") + (draft.stderr or "")
+    print(out[-2000:] if len(out) > 2000 else out)
+    if draft.returncode != 0:
+        print("  ⚠ HQ draft deploy failed")
+        return
+    import re
+
+    m = re.search(r"/deploys/([0-9a-f]+)", out)
+    if not m:
+        print("  ⚠ Could not parse HQ deploy id")
+        return
+    deploy_id = m.group(1)
+    hq_site_id = os.environ.get("RNITRO_HQ_SITE_ID", "3719da87-51a9-432a-9ddb-82d755c50785")
+    promo = subprocess.run(
+        [
+            str(netlify_bin),
+            "api",
+            "restoreSiteDeploy",
+            "--data",
+            json.dumps({"site_id": hq_site_id, "deploy_id": deploy_id}),
+        ],
+        cwd=hq,
+        text=True,
+        capture_output=True,
+    )
+    if promo.returncode == 0:
+        print(f"  ✅ HQ promoted ({deploy_id}) — https://chopstickshq.com/rnitro/")
+    else:
+        print(f"  ⚠ HQ promote failed: {(promo.stdout or '') + (promo.stderr or '')}")
 
 
 def main() -> None:

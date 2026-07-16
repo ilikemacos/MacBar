@@ -218,7 +218,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="ccbf9fa6566e0c688d636c2ba1b044b28410aca39e70853977518abeba7b08be"
+EXPECTED_HASH="1dbeeda39f91fe6b95f3f4640d711f85297044f130fb9dc2cd1537ca538a48d4"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -3586,6 +3586,57 @@ final class UICustomizationStore: ObservableObject {
         cpuGreenMax = 40; cpuOrangeMax = 70; cpuRedMin = 90
         tempGreenMax = 60; tempOrangeMax = 80
     }
+
+    /// Export menubar + appearance preferences as JSON (Dev Mode / power users).
+    func exportConfigJSON() -> String {
+        let dict: [String: Any] = [
+            "format": "rnitro-ui-config-v1",
+            "density": density.rawValue,
+            "accent": accentPreset.rawValue,
+            "menubarClick": menubarClick.rawValue,
+            "showPerCore": showPerCore,
+            "showFans": showFans,
+            "showProcesses": showProcesses,
+            "cpuGreenMax": cpuGreenMax,
+            "cpuOrangeMax": cpuOrangeMax,
+            "cpuRedMin": cpuRedMin,
+            "tempGreenMax": tempGreenMax,
+            "tempOrangeMax": tempOrangeMax,
+            "menuBarLayout": MenuBarConfig.layout.rawValue,
+            "menuBarSlots": MenuBarConfig.enabledSlots.map(\.rawValue),
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: data, encoding: .utf8) else { return "{}" }
+        return str
+    }
+
+    @discardableResult
+    func importConfigJSON(_ raw: String) -> Bool {
+        guard let data = raw.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        if let s = obj["density"] as? String, let d = MenubarDensity(rawValue: s) { density = d }
+        if let s = obj["accent"] as? String, let a = AccentPreset(rawValue: s) { accentPreset = a }
+        if let s = obj["menubarClick"] as? String, let c = MenubarClickBehavior(rawValue: s) { menubarClick = c }
+        if let b = obj["showPerCore"] as? Bool { showPerCore = b }
+        if let b = obj["showFans"] as? Bool { showFans = b }
+        if let b = obj["showProcesses"] as? Bool { showProcesses = b }
+        if let n = obj["cpuGreenMax"] as? Double { cpuGreenMax = n }
+        if let n = obj["cpuOrangeMax"] as? Double { cpuOrangeMax = n }
+        if let n = obj["cpuRedMin"] as? Double { cpuRedMin = n }
+        if let n = obj["tempGreenMax"] as? Double { tempGreenMax = n }
+        if let n = obj["tempOrangeMax"] as? Double { tempOrangeMax = n }
+        if let s = obj["menuBarLayout"] as? String, let layout = MenuBarLayout(rawValue: s) {
+            MenuBarConfig.setLayout(layout)
+        }
+        if let slots = obj["menuBarSlots"] as? [String] {
+            let mapped = slots.compactMap(MenuBarSlot.init(rawValue:))
+            if !mapped.isEmpty {
+                UserDefaults.standard.set(mapped.map(\.rawValue), forKey: MonitorPreferences.menuBarSlotsKey)
+                NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+            }
+        }
+        return true
+    }
 }
 
 // ── Bitcoin price ────────────────────────────────────────────────────────────
@@ -6058,6 +6109,7 @@ struct SettingsDeveloperSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var dev = DeveloperModeStore.shared
     @State private var copiedNote = ""
+    @State private var importDraft = ""
 
     var body: some View {
         ScrollView {
@@ -6088,6 +6140,31 @@ struct SettingsDeveloperSection: View {
                     copiedNote = "JSON snapshot copied"
                 })
                 MinimalButton(title: "Open log folder", action: { dev.openLogFolder() })
+                Divider().padding(.vertical, 4)
+                Text("UI config")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                MinimalButton(title: "Copy UI config JSON", action: {
+                    let json = UICustomizationStore.shared.exportConfigJSON()
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(json, forType: .string)
+                    copiedNote = "UI config copied"
+                })
+                Text("Paste a config JSON below, then Import.")
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                TextEditor(text: $importDraft)
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .frame(minHeight: 72)
+                    .padding(6)
+                    .background(Color.card)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.5), lineWidth: 1))
+                MinimalButton(title: "Import UI config", action: {
+                    if UICustomizationStore.shared.importConfigJSON(importDraft) {
+                        copiedNote = "UI config imported"
+                        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+                    } else {
+                        copiedNote = "Import failed — check JSON"
+                    }
+                })
                 if !copiedNote.isEmpty {
                     Text(copiedNote).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.nGreen)
                 }
@@ -7808,7 +7885,8 @@ struct FirstLaunchTipsSheet: View {
             VStack(alignment: .leading, spacing: 12) {
                 tipRow("1", "Find the menubar icon", "rNitro lives in the top-right menu bar. Click it anytime for live CPU, temp, and per-core stats.")
                 tipRow("2", "First launch on macOS", "If Gatekeeper blocks the app: right-click rNitro.app → Open → Open once. No admin password needed for the App ZIP.")
-                tipRow("3", "Recommended install", "App ZIP from getrnitro.netlify.app — unzip, drag to Applications, then use right-click → Open if prompted.")
+                tipRow("3", "Customize anytime", "Settings → Menubar / Appearance for density, slots, accents. Developer Mode is optional (Beta).")
+                tipRow("4", "Recommended install", "App ZIP from getrnitro.netlify.app or chopstickshq.com/rnitro — or the Terminal one-liner to skip most Gatekeeper prompts.")
             }
             Button(action: {
                 FirstLaunchTips.markSeen()
@@ -9692,39 +9770,118 @@ enum ProcessHighlight {
 struct ProcessUsageRow: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
+    @ObservedObject private var dev = DeveloperModeStore.shared
     let snapshot: ProcessSnapshot
     let highlight: ProcessHighlight
+    @State private var confirmQuit = false
 
     var body: some View {
-        HStack(spacing: 6) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(snapshot.name)
-                    .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
-                    .lineLimit(1).truncationMode(.tail)
-                Text("pid \(snapshot.pid)")
-                    .font(rNitroFont(.micro, metrics: metrics))
-                    .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(snapshot.name)
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
+                        .lineLimit(1).truncationMode(.tail)
+                    Text("pid \(snapshot.pid)")
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.secondary)
+                }
+                Spacer(minLength: 4)
+                if highlight == .cpu {
+                    Text(String(format: "%.1f%%", snapshot.cpuPercent))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        .foregroundColor(Color.usage(min(100, snapshot.cpuPercent)))
+                    Text(String(format: "%.0f MB", snapshot.memoryMB))
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.secondary)
+                        .frame(width: 52, alignment: .trailing)
+                } else {
+                    Text(String(format: "%.0f MB", snapshot.memoryMB))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        .foregroundColor(.nPurple)
+                    Text(String(format: "%.1f%%", snapshot.cpuPercent))
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.secondary)
+                        .frame(width: 44, alignment: .trailing)
+                }
             }
-            Spacer(minLength: 4)
-            if highlight == .cpu {
-                Text(String(format: "%.1f%%", snapshot.cpuPercent))
-                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-                    .foregroundColor(Color.usage(min(100, snapshot.cpuPercent)))
-                Text(String(format: "%.0f MB", snapshot.memoryMB))
+            HStack(spacing: 8) {
+                if RNITRO_FEATURE_BETA_UI {
+                    Button("Why hot?") {
+                        let line = String(
+                            format: "%@ (pid %d) · %.1f%% CPU · %.0f MB — likely heat contributor",
+                            snapshot.name, snapshot.pid, snapshot.cpuPercent, snapshot.memoryMB
+                        )
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(line, forType: .string)
+                        NotificationCenter.default.post(
+                            name: .rNitroOpenMainWindow,
+                            object: nil,
+                            userInfo: ["tab": AppTab.lab.rawValue]
+                        )
+                    }
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.nOrange)
+                    .buttonStyle(.plain)
+                }
+                if dev.isEnabled {
+                    Button("Copy PID") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString("\(snapshot.pid)", forType: .string)
+                    }
                     .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
-                    .frame(width: 52, alignment: .trailing)
-            } else {
-                Text(String(format: "%.0f MB", snapshot.memoryMB))
-                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
-                    .foregroundColor(.nPurple)
-                Text(String(format: "%.1f%%", snapshot.cpuPercent))
+                    .buttonStyle(.plain)
+                    Button("Reveal") {
+                        ProcessActions.reveal(pid: snapshot.pid)
+                    }
                     .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
-                    .frame(width: 44, alignment: .trailing)
+                    .buttonStyle(.plain)
+                    Button("Quit") { confirmQuit = true }
+                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                        .foregroundColor(.nRed)
+                        .buttonStyle(.plain)
+                }
             }
         }
         .padding(.vertical, 2)
+        .alert("Quit \(snapshot.name)?", isPresented: $confirmQuit) {
+            Button("Cancel", role: .cancel) {}
+            Button("Send SIGTERM", role: .destructive) {
+                ProcessActions.terminate(pid: snapshot.pid, force: false)
+            }
+            Button("Force quit (SIGKILL)", role: .destructive) {
+                ProcessActions.terminate(pid: snapshot.pid, force: true)
+            }
+        } message: {
+            Text("Developer Mode only. Prefer SIGTERM first. Force quit can lose unsaved work.")
+        }
+    }
+}
+
+enum ProcessActions {
+    static func terminate(pid: Int32, force: Bool) {
+        guard pid > 0, pid != getpid() else { return }
+        let sig = force ? SIGKILL : SIGTERM
+        _ = kill(pid, sig)
+        DeveloperModeStore.shared.log("process \(force ? "SIGKILL" : "SIGTERM") pid=\(pid)")
+    }
+
+    static func reveal(pid: Int32) {
+        guard let path = processPath(pid: pid) else { return }
+        let url = URL(fileURLWithPath: path)
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    private static func processPath(pid: Int32) -> String? {
+        var buf = [CChar](repeating: 0, count: 4096)
+        let ret = buf.withUnsafeMutableBufferPointer { ptr -> Int32 in
+            guard let base = ptr.baseAddress else { return 0 }
+            return proc_pidpath(pid, base, UInt32(ptr.count))
+        }
+        guard ret > 0 else { return nil }
+        return String(cString: buf)
     }
 }
 
@@ -9835,16 +9992,18 @@ struct MonitorCPUSectionView: View {
                     CoreRow(core: core, index: i, isEfficiency: eff, clusterIndex: cIdx)
                 }
             }
-            Text(display.tr("processes.topCpu"))
-                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
-                .foregroundColor(.secondary)
-                .padding(.top, 6)
-            if proc.topByCPU.isEmpty {
-                MonitorRow(label: display.tr("processes.col.cpu"), value: display.tr("processes.none"))
-            } else {
-                VStack(spacing: 2) {
-                    ForEach(proc.topByCPU) { p in
-                        ProcessUsageRow(snapshot: p, highlight: .cpu)
+            if UICustomizationStore.shared.showProcesses {
+                Text(display.tr("processes.topCpu"))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.top, 6)
+                if proc.topByCPU.isEmpty {
+                    MonitorRow(label: display.tr("processes.col.cpu"), value: display.tr("processes.none"))
+                } else {
+                    VStack(spacing: 2) {
+                        ForEach(proc.topByCPU) { p in
+                            ProcessUsageRow(snapshot: p, highlight: .cpu)
+                        }
                     }
                 }
             }
@@ -9896,16 +10055,18 @@ struct MonitorMemorySectionView: View {
             MonitorRow(label: display.tr("row.wired"), value: String(format: "%.1f GB", m.memoryWiredGB))
             MonitorRow(label: display.tr("row.compressed"), value: String(format: "%.1f GB", m.memoryCompressedGB))
             MonitorRow(label: display.tr("row.swap"), value: String(format: "%.1f GB", m.memorySwapGB))
-            Text(display.tr("processes.topRam"))
-                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
-                .foregroundColor(.secondary)
-                .padding(.top, 6)
-            if proc.topByMemory.isEmpty {
-                MonitorRow(label: display.tr("processes.col.ram"), value: display.tr("processes.none"))
-            } else {
-                VStack(spacing: 2) {
-                    ForEach(proc.topByMemory) { p in
-                        ProcessUsageRow(snapshot: p, highlight: .memory)
+            if UICustomizationStore.shared.showProcesses {
+                Text(display.tr("processes.topRam"))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.top, 6)
+                if proc.topByMemory.isEmpty {
+                    MonitorRow(label: display.tr("processes.col.ram"), value: display.tr("processes.none"))
+                } else {
+                    VStack(spacing: 2) {
+                        ForEach(proc.topByMemory) { p in
+                            ProcessUsageRow(snapshot: p, highlight: .memory)
+                        }
                     }
                 }
             }
@@ -9999,6 +10160,7 @@ struct MonitorSensorsSectionView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var sensors = SensorsMonitor.shared
+    @ObservedObject private var dev = DeveloperModeStore.shared
 
     var body: some View {
         MonitorSection(
@@ -10012,13 +10174,19 @@ struct MonitorSensorsSectionView: View {
                 MonitorRow(label: display.tr("row.tip"), value: display.tr("row.sensorsTip"))
             } else {
                 let groups = Dictionary(grouping: sensors.entries, by: { $0.group })
+                let showRaw = dev.isEnabled && dev.showRawSensors
                 ForEach(["Temperatures", "Fans"], id: \.self) { group in
                     if let items = groups[group] {
                         Text(group).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                         ForEach(items) { entry in
                             VStack(alignment: .leading, spacing: 0) {
                                 MonitorRow(label: entry.name, value: "\(entry.value) \(entry.unit)")
-                                Text(entry.rawKey).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary.opacity(0.6))
+                                if showRaw {
+                                    Text(entry.rawKey)
+                                        .font(rNitroFont(.micro, metrics: metrics))
+                                        .foregroundColor(.secondary.opacity(0.75))
+                                        .textSelection(.enabled)
+                                }
                             }
                         }
                     }
@@ -11392,9 +11560,10 @@ struct LabTabView: View {
     @State private var jumpTarget: String? = nil
     @State private var haikuText = ""
     @State private var chaosSeconds: Double = 1.0
+    @State private var toysExpanded = false
 
-    private var toc: [(String, String)] {
-        var items: [(String, String)] = [
+    private var coreToc: [(String, String)] {
+        [
             ("weather", "lab.toc.weather"),
             ("scrub", "lab.toc.scrub"),
             ("detective", "lab.toc.detective"),
@@ -11402,32 +11571,27 @@ struct LabTabView: View {
             ("whisper", "lab.toc.whisper"),
             ("farm", "lab.toc.farm"),
         ]
-        if RNITRO_FEATURE_EXPERIMENTAL_UI {
-            items = [
-                ("weather", "lab.toc.weather"),
-                ("scrub", "lab.toc.scrub"),
-                ("detective", "lab.toc.detective"),
-                ("ghost", "lab.toc.ghost"),
-                ("receipt", "lab.toc.receipt"),
-                ("budget", "lab.toc.budget"),
-                ("snapshot", "lab.toc.snapshot"),
-                ("confess", "lab.toc.confess"),
-                ("widget", "lab.toc.widget"),
-                ("whisper", "lab.toc.whisper"),
-                ("cloak", "lab.toc.cloak"),
-                ("peer", "lab.toc.peer"),
-                ("farm", "lab.toc.farm"),
-                ("alibi", "lab.toc.alibi"),
-                ("duel", "lab.toc.duel"),
-                ("forecast", "lab.toc.forecast"),
-                ("haiku", "lab.toc.haiku"),
-                ("cosplay", "lab.toc.cosplay"),
-                ("overnight", "lab.toc.overnight"),
-                ("roulette", "lab.toc.roulette"),
-                ("chaos", "lab.toc.chaos"),
-            ]
-        }
-        return items
+    }
+
+    private var toyToc: [(String, String)] {
+        guard RNITRO_FEATURE_EXPERIMENTAL_UI else { return [] }
+        return [
+            ("ghost", "lab.toc.ghost"),
+            ("budget", "lab.toc.budget"),
+            ("snapshot", "lab.toc.snapshot"),
+            ("confess", "lab.toc.confess"),
+            ("widget", "lab.toc.widget"),
+            ("cloak", "lab.toc.cloak"),
+            ("peer", "lab.toc.peer"),
+            ("alibi", "lab.toc.alibi"),
+            ("duel", "lab.toc.duel"),
+            ("forecast", "lab.toc.forecast"),
+            ("haiku", "lab.toc.haiku"),
+            ("cosplay", "lab.toc.cosplay"),
+            ("overnight", "lab.toc.overnight"),
+            ("roulette", "lab.toc.roulette"),
+            ("chaos", "lab.toc.chaos"),
+        ]
     }
 
     var body: some View {
@@ -11502,13 +11666,13 @@ struct LabTabView: View {
     }
 
     private func tocBar(proxy: ScrollViewProxy) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(display.tr("lab.jump"))
                 .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                 .foregroundColor(.secondary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(toc, id: \.0) { item in
+                    ForEach(coreToc, id: \.0) { item in
                         Button(action: { jumpTarget = item.0 }) {
                             Text(display.tr(item.1))
                                 .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
@@ -11518,6 +11682,36 @@ struct LabTabView: View {
                                 .background(Capsule().stroke(Color.nOrange.opacity(0.5), lineWidth: 0.8))
                         }
                         .buttonStyle(.plain)
+                    }
+                }
+            }
+            if RNITRO_FEATURE_EXPERIMENTAL_UI && !toyToc.isEmpty {
+                Button(action: { withAnimation { toysExpanded.toggle() } }) {
+                    HStack(spacing: 6) {
+                        Text(toysExpanded ? "Hide experimental toys" : "Show experimental toys (\(toyToc.count))")
+                            .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                            .foregroundColor(.nPurple)
+                        Image(systemName: toysExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.nPurple)
+                    }
+                }
+                .buttonStyle(.plain)
+                if toysExpanded {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(toyToc, id: \.0) { item in
+                                Button(action: { jumpTarget = item.0 }) {
+                                    Text(display.tr(item.1))
+                                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                                        .foregroundColor(.nPurple)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Capsule().stroke(Color.nPurple.opacity(0.55), lineWidth: 0.8))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                 }
             }
