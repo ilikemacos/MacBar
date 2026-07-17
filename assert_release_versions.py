@@ -44,12 +44,15 @@ def version_in_zip(zip_path: Path) -> str:
 
 def main() -> None:
     data = v.load()
-    checks = [
-        ("stable", v.stable_release(data)["id"], v.stable_release(data)["zip"]),
-        ("beta", v.beta_release(data)["id"], v.beta_release(data)["zip"]),
-    ]
+    channel_meta = {
+        "stable": v.stable_release(data),
+        "beta": v.beta_release(data),
+        "experimental": v.experimental_release(data),
+    }
     failed = False
-    for label, expect, zip_name in checks:
+    for label, meta in channel_meta.items():
+        expect = meta["id"]
+        zip_name = meta["zip"]
         path = SITE / zip_name
         if not path.is_file():
             print(f"FAIL {label}: missing {zip_name}")
@@ -60,6 +63,16 @@ def main() -> None:
         print(f"{'OK' if ok else 'FAIL'} {label}: zip={zip_name} plist={got!r} expect={expect!r}")
         if not ok:
             failed = True
+        for kind in ("pkg", "dmg"):
+            name = meta.get(kind)
+            if not name:
+                continue
+            p = SITE / name
+            if not p.is_file():
+                print(f"FAIL {label}: missing {kind} {name}")
+                failed = True
+            else:
+                print(f"OK {label}: {kind}={name} present ({p.stat().st_size:,} bytes)")
     if failed:
         raise SystemExit(1)
     print("All release version asserts passed.")

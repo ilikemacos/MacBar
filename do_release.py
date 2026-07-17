@@ -11,6 +11,13 @@ Modes:
   ship     — sync → build → assert → website stage → github → netlify
              (full path for a real public release)
 
+Packaging installers are invoked with RNITRO_NO_LAUNCH=1 so builds do not open
+the app mid-ship. After build/ship, launch-experimental.py reinstalls Exp on this
+Mac unless --no-launch-experimental is set.
+
+Post-deploy, deploy-netlify.py verifies stable + beta + experimental App ZIPs
+are HTTP 200 and ≥ 1.4 MB on the live site.
+
 Always push main README after ship if you changed version.json:
   git add README.md version.json && git commit && git push
 """

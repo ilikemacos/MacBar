@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="063d2c5b4b9b24784ba39e1b2cb01b0b0a6b97c67e708bc839007d43f72c9baf"
+EXPECTED_HASH="29594ead745322e8b8f527f63ac2b64d66f26cbf92e8f7081c1c282a995fd078"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -15276,6 +15276,12 @@ echo "🔒 Binary SHA-256 (reference): $BINARY_HASH"
 
 echo ""
 echo "✅ rNitro installed to $APP_DEST"
-echo "🚀 Launching..."
-xattr -cr "$APP_DEST" 2>/dev/null || true
-open "$APP_DEST"
+# Packaging sets RNITRO_NO_LAUNCH=1 so multi-channel builds don't steal focus.
+_no_launch="$(printf '%s' "${RNITRO_NO_LAUNCH:-}" | tr '[:upper:]' '[:lower:]')"
+if [[ "$_no_launch" == "1" || "$_no_launch" == "true" || "$_no_launch" == "yes" ]]; then
+  echo "ℹ️  Launch skipped (RNITRO_NO_LAUNCH=$_no_launch)."
+else
+  echo "🚀 Launching..."
+  xattr -cr "$APP_DEST" 2>/dev/null || true
+  open "$APP_DEST"
+fi

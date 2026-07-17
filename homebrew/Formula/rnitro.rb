@@ -1,9 +1,9 @@
 class Rnitro < Formula
   desc "Real-time CPU monitor for macOS — usage, temperature, and per-core stats"
   homepage "https://getrnitro.netlify.app/"
-  url "https://github.com/ilikemacos/rNitro/releases/download/v1.2.8-Final/rNitro-v1.2.8-Final.zip"
-  version "1.2.8"
-  sha256 "d9d4e3368637204ba147e7b36c6e44a554099cdfffc296ca0bc144c5dcef567e"
+  url "https://github.com/ilikemacos/rNitro/releases/download/v1.2.9-Final/rNitro-v1.2.9-Final.zip"
+  version "1.2.9"
+  sha256 "f720b3a6ddc7cd9946ff587357ae1ab5efd07714db81aefe7be45da4030c0b43"
   license "MIT"
 
   depends_on macos: ">= :monterey"
@@ -47,7 +47,7 @@ class Rnitro < Formula
       Run `rnitro` from Terminal or open it from Applications.
 
       First launch: if macOS blocks the app, right-click rNitro.app → Open → Open.
-      Release: https://github.com/ilikemacos/rNitro/releases/tag/v1.2.8-Final
+      Release: https://github.com/ilikemacos/rNitro/releases/tag/v1.2.9-Final
     EOS
   end
 

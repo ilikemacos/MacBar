@@ -106,7 +106,7 @@ def verify_deploy(url: str) -> bool:
                 print(f"VERIFY FAIL: {base}/version.json returned HTTP {resp.status}")
                 return False
             version_data = json.loads(resp.read().decode("utf-8"))
-        for label, key in (("stable", "stable"), ("beta", "beta")):
+        for label, key in (("stable", "stable"), ("beta", "beta"), ("experimental", "experimental")):
             zip_name = version_data.get("releases", {}).get(key, {}).get("zip")
             if not zip_name:
                 continue
@@ -144,7 +144,7 @@ def verify_deploy(url: str) -> bool:
     except Exception as exc:
         print(f"VERIFY FAIL: {exc}")
         return False
-    print(f"VERIFY OK: {base}/, /version.json, stable + beta + archive ZIPs")
+    print(f"VERIFY OK: {base}/, /version.json, stable + beta + experimental + archive ZIPs")
     return True
 
 
