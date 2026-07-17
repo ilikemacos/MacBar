@@ -50,6 +50,7 @@ WEBSITE_FILES = [
     "404.html",
     "archives.html",
     "privacy.html",
+    "faq.html",
     "windows.html",
     "linux.html",
     "cli.html",
