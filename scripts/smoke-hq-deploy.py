@@ -67,6 +67,13 @@ def main() -> int:
         if remote.get("experimental") != exp["id"]:
             print(f"  FAIL experimental mismatch remote={remote.get('experimental')}")
             failed += 1
+        hashes = remote.get("hashes") or {}
+        for key in ("stable_zip", "beta_zip", "experimental_zip"):
+            h = hashes.get(key) or ""
+            if h and len(h) == 64:
+                print(f"  OK hashes.{key}={h[:16]}…")
+            else:
+                print(f"  WARN hashes.{key} missing (updates will skip SHA check)")
     except Exception as e:
         print(f"  FAIL version.json: {e}")
         failed += 1

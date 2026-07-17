@@ -2,6 +2,21 @@
   "whats_new": [
     {
       "channel": "experimental",
+      "title": "v1.3.9 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Update ZIP integrity",
+          "text": " \u2014 verifies published SHA-256 from version.json before install."
+        },
+        {
+          "strong": "Hardened auto-update",
+          "text": " \u2014 only /Applications or ~/Applications; codesign verify pre/post replace."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
       "title": "v1.3.8 Experimental",
       "accent": "purple",
       "items": [

@@ -1938,14 +1938,31 @@ def sync_readme(data: dict) -> None:
 def refresh_hashes(data: dict) -> dict:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
+    exp = v.experimental_release(data)
     stable_path = SITE / stable["sh"]
     beta_path = SITE / beta["sh"]
     if not stable_path.is_file():
         raise SystemExit(f"Missing stable installer: {stable_path}")
     if not beta_path.is_file():
         raise SystemExit(f"Missing beta installer: {beta_path}")
+    data.setdefault("hashes", {})
     data["hashes"]["stable_sh"] = v.file_sha256(stable_path)
     data["hashes"]["beta_sh"] = v.file_sha256(beta_path)
+    # App ZIP digests for in-app update integrity (optional until ZIP exists).
+    for key, meta in (
+        ("stable_zip", stable),
+        ("beta_zip", beta),
+        ("experimental_zip", exp),
+    ):
+        zname = meta.get("zip") or ""
+        zpath = SITE / zname if zname else None
+        if zpath and zpath.is_file():
+            data["hashes"][key] = v.file_sha256(zpath)
+            print(f"  {key}: {data['hashes'][key][:16]}… ({zname})")
+        else:
+            # Keep previous hash if present; do not invent empty false positives.
+            if not data["hashes"].get(key):
+                data["hashes"][key] = data["hashes"].get(key, "")
     return data
 
 
@@ -2005,6 +2022,10 @@ def main() -> None:
     print(f"  beta:   {data['beta']}")
     print(f"  stable SHA: {data['hashes']['stable_sh'][:16]}…")
     print(f"  beta SHA:   {data['hashes']['beta_sh'][:16]}…")
+    for k in ("stable_zip", "beta_zip", "experimental_zip"):
+        h = (data.get("hashes") or {}).get(k) or ""
+        if h:
+            print(f"  {k}: {h[:16]}…")
 
 
 if __name__ == "__main__":
