@@ -1,6 +1,28 @@
 {
   "whats_new": [
     {
+      "channel": "beta",
+      "title": "v1.2.13 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Font picker UX",
+          "text": " \u2014 search, category chips, scrollable live previews, star favorites, OFL credit."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.4 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Font picker UX",
+          "text": " \u2014 same improved Appearance font browser as Beta."
+        }
+      ]
+    },
+    {
       "channel": "stable",
       "title": "v1.2.9 Final",
       "accent": "green",

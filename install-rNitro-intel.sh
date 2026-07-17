@@ -218,7 +218,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="007266602ccbf2317979c7bcc26b3a15dbed63f8dc56b362b819ec14f00dea5f"
+EXPECTED_HASH="a55f015f1c1d52bb0c2f65ae3b74527b3891f38c97d1a3403d6350c65dac9654"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -5851,9 +5851,30 @@ struct FontFamilyPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField(display.tr("appearance.fontSearch"), text: $search)
-                .textFieldStyle(.roundedBorder)
-                .font(rNitroFont(.caption, metrics: metrics))
+            // Search
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                TextField(display.tr("appearance.fontSearch"), text: $search)
+                    .textFieldStyle(.plain)
+                    .font(rNitroFont(.caption, metrics: metrics))
+                if !search.isEmpty {
+                    Button {
+                        search = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.10)))
+
+            // Categories
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(UIFontCategory.allCases) { cat in
@@ -5866,37 +5887,76 @@ struct FontFamilyPickerView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12)))
+                                .foregroundColor(on ? .primary : .secondary)
                         }
                         .buttonStyle(.plain)
                     }
                 }
             }
-            Picker(display.tr("appearance.fontFamily"), selection: Binding(
-                get: { display.fontFamilyID },
-                set: { display.setFontFamily($0) }
-            )) {
-                ForEach(filtered) { font in
-                    Text((display.isFavoriteFont(font.id) ? "★ " : "") + font.label)
-                        .font(.custom(font.family, size: 13))
-                        .tag(font.id)
+
+            // Match count + current
+            HStack {
+                Text(String(format: display.tr("appearance.fontCount"), filtered.count))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary)
+                Spacer(minLength: 0)
+                if let current = UIFontCatalog.all.first(where: { $0.id == display.fontFamilyID }) {
+                    Text(display.tr("appearance.fontCurrent") + ": " + current.label)
+                        .font(rNitroFont(.micro, metrics: metrics))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
             }
-            .pickerStyle(.menu)
-            if let current = UIFontCatalog.all.first(where: { $0.id == display.fontFamilyID }) {
-                HStack(spacing: 8) {
-                    Text(current.label)
-                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
-                    Spacer(minLength: 0)
-                    Button {
-                        display.toggleFavoriteFont(current.id)
-                    } label: {
-                        Text(display.isFavoriteFont(current.id) ? display.tr("appearance.fontUnfavorite") : display.tr("appearance.fontFavorite"))
-                            .font(rNitroFont(.micro, metrics: metrics))
+
+            // Scrollable list with live preview (replaces hard-to-scan menu)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(filtered) { font in
+                        let selected = display.fontFamilyID == font.id
+                        let fav = display.isFavoriteFont(font.id)
+                        Button {
+                            display.setFontFamily(font.id)
+                        } label: {
+                            HStack(spacing: 8) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(font.label)
+                                        .font(.custom(font.family, size: 14))
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                    Text(font.category.label)
+                                        .font(rNitroFont(.micro, metrics: metrics))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer(minLength: 4)
+                                if selected {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.accentColor)
+                                }
+                                Button {
+                                    display.toggleFavoriteFont(font.id)
+                                } label: {
+                                    Image(systemName: fav ? "star.fill" : "star")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(fav ? Color.accentColor : .secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 7)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(selected ? Color.accentColor.opacity(0.14) : Color.clear)
+                            )
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.accentColor)
                 }
             }
+            .frame(maxHeight: 200)
+            .background(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.18), lineWidth: 1))
+
             if filtered.isEmpty {
                 Text(display.tr("appearance.fontEmpty"))
                     .font(rNitroFont(.caption, metrics: metrics))
@@ -7910,7 +7970,7 @@ enum UIFontCatalog {
     }
     static func filtered(search: String, category: UIFontCategory, favorites: [String]) -> [Choice] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return all.filter { c in
+        var list = all.filter { c in
             let catOK: Bool
             switch category {
             case .all: catOK = true
@@ -7921,6 +7981,18 @@ enum UIFontCatalog {
             if q.isEmpty { return true }
             return c.label.lowercased().contains(q) || c.family.lowercased().contains(q) || c.id.lowercased().contains(q)
         }
+        // Favorites first (stable order within each group)
+        if category == .all || category == .favorites {
+            list.sort { a, b in
+                let af = favorites.contains(a.id)
+                let bf = favorites.contains(b.id)
+                if af != bf { return af && !bf }
+                return a.label.localizedCaseInsensitiveCompare(b.label) == .orderedAscending
+            }
+        } else {
+            list.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+        }
+        return list
     }
 }
 
@@ -8079,7 +8151,14 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.accent": "Accent color",
         "appearance.accent.preview": "Preview accent",
         "appearance.fontFamily": "UI font",
-        "appearance.fontFamily.hint": "50+ Google Fonts (OFL) bundled offline. Preview updates immediately.",
+        "appearance.fontFamily.hint": "50+ Google Fonts (OFL) bundled offline. Search, categories, and favorites help you find one fast.",
+        "appearance.fontSearch": "Search fonts…",
+        "appearance.fontEmpty": "No fonts match.",
+        "appearance.fontOFL": "Google Fonts · SIL Open Font License (bundled offline).",
+        "appearance.fontFavorite": "Favorite",
+        "appearance.fontUnfavorite": "Unfavorite",
+        "appearance.fontCount": "%d fonts",
+        "appearance.fontCurrent": "Current",
         "appearance.fontSize": "Font size",
         "appearance.language": "Language",
         "appearance.monitorUI": "Monitor UI",
@@ -8455,7 +8534,14 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.accent": "強調色",
         "appearance.accent.preview": "強調色預覽",
         "appearance.fontFamily": "介面字型",
-        "appearance.fontFamily.hint": "內建 50+ Google Fonts（OFL）。",
+        "appearance.fontFamily.hint": "內建 50+ Google Fonts（OFL）。可用搜尋、分類與最愛快速挑選。",
+        "appearance.fontSearch": "搜尋字型…",
+        "appearance.fontEmpty": "沒有符合的字型。",
+        "appearance.fontOFL": "Google Fonts · SIL 開源字型授權（離線內建）。",
+        "appearance.fontFavorite": "加入最愛",
+        "appearance.fontUnfavorite": "取消最愛",
+        "appearance.fontCount": "%d 個字型",
+        "appearance.fontCurrent": "目前",
         "appearance.fontSize": "字體大小",
         "appearance.language": "語言",
         "appearance.monitorUI": "監控介面",
@@ -8831,7 +8917,14 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.accent": "Color de acento",
         "appearance.accent.preview": "Vista previa del acento",
         "appearance.fontFamily": "Fuente de la UI",
-        "appearance.fontFamily.hint": "Más de 50 Google Fonts (OFL) incluidas.",
+        "appearance.fontFamily.hint": "Más de 50 Google Fonts (OFL). Busca, filtra por categoría y marca favoritas.",
+        "appearance.fontSearch": "Buscar fuentes…",
+        "appearance.fontEmpty": "Ninguna fuente coincide.",
+        "appearance.fontOFL": "Google Fonts · SIL Open Font License (incluidas sin red).",
+        "appearance.fontFavorite": "Favorita",
+        "appearance.fontUnfavorite": "Quitar favorita",
+        "appearance.fontCount": "%d fuentes",
+        "appearance.fontCurrent": "Actual",
         "appearance.fontSize": "Tamaño de fuente",
         "appearance.language": "Idioma",
         "appearance.monitorUI": "Interfaz del monitor",
@@ -9207,7 +9300,14 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.accent": "Akzentfarbe",
         "appearance.accent.preview": "Akzent-Vorschau",
         "appearance.fontFamily": "UI-Schrift",
-        "appearance.fontFamily.hint": "50+ Google Fonts (OFL) offline gebündelt.",
+        "appearance.fontFamily.hint": "50+ Google Fonts (OFL) offline. Suche, Kategorien und Favoriten.",
+        "appearance.fontSearch": "Schriften suchen…",
+        "appearance.fontEmpty": "Keine Schrift passt.",
+        "appearance.fontOFL": "Google Fonts · SIL Open Font License (offline gebündelt).",
+        "appearance.fontFavorite": "Favorit",
+        "appearance.fontUnfavorite": "Favorit entfernen",
+        "appearance.fontCount": "%d Schriften",
+        "appearance.fontCurrent": "Aktuell",
         "appearance.fontSize": "Schriftgröße",
         "appearance.language": "Sprache",
         "appearance.monitorUI": "Monitor-Oberfläche",
