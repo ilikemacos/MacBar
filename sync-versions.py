@@ -1927,8 +1927,8 @@ def refresh_hashes(data: dict) -> dict:
     return data
 
 
-def refresh_archive(data: dict, *, rebuild: bool = False) -> dict:
-    # Keep archive empty for clean 1.x launches unless explicitly rebuilt.
+def refresh_archive(data: dict, *, rebuild: bool = True) -> dict:
+    # Default: rebuild from previous_versions.ARCHIVE_SPECS so prior-gen zips stay on CDN.
     if rebuild:
         data["archive"] = pv.build_archive(data)
     else:
@@ -1950,6 +1950,11 @@ def main() -> None:
         action="store_true",
         help="Regenerate beta .sh only; keep existing stable .sh",
     )
+    parser.add_argument(
+        "--no-rebuild-archive",
+        action="store_true",
+        help="Keep existing version.json archive list (do not rebuild from ARCHIVE_SPECS)",
+    )
     args = parser.parse_args()
 
     data = v.load()
@@ -1961,7 +1966,7 @@ def main() -> None:
         regenerate_installers(data, skip_stable=args.skip_stable_installer)
 
     data = refresh_hashes(data)
-    data = refresh_archive(data)
+    data = refresh_archive(data, rebuild=not args.no_rebuild_archive)
     v.save(data)
 
     print("Building CLI tarball...")

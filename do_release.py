@@ -16,7 +16,10 @@ the app mid-ship. After build/ship, launch-experimental.py reinstalls Exp on thi
 Mac unless --no-launch-experimental is set.
 
 Post-deploy, deploy-netlify.py verifies stable + beta + experimental App ZIPs
-are HTTP 200 and ≥ 1.4 MB on the live site.
+are HTTP 200 and ≥ 1.4 MB on the live site (plus archive[] prior-gen zips).
+
+Prior generation: keep one previous stable/beta/exp in previous_versions.ARCHIVE_SPECS
+so sync rebuilds version.json archive and Netlify still hosts those files.
 
 Always push main README after ship if you changed version.json:
   git add README.md version.json && git commit && git push

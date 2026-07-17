@@ -6,10 +6,12 @@ import versions as v
 
 SITE = v.SITE
 
+# One prior generation per channel (kept on CDN so old bookmarks / update URLs don't 404).
+# When you ship a new channel version, move the outgoing id into this list and drop the older row.
 ARCHIVE_SPECS: list[dict[str, str]] = [
-    {"id": "v8.3.11-Beta-arm64", "channel": "beta"},
-    {"id": "v8.3.10-Beta-arm64", "channel": "beta"},
-    {"id": "v8.3.9-Beta-arm64", "channel": "beta"},
+    {"id": "v1.2.8-Final", "channel": "stable"},
+    {"id": "v1.2.11", "channel": "beta"},
+    {"id": "v1.3.2-Experimental", "channel": "experimental"},
 ]
 
 
@@ -31,15 +33,19 @@ def build_archive(data: dict | None = None) -> list[dict]:
     data = data or v.load()
     stable_id = v.stable_id(data)
     beta_id = v.beta_id(data)
+    exp_id = (data.get("experimental") or "").strip()
     rows: list[dict] = []
     for spec in ARCHIVE_SPECS:
         rid = spec["id"]
-        if rid in (stable_id, beta_id):
+        if rid in (stable_id, beta_id, exp_id):
             continue
         files = artifact_names(rid)
-        if not files["sh"]:
+        # Prefer hosting zip (App ZIP); require at least zip or sh to list the row
+        if not files["zip"] and not files["sh"]:
             continue
-        sh_path = SITE / files["sh"]
+        sh_hash = ""
+        if files["sh"]:
+            sh_hash = v.file_sha256(SITE / files["sh"])
         rows.append(
             {
                 "id": rid,
@@ -48,7 +54,7 @@ def build_archive(data: dict | None = None) -> list[dict]:
                 "pkg": files["pkg"],
                 "dmg": files["dmg"],
                 "zip": files["zip"],
-                "sh_hash": v.file_sha256(sh_path),
+                "sh_hash": sh_hash,
             }
         )
     return rows
