@@ -1292,7 +1292,7 @@
     <a class="nav-link" href="/faq.html">FAQ</a>
     <a class="nav-link" href="/privacy.html">Privacy</a>
     <a class="nav-link" href="/terms.html">Terms</a>
-    <div class="nav-badge">v1.2.9 Final · v1.2.13 Beta · Apple Silicon + Intel</div>
+    <div class="nav-badge">v1.2.9 Final · v1.2.13 Beta · Exp v1.3.6-Exp · Apple Silicon + Intel</div>
   </div>
 <!-- @end:nav-right -->
   <button type="button" class="theme-toggle" id="theme-toggle" title="Toggle light / dark" aria-label="Toggle theme">◐ Theme</button>
@@ -1495,8 +1495,8 @@
         </button>
         <div class="dl-other-body prev-versions-body">
           <div class="dl-other-grid">
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.3.6-Experimental.pkg')">PKG installer</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.3.6-Experimental.dmg')">DMG disk image</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.3.6-Experimental.pkg')">PKG installer · 3.5 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.3.6-Experimental.dmg')">DMG disk image · 5.6 MB</button>
             <button type="button" class="btn btn-sh" style="border-color:#b8a0ff; color:#b8a0ff;" onclick="requestDownload('rNitro-v1.3.6-Experimental.sh')">Shell installer (.sh) · 672 KB</button>
             <button class="btn btn-secondary" onclick="copyCurlCmd('experimental')">⎘ Copy curl install</button>
           </div>
@@ -1812,7 +1812,7 @@
 <!-- @sync:how-it-works -->
   <div class="channel-compare" style="margin-bottom:14px;">
     <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Platforms &amp; channels at a glance</h2>
-    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">One place to see what each build is, where it installs, and how updates work. New here? <strong style="color:var(--green);">macOS Stable App ZIP</strong> for daily monitoring, or <strong style="color:var(--orange);">macOS Beta App ZIP</strong> if you want every AI provider.</p>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">One place to see what each build is, where it installs, and how updates work. New here? <strong style="color:var(--green);">macOS Stable App ZIP</strong> for daily monitoring, <strong style="color:var(--orange);">Beta</strong> for Lab + every AI provider, or <strong style="color:#b8a0ff;">Experimental</strong> for playground toys.</p>
     <div class="channel-compare-scroll">
       <table class="channel-compare-table how-it-works-table">
         <thead>
@@ -1828,7 +1828,8 @@
         </thead>
         <tbody>
           <tr><td><strong style="color:var(--green);">macOS</strong> · Stable</td><td>v1.2.9-Final</td><td><span class="status-pill status-pill--active">Active</span></td><td><code>rNitro-v1.2.9-Final.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>CPU monitor, benchmark, stress test, System Advisor, App Cleaner; AI chat: OpenAI + OpenRouter only</td></tr>
-          <tr><td><strong style="color:var(--orange);">macOS</strong> · Beta</td><td>v1.2.13</td><td><span class="status-pill status-pill--beta">Experimental</span></td><td><code>rNitro-v1.2.13.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>Everything in Stable plus all AI providers, temp banners, AES-256 key storage, first-launch tips</td></tr>
+          <tr><td><strong style="color:var(--orange);">macOS</strong> · Beta</td><td>v1.2.13</td><td><span class="status-pill status-pill--beta">Beta</span></td><td><code>rNitro-v1.2.13.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>Everything in Stable plus all AI providers, Lab (slim), temp banners, AES-256 key storage</td></tr>
+          <tr><td><strong style="color:#b8a0ff;">macOS</strong> · Experimental</td><td>v1.3.6-Experimental</td><td><span class="status-pill status-pill--prerelease">Playground</span></td><td><code>rNitro-v1.3.6-Experimental.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater (Stable / Beta / Experimental)</td><td>Everything in Beta plus Lab toys (duel, ghost-load, SOC budget, cloak, peer, …). Unstable.</td></tr>
           <tr><td><strong style="color:#a78bfa;">CLI</strong> · Terminal</td><td>v0.2-cli</td><td><span class="status-pill status-pill--active">New</span></td><td><code>rNitro-CLI.tar.gz</code></td><td><code>~/bin/rnitro</code> or <code>/usr/local/bin/rnitro</code></td><td>Manual — re-download tarball or curl one-liner</td><td>btop-style TUI: CPU, RAM, disk, network, battery, top processes; macOS + Linux; Python 3</td></tr>
           <tr><td><strong style="color:#e8a838;">Linux</strong> · Pre-release</td><td>v0.1-Linux-Beta-Pre-release-x64</td><td><span class="status-pill status-pill--prerelease">Pre-release</span></td><td><code>rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz</code> or <code>install-rNitro-linux.sh</code></td><td><code>~/.local/share/rnitro</code></td><td>Checks <code>version.json</code> on launch</td><td>GTK4 app: Monitor, Advisor, Chat, Cleaner; x86_64; needs Python 3.10+, GTK 4, libadwaita</td></tr>
           <tr><td><strong style="color:var(--cyan);">Windows</strong> · Legacy</td><td>v4.2.4-Windows-Final-x86</td><td><span class="status-pill status-pill--deprecated">Deprecated</span></td><td><code>rNitro-v4.2.4-Windows-Final-x86.exe</code></td><td><code>%LOCALAPPDATA%\rNitro</code></td><td>Manual — check website or GitHub</td><td>Tray monitor only (CPU, temp, RAM, BTC); no AI chat or Cleaner; .NET 8 runtime for EXE</td></tr>
@@ -1868,10 +1869,10 @@
         </thead>
         <tbody>
           <tr><td>Pick your platform tab</td><td>macOS, Linux, or Windows — the site auto-detects your OS</td></tr>
-          <tr><td>Accept Terms &amp; Conditions</td><td>Required once per browser session before any download</td></tr>
-          <tr><td>Download recommended file</td><td>Green/orange/cyan/gold cards on each tab — sizes shown on buttons</td></tr>
+          <tr><td>Accept Terms &amp; Conditions</td><td>Required on <strong>every</strong> download — Agree continues, Disagree returns home</td></tr>
+          <tr><td>Download recommended file</td><td>Green / orange / purple cards (Stable · Beta · Experimental) — sizes shown on buttons</td></tr>
           <tr><td>Install</td><td>Follow the <strong>How to install</strong> steps below for your tab</td></tr>
-          <tr><td>Updates</td><td>macOS: in-app prompt → download ZIP → replace app. Linux: checks same <code>version.json</code>. Windows: manual.</td></tr>
+          <tr><td>Updates</td><td>macOS: in-app prompt → download ZIP → replace app (Experimental channel supported). Linux: checks same <code>version.json</code>. Windows: manual.</td></tr>
           <tr><td>GitHub mirror</td><td>All current builds also on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a></td></tr>
         </tbody>
       </table>
@@ -1890,7 +1891,7 @@
       <div class="step-content">
 <!-- @sync:install-step-pkg -->
         <h3>Download the PKG, DMG, or App ZIP</h3>
-        <p>Choose <strong>Stable</strong> (green, OpenAI + OpenRouter) or <strong>Beta</strong> (orange, all AI APIs). Agree to the Terms &amp; Conditions, then pick a format:</p>
+        <p>Choose <strong>Stable</strong> (green), <strong>Beta</strong> (orange), or <strong>Experimental</strong> (purple). Agree to the Terms &amp; Conditions on every download, then pick a format:</p>
         <ul style="margin:10px 0 0 18px; line-height:1.7; color:var(--muted);">
           <li><strong>PKG</strong> — double-click; installs to Applications (admin password).</li>
           <li><strong>DMG</strong> — open the disk image and drag <code>rNitro.app</code> to Applications.</li>
@@ -2025,8 +2026,8 @@
 
 <!-- @sync:stable-beta-compare -->
   <div class="channel-compare">
-    <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Stable vs Beta — which should I download?</h2>
-    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">Start with Stable v1.2.0 Final (App ZIP). Beta v1.2.6 adds Lab, Developer Mode, and every AI provider.</p>
+    <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Stable vs Beta vs Experimental — which should I download?</h2>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">Start with Stable App ZIP for daily use. Beta adds Lab + every AI provider. Experimental is the playground (toys) — expect breakage.</p>
     <div class="channel-compare-scroll">
       <table class="channel-compare-table">
         <thead>
@@ -2034,6 +2035,7 @@
             <th></th>
             <th style="color:var(--green);">v1.2.9 Final</th>
             <th style="color:var(--orange);">v1.2.13 Beta</th>
+            <th style="color:#b8a0ff;">v1.3.6 Experimental</th>
           </tr>
         </thead>
         <tbody>
@@ -2041,31 +2043,55 @@
             <td>Best for</td>
             <td style="color:var(--green);">Daily monitoring + light customization</td>
             <td style="color:var(--orange);">Lab, Dev Mode, every AI provider</td>
+            <td style="color:#b8a0ff;">Playground toys — duel, ghost-load, budget, cloak, etc.</td>
+          </tr>
+          <tr>
+            <td>Stability</td>
+            <td style="color:var(--green);">Production-ready</td>
+            <td style="color:var(--orange);">Power-user (may change)</td>
+            <td style="color:#b8a0ff;">Unstable / bleeding edge</td>
           </tr>
           <tr>
             <td>Settings</td>
-            <td style="color:var(--green);">Appearance, Menubar (density/slots), Monitor, Alerts, General + custom UI</td>
+            <td style="color:var(--green);">Appearance, Menubar, Monitor, Alerts, General + custom UI</td>
             <td style="color:var(--orange);">Same + Lab + Developer Mode + full AI list</td>
+            <td style="color:#b8a0ff;">Everything in Beta + experimental toys UI</td>
           </tr>
           <tr>
             <td>AI chat</td>
             <td style="color:var(--green);">OpenAI + OpenRouter only</td>
             <td style="color:var(--orange);">Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes</td>
+            <td style="color:#b8a0ff;">Same as Beta</td>
           </tr>
           <tr>
             <td>System Advisor</td>
             <td style="color:var(--green);">Yes</td>
             <td style="color:var(--orange);">Yes</td>
+            <td style="color:#b8a0ff;">Yes</td>
           </tr>
           <tr>
             <td>Temp notification banners</td>
             <td style="color:var(--green);">No</td>
             <td style="color:var(--orange);">Yes (optional)</td>
+            <td style="color:#b8a0ff;">Yes (optional)</td>
           </tr>
           <tr>
             <td>AES-256 key storage</td>
             <td style="color:var(--green);">No</td>
             <td style="color:var(--orange);">Yes (GCM + Keychain)</td>
+            <td style="color:#b8a0ff;">Yes (GCM + Keychain)</td>
+          </tr>
+          <tr>
+            <td>In-app updates</td>
+            <td style="color:var(--green);">Stable + Beta choices</td>
+            <td style="color:var(--orange);">Stable + Beta choices</td>
+            <td style="color:#b8a0ff;">Stable + Beta + Experimental</td>
+          </tr>
+          <tr>
+            <td>Terms before download</td>
+            <td style="color:var(--green);">Agree or Disagree on every download</td>
+            <td style="color:var(--orange);">Agree or Disagree on every download</td>
+            <td style="color:#b8a0ff;">Agree or Disagree on every download</td>
           </tr>
         </tbody>
       </table>
@@ -3098,7 +3124,7 @@
       a: "In rNitro Beta, open the menubar popover → Advisor tab. It's a client-side assistant (no API key) that reads YOUR live CPU, temp, RAM, GPU, battery, and disk stats. Ask \"my specs\" or \"is my temp ok?\" Tap ⚙ to set custom warning thresholds — you'll get proactive alerts in the chat when temps or usage cross your limits." },
     // @sync:chat-kb-platform
     { label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
-      a: "Scroll to **How everything works** on [getrnitro.netlify.app](https://getrnitro.netlify.app/) for tables covering macOS Stable (v1.2.9), macOS Beta (v1.2.13), Linux (v0.1), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." },
+      a: "Scroll to **How everything works** on [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/) for tables covering macOS Stable (v1.2.9), Beta (v1.2.13), Experimental (v1.3.6-Exp), Linux (v0.1), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta for all AI providers, purple Experimental for playground toys. Terms: Agree or Disagree on every download." },
     { label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
       a: `Windows is no longer actively supported. The last build (${RNITRO_VERSIONS.windows.id}) remains on the Windows page — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` },
     { label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
@@ -3124,8 +3150,8 @@
     { label: 'Is the source code visible?', kws: ['source', 'open source', 'code'],
       a: "The full install script (including the app's source) is right there in the downloaded .sh / .ps1 file — nothing is hidden or obfuscated. You're compiling it yourself." },
     // @sync:chat-whats-new
-    { label: "What's the current version?", kws: ["whats new", "what's new", "v1.2.13", "v1.2.9", "v1.0.0", "changelog", "version"],
-      a: "Current macOS builds: Stable v1.2.9 Final (v1.2.9-Final) and Beta v1.2.13 Beta (v1.2.13). All product features are on the download page — there is no public changelog. Use Stable for daily monitoring; Beta for every AI provider." },
+    { label: "What's the current version?", kws: ["whats new", "what's new", "v1.2.13", "v1.2.9", "v1.3.6-Exp", "experimental", "v1.0.0", "changelog", "version"],
+      a: "Current macOS builds: Stable v1.2.9 Final (v1.2.9-Final), Beta v1.2.13 Beta (v1.2.13), and Experimental v1.3.6 Experimental (v1.3.6-Experimental). Use Stable for daily monitoring; Beta for every AI provider; Experimental for playground toys. See the Stable vs Beta vs Experimental table on the download page." },
     // @end:chat-whats-new
     { label: 'App ZIP won\'t open?', kws: ['wont run', "won't run", 'damaged', 'quarantine', 'xattr', '3.6', 'small', 'zip'],
       a: "If Gatekeeper blocks the App ZIP: right-click rNitro.app → Open → Open (once). Or run in Terminal:\nxattr -cr ~/Applications/rNitro.app\n\nThe .app is ~3.5–3.7 MB (native Swift, not Electron). Download the fresh build from getrnitro.netlify.app — older zips may have been stale." },

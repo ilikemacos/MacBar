@@ -210,7 +210,7 @@ def nav_right(data: dict) -> str:
 {archives_link}    <a class="nav-link" href="/faq.html">FAQ</a>
     <a class="nav-link" href="/privacy.html">Privacy</a>
     <a class="nav-link" href="/terms.html">Terms</a>
-    <div class="nav-badge">{stable["label"]} · {beta["label"]} · Apple Silicon + Intel</div>
+    <div class="nav-badge">{stable["label"]} · {beta["label"]} · Exp {v.experimental_release(data)["short"]} · Apple Silicon + Intel</div>
   </div>"""
 
 
@@ -689,7 +689,7 @@ def hero_dl_note(data: dict) -> str:
 
 def install_step_pkg(data: dict) -> str:
     return f"""        <h3>Download the PKG, DMG, or App ZIP</h3>
-        <p>Choose <strong>Stable</strong> (green, OpenAI + OpenRouter) or <strong>Beta</strong> (orange, all AI APIs). Agree to the Terms &amp; Conditions, then pick a format:</p>
+        <p>Choose <strong>Stable</strong> (green), <strong>Beta</strong> (orange), or <strong>Experimental</strong> (purple). Agree to the Terms &amp; Conditions on every download, then pick a format:</p>
         <ul style="margin:10px 0 0 18px; line-height:1.7; color:var(--muted);">
           <li><strong>PKG</strong> — double-click; installs to Applications (admin password).</li>
           <li><strong>DMG</strong> — open the disk image and drag <code>rNitro.app</code> to Applications.</li>
@@ -1097,6 +1097,7 @@ def how_it_works_section(data: dict) -> str:
     linux_gh = v.github_release_page_url(linux["id"])
     gh = v.github_releases_url()
 
+    exp = v.experimental_release(data)
     platform_rows = [
         (
             f'<strong style="color:var(--green);">macOS</strong> · Stable',
@@ -1110,11 +1111,20 @@ def how_it_works_section(data: dict) -> str:
         (
             f'<strong style="color:var(--orange);">macOS</strong> · Beta',
             beta["id"],
-            _status_pill("Experimental", "beta"),
+            _status_pill("Beta", "beta"),
             f'<code>{beta["zip"]}</code>',
             "<code>~/Applications/rNitro.app</code>",
             "In-app updater on launch",
-            "Everything in Stable plus all AI providers, temp banners, AES-256 key storage, first-launch tips",
+            "Everything in Stable plus all AI providers, Lab (slim), temp banners, AES-256 key storage",
+        ),
+        (
+            f'<strong style="color:#b8a0ff;">macOS</strong> · Experimental',
+            exp["id"],
+            _status_pill("Playground", "prerelease"),
+            f'<code>{exp["zip"]}</code>',
+            "<code>~/Applications/rNitro.app</code>",
+            "In-app updater (Stable / Beta / Experimental)",
+            "Everything in Beta plus Lab toys (duel, ghost-load, SOC budget, cloak, peer, …). Unstable.",
         ),
         (
             f'<strong style="color:#a78bfa;">CLI</strong> · Terminal',
@@ -1196,10 +1206,10 @@ def how_it_works_section(data: dict) -> str:
 
     flow_rows = [
         ("Pick your platform tab", "macOS, Linux, or Windows — the site auto-detects your OS"),
-        ("Accept Terms &amp; Conditions", "Required once per browser session before any download"),
-        ("Download recommended file", "Green/orange/cyan/gold cards on each tab — sizes shown on buttons"),
+        ("Accept Terms &amp; Conditions", "Required on <strong>every</strong> download — Agree continues, Disagree returns home"),
+        ("Download recommended file", "Green / orange / purple cards (Stable · Beta · Experimental) — sizes shown on buttons"),
         ("Install", "Follow the <strong>How to install</strong> steps below for your tab"),
-        ("Updates", "macOS: in-app prompt → download ZIP → replace app. Linux: checks same <code>version.json</code>. Windows: manual."),
+        ("Updates", "macOS: in-app prompt → download ZIP → replace app (Experimental channel supported). Linux: checks same <code>version.json</code>. Windows: manual."),
         ("GitHub mirror", f"All current builds also on <a href=\"{gh}\" style=\"color:var(--cyan);\">GitHub Releases</a>"),
     ]
 
@@ -1211,7 +1221,7 @@ def how_it_works_section(data: dict) -> str:
 
     return f"""  <div class="channel-compare" style="margin-bottom:14px;">
     <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Platforms &amp; channels at a glance</h2>
-    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">One place to see what each build is, where it installs, and how updates work. New here? <strong style="color:var(--green);">macOS Stable App ZIP</strong> for daily monitoring, or <strong style="color:var(--orange);">macOS Beta App ZIP</strong> if you want every AI provider.</p>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">One place to see what each build is, where it installs, and how updates work. New here? <strong style="color:var(--green);">macOS Stable App ZIP</strong> for daily monitoring, <strong style="color:var(--orange);">Beta</strong> for Lab + every AI provider, or <strong style="color:#b8a0ff;">Experimental</strong> for playground toys.</p>
     <div class="channel-compare-scroll">
       <table class="channel-compare-table how-it-works-table">
         <thead>
@@ -1267,21 +1277,25 @@ def how_it_works_section(data: dict) -> str:
 def stable_beta_compare_section(changelog: dict, data: dict) -> str:
     stable = v.stable_release(data)
     beta = v.beta_release(data)
+    exp = v.experimental_release(data)
     meta = changelog.get("compare", {})
-    title = meta.get("title", "Stable vs Beta")
+    title = meta.get("title", "Stable vs Beta vs Experimental")
     subtitle = meta.get(
         "subtitle",
-        f"New here? Start with the green Recommended Download (App ZIP). "
-        f"{stable['label']} is production-ready; {beta['label']} adds every AI provider and experimental features. "
+        f"Start with Stable ({stable['label']}) App ZIP. "
+        f"{beta['label']} adds Lab + every AI provider. "
+        f"{exp['label']} is the playground — expect breakage. "
         f"Linux pre-release is on the Linux page; Windows is deprecated but downloads remain.",
     )
     rows_html = []
     for row in meta.get("rows", []):
+        exp_cell = row.get("experimental") or row.get("beta", "")
         rows_html.append(
             f"""          <tr>
             <td>{row.get('feature', '')}</td>
             <td style="color:var(--green);">{row.get('stable', '')}</td>
             <td style="color:var(--orange);">{row.get('beta', '')}</td>
+            <td style="color:#b8a0ff;">{exp_cell}</td>
           </tr>"""
         )
     return f"""  <div class="channel-compare">
@@ -1294,6 +1308,7 @@ def stable_beta_compare_section(changelog: dict, data: dict) -> str:
             <th></th>
             <th style="color:var(--green);">{stable['label']}</th>
             <th style="color:var(--orange);">{beta['label']}</th>
+            <th style="color:#b8a0ff;">{exp['label']}</th>
           </tr>
         </thead>
         <tbody>
@@ -1309,8 +1324,9 @@ def chat_kb_platform(data: dict) -> str:
     beta = v.beta_release(data)
     linux = v.linux_release(data)
     linux_gh = v.github_release_page_url(linux["id"])
+    exp = v.experimental_release(data)
     return f"""    {{ label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
-      a: "Scroll to **How everything works** on [getrnitro.netlify.app](https://getrnitro.netlify.app/) for tables covering macOS Stable ({stable['short']}), macOS Beta ({beta['short']}), Linux ({linux['short']}), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta App ZIP for all AI providers. Terms required once per session before download." }},
+      a: "Scroll to **How everything works** on [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/) for tables covering macOS Stable ({stable['short']}), Beta ({beta['short']}), Experimental ({exp['short']}), Linux ({linux['short']}), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta for all AI providers, purple Experimental for playground toys. Terms: Agree or Disagree on every download." }},
     {{ label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
       a: `Windows is no longer actively supported. The last build (${{RNITRO_VERSIONS.windows.id}}) remains on the Windows page — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` }},
     {{ label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
@@ -1320,13 +1336,15 @@ def chat_kb_platform(data: dict) -> str:
 
 
 def chat_whats_new_kb(data: dict, changelog: dict) -> str:
-    """No website changelog — point chat at current channels instead."""
+    """Point chat at current channels + experimental."""
     stable = v.stable_release(data)
     beta = v.beta_release(data)
+    exp = v.experimental_release(data)
     answer = (
-        f"Current macOS builds: Stable {stable['label']} ({stable['id']}) and "
-        f"Beta {beta['label']} ({beta['id']}). All product features are on the download page — "
-        f"there is no public changelog. Use Stable for daily monitoring; Beta for every AI provider."
+        f"Current macOS builds: Stable {stable['label']} ({stable['id']}), "
+        f"Beta {beta['label']} ({beta['id']}), and Experimental {exp['label']} ({exp['id']}). "
+        f"Use Stable for daily monitoring; Beta for every AI provider; Experimental for playground toys. "
+        f"See the Stable vs Beta vs Experimental table on the download page."
     )
     answer_js = json.dumps(answer, ensure_ascii=False)
     kws = [
@@ -1334,6 +1352,8 @@ def chat_whats_new_kb(data: dict, changelog: dict) -> str:
         "what's new",
         beta["short"],
         stable["short"],
+        exp["short"],
+        "experimental",
         "v1.0.0",
         "changelog",
         "version",

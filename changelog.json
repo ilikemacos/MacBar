@@ -161,38 +161,62 @@
     }
   ],
   "compare": {
-    "title": "Stable vs Beta \u2014 which should I download?",
-    "subtitle": "Start with Stable v1.2.0 Final (App ZIP). Beta v1.2.6 adds Lab, Developer Mode, and every AI provider.",
+    "title": "Stable vs Beta vs Experimental \u2014 which should I download?",
+    "subtitle": "Start with Stable App ZIP for daily use. Beta adds Lab + every AI provider. Experimental is the playground (toys) \u2014 expect breakage.",
     "rows": [
       {
         "feature": "Best for",
         "stable": "Daily monitoring + light customization",
-        "beta": "Lab, Dev Mode, every AI provider"
+        "beta": "Lab, Dev Mode, every AI provider",
+        "experimental": "Playground toys \u2014 duel, ghost-load, budget, cloak, etc."
+      },
+      {
+        "feature": "Stability",
+        "stable": "Production-ready",
+        "beta": "Power-user (may change)",
+        "experimental": "Unstable / bleeding edge"
       },
       {
         "feature": "Settings",
-        "stable": "Appearance, Menubar (density/slots), Monitor, Alerts, General + custom UI",
-        "beta": "Same + Lab + Developer Mode + full AI list"
+        "stable": "Appearance, Menubar, Monitor, Alerts, General + custom UI",
+        "beta": "Same + Lab + Developer Mode + full AI list",
+        "experimental": "Everything in Beta + experimental toys UI"
       },
       {
         "feature": "AI chat",
         "stable": "OpenAI + OpenRouter only",
-        "beta": "Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes"
+        "beta": "Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes",
+        "experimental": "Same as Beta"
       },
       {
         "feature": "System Advisor",
         "stable": "Yes",
-        "beta": "Yes"
+        "beta": "Yes",
+        "experimental": "Yes"
       },
       {
         "feature": "Temp notification banners",
         "stable": "No",
-        "beta": "Yes (optional)"
+        "beta": "Yes (optional)",
+        "experimental": "Yes (optional)"
       },
       {
         "feature": "AES-256 key storage",
         "stable": "No",
-        "beta": "Yes (GCM + Keychain)"
+        "beta": "Yes (GCM + Keychain)",
+        "experimental": "Yes (GCM + Keychain)"
+      },
+      {
+        "feature": "In-app updates",
+        "stable": "Stable + Beta choices",
+        "beta": "Stable + Beta choices",
+        "experimental": "Stable + Beta + Experimental"
+      },
+      {
+        "feature": "Terms before download",
+        "stable": "Agree or Disagree on every download",
+        "beta": "Agree or Disagree on every download",
+        "experimental": "Agree or Disagree on every download"
       }
     ]
   }

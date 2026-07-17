@@ -151,48 +151,8 @@
   </div>
   <p class="note">Current releases: v1.2.9 Final (stable) · v1.2.13 Beta (beta). GitHub: <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">ilikemacos/rNitro</a></p>
 </div>
-
-<div id="tc-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:9999; align-items:center; justify-content:center; padding:16px;">
-  <div style="max-width:420px; width:100%; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px 20px;">
-    <h2 style="font-size:18px; margin:0 0 10px;">Terms &amp; Conditions</h2>
-    <p style="color:var(--muted); font-size:14px; line-height:1.55; margin:0 0 12px;">By downloading you agree to the <a href="terms.html" style="color:var(--cyan);">rNitro Terms</a>. Software is provided as-is.</p>
-    <p id="tc-download-file" style="font-family:var(--mono); font-size:12px; color:var(--cyan); margin:0 0 16px;"></p>
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="button" id="tc-disagree-btn" style="background:transparent; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px 14px; font-family:var(--mono); cursor:pointer;">I Disagree</button>
-      <button type="button" id="tc-agree-btn" style="background:var(--green); border:none; color:#000; border-radius:8px; padding:10px 14px; font-family:var(--mono); font-weight:600; cursor:pointer;">I Agree &amp; Download</button>
-    </div>
-  </div>
-</div>
 <script>
-let pendingDownload = null;
-function homeUrl() {
-  const base = (window.__RNITRO_BASE__ || '').replace(/\/$/, '');
-  if (base) return base + '/';
-  const path = window.location.pathname || '/';
-  if (path === '/rnitro' || path.startsWith('/rnitro/')) return '/rnitro/';
-  return '/';
-}
 function requestDownload(filename) {
-  pendingDownload = filename;
-  const label = document.getElementById('tc-download-file');
-  if (label) label.textContent = 'Downloading: ' + filename;
-  const overlay = document.getElementById('tc-overlay');
-  if (overlay) {
-    overlay.style.display = 'flex';
-  }
-}
-function disagreeTcAndGoHome() {
-  pendingDownload = null;
-  const overlay = document.getElementById('tc-overlay');
-  if (overlay) overlay.style.display = 'none';
-  window.location.href = homeUrl();
-}
-document.getElementById('tc-agree-btn')?.addEventListener('click', () => {
-  const overlay = document.getElementById('tc-overlay');
-  if (overlay) overlay.style.display = 'none';
-  if (!pendingDownload) return;
-  const filename = pendingDownload;
-  pendingDownload = null;
   const a = document.createElement('a');
   a.href = filename;
   a.download = filename;
@@ -200,16 +160,7 @@ document.getElementById('tc-agree-btn')?.addEventListener('click', () => {
   document.body.appendChild(a);
   a.click();
   a.remove();
-});
-document.getElementById('tc-disagree-btn')?.addEventListener('click', disagreeTcAndGoHome);
-document.getElementById('tc-overlay')?.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'tc-overlay') disagreeTcAndGoHome();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('tc-overlay')?.style.display === 'flex') {
-    disagreeTcAndGoHome();
-  }
-});
+}
 </script>
 </body>
 </html>
