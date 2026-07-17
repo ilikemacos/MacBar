@@ -30,7 +30,12 @@ def run_installer(script_name: str) -> None:
     if not script.is_file():
         raise SystemExit(f"Missing installer: {script}")
     print(f"Building from {script_name}...")
-    subprocess.run(["bash", str(script)], cwd=SITE, check=True)
+    import os
+
+    env = os.environ.copy()
+    # Quiet packaging: installers open the app by default; skip during release builds.
+    env["RNITRO_NO_LAUNCH"] = "1"
+    subprocess.run(["bash", str(script)], cwd=SITE, check=True, env=env)
 
 
 def app_from_legacy_zip(artifact_name: str, work: Path) -> Path | None:
