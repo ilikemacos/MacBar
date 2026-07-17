@@ -1,8 +1,10 @@
 # Google Search Console — get rNitro into Google
 
 Marketing URL (indexed): **https://chopstickshq.com/rnitro/**  
-FAQ (new): **https://chopstickshq.com/rnitro/faq.html**  
-Download CDN: **https://getrnitro.netlify.app/**
+FAQ: **https://chopstickshq.com/rnitro/faq.html**  
+Terms: **https://chopstickshq.com/rnitro/terms.html**  
+Privacy: **https://chopstickshq.com/rnitro/privacy.html**  
+Download CDN (legacy): **https://getrnitro.netlify.app/** (marketing pages 301 → HQ)
 
 There is **no Search Console API** in this workflow for full verification — do these steps in the browser with the Google account that owns the site.
 
@@ -41,10 +43,24 @@ Use the **HTML file** method if prompted. The file name above must match GSC’s
 1. `https://chopstickshq.com/`
 2. `https://chopstickshq.com/rnitro/`
 3. `https://chopstickshq.com/rnitro/faq.html` ← FAQ + FAQPage schema
-4. `https://chopstickshq.com/rnitro/cli.html`
-5. `https://chopstickshq.com/rnitro/linux.html`
+4. `https://chopstickshq.com/rnitro/terms.html` ← Terms & Conditions
+5. `https://chopstickshq.com/rnitro/privacy.html`
+6. `https://chopstickshq.com/rnitro/cli.html`
+7. `https://chopstickshq.com/rnitro/linux.html`
 
 Google may queue these for hours–days.
+
+### Checklist after deploy (copy/paste)
+
+```
+[ ] GSC property verified (HTML file)
+[ ] Sitemap submitted: https://chopstickshq.com/sitemap.xml
+[ ] Sitemap submitted: https://chopstickshq.com/rnitro/sitemap.xml
+[ ] Request index: /rnitro/
+[ ] Request index: /rnitro/faq.html
+[ ] Request index: /rnitro/terms.html
+[ ] Request index: /rnitro/privacy.html
+```
 
 ## 4. Keywords we target
 

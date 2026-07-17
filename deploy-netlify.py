@@ -355,7 +355,7 @@ def update_chopstickshq_mirror() -> None:
         print("  ⚠ Could not parse HQ deploy id")
         return
     deploy_id = m.group(1)
-    hq_site_id = os.environ.get("RNITRO_HQ_SITE_ID", "3719da87-51a9-432a-9ddb-82d755c50785")
+    hq_site_id = os.environ.get("RNITRO_HQ_SITE_ID", "e9dd9aef-75ac-4bdc-8c0a-b85e5e1449a4")
     promo = subprocess.run(
         [
             str(netlify_bin),

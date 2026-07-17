@@ -51,6 +51,7 @@ WEBSITE_FILES = [
     "archives.html",
     "privacy.html",
     "faq.html",
+    "terms.html",
     "windows.html",
     "linux.html",
     "cli.html",
