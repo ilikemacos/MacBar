@@ -35,6 +35,12 @@
     <priority>0.3</priority>
   </url>
   <url>
+    <loc>https://chopstickshq.com/rnitro/terms.html</loc>
+    <lastmod>2026-07-17</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.35</priority>
+  </url>
+  <url>
     <loc>https://chopstickshq.com/rnitro/archives.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.35</priority>

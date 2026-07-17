@@ -1,6 +1,25 @@
 {
   "whats_new": [
     {
+      "channel": "experimental",
+      "title": "v1.3.6 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Update UX",
+          "text": " \u2014 channel badge, last check time, Check for Updates strip; Later snoozes 24h; release notes from changelog."
+        },
+        {
+          "strong": "Menu bar presets",
+          "text": " \u2014 Laptop / Desktop / Minimal one-click layouts."
+        },
+        {
+          "strong": "Fathom link",
+          "text": " \u2014 battery section opens Fathom (or install page) for drain attribution."
+        }
+      ]
+    },
+    {
       "channel": "beta",
       "title": "v1.2.13 Beta",
       "accent": "orange",

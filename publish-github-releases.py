@@ -73,15 +73,17 @@ def release_notes(data: dict, channel: str) -> str:
     if channel == "experimental":
         lines += [
             "### What’s new in Experimental",
-            "- **Patched a bug** — ⌘Q now quits the menu bar app",
-            "- Everything in Beta, plus duel, ghost-load, SOC budget, meeting cloak, polite peer, toys",
-            "- Unstable playground channel — expect breakage",
+            "- **Update UX** — channel badge, last check time, Check for Updates; Later snoozes 24h; notes from changelog.json",
+            "- **Menu bar presets** — Laptop / Desktop / Minimal one-click layouts",
+            "- **Fathom link** — battery section opens Fathom (or install page) for drain attribution",
+            "- Experimental auto-update channel support (reads `experimental` in version.json)",
+            "- Unstable playground — expect breakage",
             "",
         ]
     lines += [
         f"Also available: [{other['label']}]({v.github_release_page_url(other['id'])})",
         "",
-        "Website with all builds: [getrnitro.netlify.app](https://getrnitro.netlify.app/)",
+        "Website: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/) · CDN: [getrnitro.netlify.app](https://getrnitro.netlify.app/)",
     ]
     return "\n".join(lines)
 

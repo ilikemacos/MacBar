@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="83423812527225e04653241223f3b4188583955ad0399fc2476016ce095b969e"
+EXPECTED_HASH="c70bd926d5c16186cdb97943178f6e950eeab47dece4394065d68a0fab202f0a"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -326,6 +326,8 @@ func verifyBinaryIntegrity() {
 //    so the connection survives normal certificate rotation.
 private let ALLOWED_HOSTS: Set<String> = [
     "getrnitro.netlify.app",
+    "chopstickshq.com",
+    "www.chopstickshq.com",
     "api.coingecko.com"
 ]
 
@@ -373,30 +375,36 @@ class PinnedSession: NSObject, URLSessionDelegate {
 
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
-// Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v1.3.4-Experimental"
+// Compared against version.json (CDN + HQ mirror) on every launch.
+let CURRENT_VERSION = "v1.3.6-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
 let RNITRO_FEATURE_EXPERIMENTAL_UI = (RNITRO_BUILD_CHANNEL == "experimental")
 private let RNITRO_UI_FONT_DEFAULT = "Varela Round"
-let UPDATE_CHECK_URL = URL(string: "https://getrnitro.netlify.app/version.json")!
-let UPDATE_PAGE_URL  = URL(string: "https://getrnitro.netlify.app")!
+// Prefer HQ (canonical product site we control) then getrnitro CDN.
+let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/rnitro/version.json")!
+private let UPDATE_CHECK_URL_FALLBACK = URL(string: "https://getrnitro.netlify.app/version.json")!
+let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/rnitro/")!
+private let UPDATE_CDN_ORIGIN = "https://getrnitro.netlify.app"
 
 struct VersionInfo: Decodable {
     let latest: String
     let beta: String?
+    let experimental: String?
     let windows: String?
 }
 
 private struct VersionManifest: Decodable {
     let latest: String
     let beta: String?
+    let experimental: String?
     let releases: ReleaseMap
 
     struct ReleaseMap: Decodable {
         let stable: Channel
         let beta: Channel
+        let experimental: Channel?
     }
 
     struct Channel: Decodable {
@@ -406,7 +414,78 @@ private struct VersionManifest: Decodable {
     func zipName(for versionId: String) -> String {
         if versionId == latest { return releases.stable.zip }
         if let beta, versionId == beta { return releases.beta.zip }
+        if let experimental, versionId == experimental, let expZip = releases.experimental?.zip {
+            return expZip
+        }
+        // Common fallback when manifest omits a channel but the ZIP naming is consistent.
         return "rNitro-\(versionId).zip"
+    }
+}
+
+/// Observable status for Settings → General (channel, last check, snooze).
+final class UpdateStatusStore: ObservableObject {
+    static let shared = UpdateStatusStore()
+    private let lastCheckKey = "rnitro.update.lastCheckAt"
+    private let snoozeUntilKey = "rnitro.update.snoozeUntil"
+    private let snoozeVersionsKey = "rnitro.update.snoozeVersions"
+
+    @Published private(set) var lastCheckAt: Date?
+    @Published private(set) var lastCheckLabel: String = "Never checked"
+
+    private init() {
+        let ts = UserDefaults.standard.double(forKey: lastCheckKey)
+        if ts > 0 {
+            lastCheckAt = Date(timeIntervalSince1970: ts)
+            refreshLabel()
+        }
+    }
+
+    func markChecked() {
+        let now = Date()
+        lastCheckAt = now
+        UserDefaults.standard.set(now.timeIntervalSince1970, forKey: lastCheckKey)
+        refreshLabel()
+    }
+
+    func refreshLabel() {
+        guard let d = lastCheckAt else {
+            lastCheckLabel = "Never checked"
+            return
+        }
+        let fmt = RelativeDateTimeFormatter()
+        fmt.unitsStyle = .short
+        lastCheckLabel = "Checked \(fmt.localizedString(for: d, relativeTo: Date()))"
+    }
+
+    /// Snooze auto-prompt for these version ids until `until`.
+    func snooze(versions: [String], hours: Double = 24) {
+        let ids = versions.filter { !$0.isEmpty }
+        UserDefaults.standard.set(ids, forKey: snoozeVersionsKey)
+        UserDefaults.standard.set(Date().addingTimeInterval(hours * 3600).timeIntervalSince1970, forKey: snoozeUntilKey)
+    }
+
+    func isSnoozed(versions: [String]) -> Bool {
+        let until = UserDefaults.standard.double(forKey: snoozeUntilKey)
+        guard until > Date().timeIntervalSince1970 else { return false }
+        let saved = Set(UserDefaults.standard.stringArray(forKey: snoozeVersionsKey) ?? [])
+        let relevant = Set(versions.filter { !$0.isEmpty })
+        return !relevant.isEmpty && relevant.isSubset(of: saved)
+    }
+
+    var channelDisplayName: String {
+        switch RNITRO_BUILD_CHANNEL {
+        case "experimental": return "Experimental"
+        case "beta": return "Beta"
+        default: return "Stable"
+        }
+    }
+
+    var channelTint: Color {
+        switch RNITRO_BUILD_CHANNEL {
+        case "experimental": return Color(red: 0.62, green: 0.48, blue: 1.0)
+        case "beta": return Color(red: 1.0, green: 0.55, blue: 0.1)
+        default: return Color(red: 0.2, green: 0.85, blue: 0.45)
+        }
     }
 }
 
@@ -428,9 +507,10 @@ enum UpdateChecker {
         return nums
     }
 
-    // Channel rank: stable/final < beta so equal numeric bases don't thrash.
+    // Channel rank: stable/final < beta < experimental so equal numeric bases don't thrash.
     private static func channelRank(_ id: String) -> Int {
         let s = id.lowercased()
+        if s.contains("experimental") || s.contains("-exp") { return 3 }
         if s.contains("beta") { return 2 }
         if s.contains("final") || s.contains("reloaded") || s.contains("stable") { return 1 }
         return 0
@@ -458,27 +538,96 @@ enum UpdateChecker {
             .replacingOccurrences(of: "-Final-Reloaded", with: " Final Reloaded")
             .replacingOccurrences(of: "-Beta-Reloaded", with: " Beta Reloaded")
             .replacingOccurrences(of: "-RELOADED", with: " RELOADED")
+            .replacingOccurrences(of: "-Experimental", with: " Experimental")
             .replacingOccurrences(of: "-Final", with: " Final")
             .replacingOccurrences(of: "-Beta", with: " Beta")
             .replacingOccurrences(of: "-beta", with: " beta")
     }
 
-    private static func fetchVersionInfo(completion: @escaping (VersionInfo?) -> Void) {
-        var req = URLRequest(url: UPDATE_CHECK_URL)
-        req.cachePolicy = .reloadIgnoringLocalCacheData
-        req.timeoutInterval = 12
-        PinnedSession.shared.dataTask(with: req) { data, _, _ in
-            if let data = data, let info = try? JSONDecoder().decode(VersionInfo.self, from: data) {
-                completion(info)
+    private static func decodeVersionInfo(_ data: Data) -> VersionInfo? {
+        try? JSONDecoder().decode(VersionInfo.self, from: data)
+    }
+
+    /// Short bullet lines from site changelog.json for a version / channel.
+    static func changelogBlurb(for versionId: String, channel: String, completion: @escaping (String?) -> Void) {
+        let urls = [
+            URL(string: "https://chopstickshq.com/rnitro/changelog.json")!,
+            URL(string: "https://getrnitro.netlify.app/changelog.json")!,
+        ]
+        func tryFetch(_ i: Int) {
+            guard i < urls.count else {
+                completion(nil)
                 return
             }
+            var req = URLRequest(url: urls[i])
+            req.cachePolicy = .reloadIgnoringLocalCacheData
+            req.timeoutInterval = 8
             URLSession.shared.dataTask(with: req) { data, _, _ in
-                if let data = data, let info = try? JSONDecoder().decode(VersionInfo.self, from: data) {
-                    completion(info)
-                } else {
+                guard let data = data,
+                      let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let items = obj["whats_new"] as? [[String: Any]] else {
+                    tryFetch(i + 1)
+                    return
+                }
+                let vLower = versionId.lowercased()
+                let chLower = channel.lowercased()
+                let match = items.first { entry in
+                    let title = (entry["title"] as? String ?? "").lowercased()
+                    let ch = (entry["channel"] as? String ?? "").lowercased()
+                    return title.contains(vLower.replacingOccurrences(of: "v", with: ""))
+                        || (ch == chLower && title.contains(versionNumbers(versionId).map(String.init).joined(separator: ".")))
+                } ?? items.first { ($0["channel"] as? String ?? "").lowercased() == chLower }
+                guard let match else {
                     completion(nil)
+                    return
+                }
+                let bullets = (match["items"] as? [[String: Any]] ?? []).prefix(3).compactMap { row -> String? in
+                    let strong = row["strong"] as? String ?? ""
+                    let text = row["text"] as? String ?? ""
+                    let line = (strong + text).trimmingCharacters(in: .whitespacesAndNewlines)
+                    return line.isEmpty ? nil : "• \(line)"
+                }
+                completion(bullets.isEmpty ? nil : bullets.joined(separator: "\n"))
+            }.resume()
+        }
+        tryFetch(0)
+    }
+
+    private static func fetchVersionInfo(completion: @escaping (VersionInfo?) -> Void) {
+        fetchVersionInfo(urls: [UPDATE_CHECK_URL, UPDATE_CHECK_URL_FALLBACK], completion: completion)
+    }
+
+    private static func fetchVersionInfo(urls: [URL], completion: @escaping (VersionInfo?) -> Void) {
+        guard let url = urls.first else {
+            DispatchQueue.main.async { UpdateStatusStore.shared.markChecked() }
+            completion(nil)
+            return
+        }
+        let rest = Array(urls.dropFirst())
+        var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.timeoutInterval = 12
+        let finish: (VersionInfo?) -> Void = { info in
+            DispatchQueue.main.async { UpdateStatusStore.shared.markChecked() }
+            completion(info)
+        }
+        let tryShared: () -> Void = {
+            URLSession.shared.dataTask(with: req) { data, _, _ in
+                if let data = data, let info = decodeVersionInfo(data) {
+                    finish(info)
+                } else if !rest.isEmpty {
+                    fetchVersionInfo(urls: rest, completion: completion)
+                } else {
+                    finish(nil)
                 }
             }.resume()
+        }
+        PinnedSession.shared.dataTask(with: req) { data, _, _ in
+            if let data = data, let info = decodeVersionInfo(data) {
+                finish(info)
+                return
+            }
+            tryShared()
         }.resume()
     }
 
@@ -505,7 +654,7 @@ enum UpdateChecker {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             let alert = NSAlert()
             alert.messageText = "Previous Update Did Not Complete"
-            alert.informativeText = detail + "\n\nCheck ~/Library/Logs/rNitro/update.log or download the App ZIP from getrnitro.netlify.app."
+            alert.informativeText = detail + "\n\nCheck ~/Library/Logs/rNitro/update.log or download the App ZIP from chopstickshq.com/rnitro."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open Website")
             alert.addButton(withTitle: "OK")
@@ -521,7 +670,7 @@ enum UpdateChecker {
                 guard let info = info else {
                     let alert = NSAlert()
                     alert.messageText = "Could Not Check for Updates"
-                    alert.informativeText = "Could not reach getrnitro.netlify.app. Check your internet connection and try again."
+                    alert.informativeText = "Could not reach the update server (getrnitro / chopstickshq). Check your internet connection and try again."
                     alert.alertStyle = .warning
                     alert.runModal()
                     return
@@ -542,10 +691,34 @@ enum UpdateChecker {
     private static func evaluateRemoteVersions(_ info: VersionInfo, manual: Bool) {
         let stableRemote = info.latest
         let betaRemote = info.beta ?? ""
+        let expRemote = info.experimental ?? ""
         let stableNewer = isNewer(stableRemote, than: CURRENT_VERSION)
         let betaNewer = !betaRemote.isEmpty && isNewer(betaRemote, than: CURRENT_VERSION)
+        let expNewer = !expRemote.isEmpty && isNewer(expRemote, than: CURRENT_VERSION)
+
+        // Auto-prompt only for channels this build cares about (avoids Stable users
+        // being nagged about Experimental playground builds).
+        let autoRelevant: Bool
+        switch RNITRO_BUILD_CHANNEL {
+        case "experimental":
+            autoRelevant = expNewer
+        case "beta":
+            autoRelevant = stableNewer || betaNewer
+        default:
+            autoRelevant = stableNewer || betaNewer
+        }
+
+        // Snooze fingerprint: versions that would be offered on auto-prompt for this channel.
+        var offerIds: [String] = []
+        if stableNewer { offerIds.append(stableRemote) }
+        if betaNewer { offerIds.append(betaRemote) }
+        if expNewer { offerIds.append(expRemote) }
+        if !manual, autoRelevant, UpdateStatusStore.shared.isSnoozed(versions: offerIds) {
+            return
+        }
+
         let onMain = { () -> Void in
-            if !stableNewer && !betaNewer {
+            if !stableNewer && !betaNewer && !expNewer {
                 if manual {
                     let alert = NSAlert()
                     alert.messageText = "You're Up to Date"
@@ -555,18 +728,55 @@ enum UpdateChecker {
                 }
                 return
             }
-            presentUpdateChoice(stable: stableRemote, beta: betaRemote,
-                                stableNewer: stableNewer, betaNewer: betaNewer)
+            // Manual check can switch channels; launch prompt only when autoRelevant.
+            if !manual && !autoRelevant { return }
+            presentUpdateChoice(
+                stable: stableRemote, beta: betaRemote, experimental: expRemote,
+                stableNewer: stableNewer, betaNewer: betaNewer, expNewer: expNewer,
+                snoozeIds: offerIds
+            )
         }
         if manual {
             onMain()
-        } else if stableNewer || betaNewer {
+        } else if autoRelevant {
             DispatchQueue.main.async(execute: onMain)
         }
     }
 
-    private static func presentUpdateChoice(stable: String, beta: String,
-                                            stableNewer: Bool, betaNewer: Bool) {
+    private static func presentUpdateChoice(stable: String, beta: String, experimental: String,
+                                            stableNewer: Bool, betaNewer: Bool, expNewer: Bool,
+                                            snoozeIds: [String]) {
+        // Prefer notes for the newest channel on this build.
+        let noteVersion: String
+        let noteChannel: String
+        if RNITRO_FEATURE_EXPERIMENTAL_UI && expNewer {
+            noteVersion = experimental; noteChannel = "experimental"
+        } else if RNITRO_FEATURE_BETA_UI && betaNewer {
+            noteVersion = beta; noteChannel = "beta"
+        } else if stableNewer {
+            noteVersion = stable; noteChannel = "stable"
+        } else if !experimental.isEmpty && RNITRO_FEATURE_EXPERIMENTAL_UI {
+            noteVersion = experimental; noteChannel = "experimental"
+        } else if !beta.isEmpty {
+            noteVersion = beta; noteChannel = "beta"
+        } else {
+            noteVersion = stable; noteChannel = "stable"
+        }
+
+        changelogBlurb(for: noteVersion, channel: noteChannel) { blurb in
+            DispatchQueue.main.async {
+                showUpdateAlert(
+                    stable: stable, beta: beta, experimental: experimental,
+                    stableNewer: stableNewer, betaNewer: betaNewer, expNewer: expNewer,
+                    notes: blurb, snoozeIds: snoozeIds
+                )
+            }
+        }
+    }
+
+    private static func showUpdateAlert(stable: String, beta: String, experimental: String,
+                                        stableNewer: Bool, betaNewer: Bool, expNewer: Bool,
+                                        notes: String?, snoozeIds: [String]) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "rNitro Update Available"
@@ -578,40 +788,62 @@ enum UpdateChecker {
         }
         if !beta.isEmpty {
             if betaNewer {
-                lines.append("• Beta \(displayLabel(beta)) is available (all AI providers + experimental features).")
+                lines.append("• Beta \(displayLabel(beta)) is available (power-user Lab + AI providers).")
             } else {
                 lines.append("• Beta: \(displayLabel(beta)) (switch to beta channel).")
             }
+        }
+        if !experimental.isEmpty {
+            if expNewer {
+                lines.append("• Experimental \(displayLabel(experimental)) is available (playground / toys).")
+            } else {
+                lines.append("• Experimental: \(displayLabel(experimental)) (switch to experimental).")
+            }
+        }
+        if let notes, !notes.isEmpty {
+            lines.append("\nWhat's new:")
+            lines.append(notes)
         }
         lines.append("\nPick which build to download and install. rNitro will restart when done.")
         alert.informativeText = lines.joined(separator: "\n")
         alert.alertStyle = .informational
 
-        let installStable = "Install Stable"
-        let installBeta = beta.isEmpty ? nil : "Install Beta"
-        let betaFirst = RNITRO_FEATURE_BETA_UI && betaNewer && installBeta != nil
-        if betaFirst, let installBeta {
-            alert.addButton(withTitle: installBeta)
-            alert.addButton(withTitle: installStable)
-        } else {
-            alert.addButton(withTitle: installStable)
-            if let installBeta {
-                alert.addButton(withTitle: installBeta)
+        // Prefer the channel this build is on when that channel has an update.
+        enum Choice { case experimental, beta, stable }
+        var order: [Choice] = []
+        if RNITRO_FEATURE_EXPERIMENTAL_UI && expNewer && !experimental.isEmpty {
+            order.append(.experimental)
+        }
+        if RNITRO_FEATURE_BETA_UI && betaNewer && !beta.isEmpty {
+            order.append(.beta)
+        }
+        order.append(.stable)
+        if !order.contains(.beta), !beta.isEmpty { order.append(.beta) }
+        if !order.contains(.experimental), !experimental.isEmpty { order.append(.experimental) }
+
+        // Cap at 3 install buttons + Later so the alert stays usable.
+        order = Array(order.prefix(3))
+        for choice in order {
+            switch choice {
+            case .experimental: alert.addButton(withTitle: "Install Experimental")
+            case .beta: alert.addButton(withTitle: "Install Beta")
+            case .stable: alert.addButton(withTitle: "Install Stable")
             }
         }
         alert.addButton(withTitle: "Later")
 
         let response = alert.runModal()
-        if betaFirst {
-            if response == .alertFirstButtonReturn {
-                UpdateInstaller.install(remoteVersion: beta)
-            } else if response == .alertSecondButtonReturn {
-                UpdateInstaller.install(remoteVersion: stable)
-            }
-        } else if response == .alertFirstButtonReturn {
-            UpdateInstaller.install(remoteVersion: stable)
-        } else if installBeta != nil && response == .alertSecondButtonReturn {
-            UpdateInstaller.install(remoteVersion: beta)
+        // NSAlert buttons: first = 1000, second = 1001, …
+        let idx = response.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
+        if idx < 0 || idx >= order.count {
+            // Later (or closed) — snooze these offers for 24h.
+            UpdateStatusStore.shared.snooze(versions: snoozeIds, hours: 24)
+            return
+        }
+        switch order[idx] {
+        case .experimental: UpdateInstaller.install(remoteVersion: experimental)
+        case .beta: UpdateInstaller.install(remoteVersion: beta)
+        case .stable: UpdateInstaller.install(remoteVersion: stable)
         }
     }
 }
@@ -656,21 +888,41 @@ enum UpdateInstaller {
     }
 
     static func zipURL(for zipName: String) -> URL {
-        URL(string: "https://getrnitro.netlify.app/\(zipName)")!
+        URL(string: "\(UPDATE_CDN_ORIGIN)/\(zipName)")!
+    }
+
+    /// Prefer CDN; fall back to HQ product path if the CDN host is unreachable.
+    private static func zipCandidates(for zipName: String) -> [URL] {
+        let encoded = zipName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? zipName
+        return [
+            URL(string: "\(UPDATE_CDN_ORIGIN)/\(encoded)")!,
+            URL(string: "https://chopstickshq.com/rnitro/\(encoded)")!,
+        ]
     }
 
     private static func fetchManifest() -> VersionManifest? {
         let sem = DispatchSemaphore(value: 0)
         var manifest: VersionManifest?
-        var req = URLRequest(url: UPDATE_CHECK_URL)
-        req.cachePolicy = .reloadIgnoringLocalCacheData
-        req.timeoutInterval = 12
-        URLSession.shared.dataTask(with: req) { data, _, _ in
-            if let data = data {
-                manifest = try? JSONDecoder().decode(VersionManifest.self, from: data)
+        let urls = [UPDATE_CHECK_URL, UPDATE_CHECK_URL_FALLBACK]
+        func tryNext(_ i: Int) {
+            guard i < urls.count else {
+                sem.signal()
+                return
             }
-            sem.signal()
-        }.resume()
+            var req = URLRequest(url: urls[i])
+            req.cachePolicy = .reloadIgnoringLocalCacheData
+            req.timeoutInterval = 12
+            URLSession.shared.dataTask(with: req) { data, _, _ in
+                if let data = data,
+                   let decoded = try? JSONDecoder().decode(VersionManifest.self, from: data) {
+                    manifest = decoded
+                    sem.signal()
+                } else {
+                    tryNext(i + 1)
+                }
+            }.resume()
+        }
+        tryNext(0)
         sem.wait()
         return manifest
     }
@@ -803,29 +1055,48 @@ enum UpdateInstaller {
         let sem = DispatchSemaphore(value: 0)
         var dlError: Error?
         var httpStatus = 0
-        var req = URLRequest(url: zipURL(for: zipName))
-        req.cachePolicy = .reloadIgnoringLocalCacheData
-        req.timeoutInterval = 180
-        let task = URLSession.shared.downloadTask(with: req) { tempURL, resp, error in
-            dlError = error
-            if let http = resp as? HTTPURLResponse { httpStatus = http.statusCode }
-            guard error == nil, let tempURL = tempURL else { sem.signal(); return }
-            do {
-                if fm.fileExists(atPath: zipFile.path) { try fm.removeItem(at: zipFile) }
-                try fm.moveItem(at: tempURL, to: zipFile)
-            } catch {
-                dlError = error
+        let candidates = zipCandidates(for: zipName)
+        func downloadNext(_ i: Int) {
+            guard i < candidates.count else {
+                sem.signal()
+                return
             }
-            sem.signal()
+            let url = candidates[i]
+            log("Downloading from \(url.absoluteString)")
+            var req = URLRequest(url: url)
+            req.cachePolicy = .reloadIgnoringLocalCacheData
+            req.timeoutInterval = 180
+            let task = URLSession.shared.downloadTask(with: req) { tempURL, resp, error in
+                let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
+                if error == nil, let tempURL = tempURL, status == 0 || status == 200 {
+                    do {
+                        if fm.fileExists(atPath: zipFile.path) { try fm.removeItem(at: zipFile) }
+                        try fm.moveItem(at: tempURL, to: zipFile)
+                        dlError = nil
+                        httpStatus = status == 0 ? 200 : status
+                        sem.signal()
+                        return
+                    } catch {
+                        dlError = error
+                        httpStatus = status
+                    }
+                } else {
+                    dlError = error
+                    httpStatus = status
+                    log("Download candidate failed status=\(status) err=\(error?.localizedDescription ?? "none")")
+                }
+                downloadNext(i + 1)
+            }
+            downloadProgressObservation = task.progress.observe(\.fractionCompleted, options: [.new]) { progress, _ in
+                updateDownloadProgress(
+                    received: Int(progress.completedUnitCount),
+                    expected: Int(progress.totalUnitCount),
+                    version: remoteVersion
+                )
+            }
+            task.resume()
         }
-        downloadProgressObservation = task.progress.observe(\.fractionCompleted, options: [.new]) { progress, _ in
-            updateDownloadProgress(
-                received: Int(progress.completedUnitCount),
-                expected: Int(progress.totalUnitCount),
-                version: remoteVersion
-            )
-        }
-        task.resume()
+        downloadNext(0)
         sem.wait()
         downloadProgressObservation = nil
 
@@ -835,7 +1106,7 @@ enum UpdateInstaller {
         }
         if httpStatus != 0 && httpStatus != 200 {
             log("HTTP \(httpStatus) for \(zipName)")
-            return .failure("Server returned HTTP \(httpStatus) for \(zipName). Download the App ZIP manually from getrnitro.netlify.app.")
+            return .failure("Server returned HTTP \(httpStatus) for \(zipName). Download the App ZIP manually from chopstickshq.com/rnitro.")
         }
         guard fm.fileExists(atPath: zipFile.path) else {
             return .failure("Download did not save \(zipName). Try again or use the website.")
@@ -6094,6 +6365,22 @@ struct SettingsMenubarSection: View {
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("menubar.subtitle"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Text(display.tr("menubar.presets"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                HStack(spacing: 8) {
+                    ForEach(MenuBarPreset.allCases) { preset in
+                        Button(preset.label) {
+                            MenuBarConfig.applyPreset(preset)
+                            menuBarLayoutRaw = MenuBarConfig.layout.rawValue
+                            slotOrderTick += 1
+                        }
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+                Text(display.tr("menubar.presets.hint"))
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Picker(display.tr("menubar.layout"), selection: $menuBarLayoutRaw) {
                     ForEach(MenuBarLayout.allCases) { layout in
                         Text(layout.label).tag(layout.rawValue)
@@ -6356,6 +6643,7 @@ struct SettingsGeneralSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var devMode = DeveloperModeStore.shared
+    @ObservedObject private var updateStatus = UpdateStatusStore.shared
     @State private var launchAtLogin = LaunchAtLoginManager.isEnabled()
 
     var body: some View {
@@ -6363,6 +6651,44 @@ struct SettingsGeneralSection: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(display.tr("general.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
+                // Channel + updates strip
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text(display.tr("general.channel"))
+                            .font(rNitroFont(.caption, metrics: metrics))
+                            .foregroundColor(.secondary)
+                        Text(updateStatus.channelDisplayName)
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .bold))
+                            .foregroundColor(updateStatus.channelTint)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(updateStatus.channelTint.opacity(0.15))
+                            .clipShape(Capsule())
+                        Spacer(minLength: 4)
+                        Text(UpdateChecker.displayLabel(CURRENT_VERSION))
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                            .foregroundColor(.primary.opacity(0.85))
+                    }
+                    Text(updateStatus.lastCheckLabel)
+                        .font(rNitroFont(.caption, metrics: metrics))
+                        .foregroundColor(.secondary)
+                    HStack(spacing: 10) {
+                        MinimalButton(title: display.tr("general.checkUpdates"), action: {
+                            updateStatus.refreshLabel()
+                            UpdateChecker.checkManually()
+                        })
+                        if let url = URL(string: "https://chopstickshq.com/rnitro/") {
+                            Button(display.tr("general.openSite")) {
+                                NSWorkspace.shared.open(url)
+                            }
+                            .font(rNitroFont(.caption, metrics: metrics))
+                            .buttonStyle(.plain)
+                            .foregroundColor(.accent)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color.primary.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 if #available(macOS 13.0, *) {
                     Toggle(isOn: $launchAtLogin) {
                         Text(display.tr("general.launchAtLogin")).font(rNitroFont(.label, metrics: metrics))
@@ -6419,12 +6745,14 @@ struct SettingsGeneralSection: View {
                 }
                 MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
                 MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
-                MinimalButton(title: display.tr("general.checkUpdates"), action: { UpdateChecker.checkManually() })
                 MinimalButton(title: display.tr("general.launchCLI"), action: { CLIIntegration.copyLaunchCommand() })
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
-        .onAppear { launchAtLogin = LaunchAtLoginManager.isEnabled() }
+        .onAppear {
+            launchAtLogin = LaunchAtLoginManager.isEnabled()
+            updateStatus.refreshLabel()
+        }
     }
 }
 
@@ -8261,6 +8589,10 @@ final class DisplayPreferencesStore: ObservableObject {
         "font.medium": "Medium",
         "font.small": "Small",
         "font.xlarge": "Extra Large",
+        "fathom.discover": "See battery drain attribution (Fathom)",
+        "fathom.hint": "Fathom attributes which apps drain battery — opens the app if installed, otherwise the download page.",
+        "fathom.open": "Open Fathom — battery drain attribution",
+        "general.channel": "Channel",
         "general.checkUpdates": "Check for Updates",
         "general.compileFarm": "Compile-farm mode",
         "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
@@ -8275,8 +8607,14 @@ final class DisplayPreferencesStore: ObservableObject {
         "general.launchAtLogin": "Launch at Login",
         "general.launchAtLogin.req": "Launch at Login requires macOS 13 or later.",
         "general.launchCLI": "Launch CLI",
+        "general.openSite": "Open website",
         "general.title": "General",
         "general.version": "Version",
+        "menubar.preset.desktop": "Desktop",
+        "menubar.preset.laptop": "Laptop",
+        "menubar.preset.minimal": "Minimal",
+        "menubar.presets": "Presets",
+        "menubar.presets.hint": "Laptop = CPU · Temp · Battery · Power. Desktop = CPU · Temp · RAM · Power · Network. Minimal = CPU only.",
         "lab.alibi": "Process alibi",
         "lab.alibi.copy": "Copy alibi",
         "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
@@ -9814,6 +10152,60 @@ enum MenuBarLayout: String, CaseIterable, Identifiable {
     }
 }
 
+/// One-click menu bar layouts (Settings → Menubar).
+enum MenuBarPreset: String, CaseIterable, Identifiable {
+    case laptop, desktop, minimal
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .laptop: return DisplayPreferencesStore.shared.tr("menubar.preset.laptop")
+        case .desktop: return DisplayPreferencesStore.shared.tr("menubar.preset.desktop")
+        case .minimal: return DisplayPreferencesStore.shared.tr("menubar.preset.minimal")
+        }
+    }
+
+    var slots: [MenuBarSlot] {
+        switch self {
+        case .laptop: return [.cpu, .temp, .battery, .power]
+        case .desktop: return [.cpu, .temp, .ram, .power, .network]
+        case .minimal: return [.cpu]
+        }
+    }
+
+    var layout: MenuBarLayout {
+        switch self {
+        case .laptop: return .inline
+        case .desktop: return .inline
+        case .minimal: return .minimal
+        }
+    }
+}
+
+/// Cross-link to Fathom (battery drain attribution) from Monitor → Battery.
+enum FathomLink {
+    static let bundleId = "com.chopstickshq.fathom"
+    static let siteURL = URL(string: "https://chopstickshq.com/fathom/")!
+
+    static var isInstalled: Bool {
+        if #available(macOS 12.0, *) {
+            return NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) != nil
+        }
+        return false
+    }
+
+    static func openOrInstall() {
+        if #available(macOS 12.0, *),
+           let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) {
+            let cfg = NSWorkspace.OpenConfiguration()
+            NSWorkspace.shared.openApplication(at: appURL, configuration: cfg, completionHandler: nil)
+            return
+        }
+        NSWorkspace.shared.open(siteURL)
+    }
+}
+
 enum MenuBarConfig {
     static let defaultSlots: [MenuBarSlot] = [.cpu, .temp, .power]
 
@@ -9843,6 +10235,18 @@ enum MenuBarConfig {
             }
         }
         return defaultSlots
+    }
+
+    static func setEnabledSlots(_ slots: [MenuBarSlot]) {
+        var next = slots
+        if next.isEmpty { next = [.cpu] }
+        UserDefaults.standard.set(next.map(\.rawValue), forKey: MonitorPreferences.menuBarSlotsKey)
+        NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+    }
+
+    static func applyPreset(_ preset: MenuBarPreset) {
+        setEnabledSlots(preset.slots)
+        setLayout(preset.layout)
     }
 
     static func setSlot(_ slot: MenuBarSlot, enabled: Bool) {
@@ -11748,6 +12152,28 @@ struct MonitorBatterySectionView: View {
                     value: display.tr("row.on"),
                     valueColor: Color(red: 0.55, green: 0.88, blue: 0.42)
                 )
+            }
+            if bat.isPresent {
+                Button {
+                    FathomLink.openOrInstall()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "leaf.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(FathomLink.isInstalled
+                             ? display.tr("fathom.open")
+                             : display.tr("fathom.discover"))
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        Spacer(minLength: 0)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                    .foregroundColor(Color(red: 0.35, green: 0.78, blue: 0.55))
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.plain)
+                .help(display.tr("fathom.hint"))
             }
             PowerGraphView(
                 history: m.powerHistory,
@@ -15105,8 +15531,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.4-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.4-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.6-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.6-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
