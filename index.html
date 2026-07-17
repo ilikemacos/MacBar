@@ -2371,7 +2371,7 @@
       <span>I have read and agree to the Terms and Conditions</span>
     </label>
     <div class="tc-modal-actions">
-      <button type="button" class="btn btn-secondary" onclick="closeTcModal()">Cancel</button>
+      <button type="button" class="btn btn-secondary" id="tc-disagree-btn" onclick="disagreeTcAndGoHome()">I Disagree</button>
       <button type="button" id="tc-agree-btn" class="btn btn-primary" disabled onclick="confirmTcAndDownload()">I Agree &amp; Download</button>
     </div>
   </div>
@@ -2544,8 +2544,18 @@
   }
 
   // ── Terms-gated downloads ────────────────────────────────────────────────
+  // Every download / curl-copy opens the T&C modal. Agree continues; Disagree → home.
   let pendingDownloadUrl = null;
   let pendingCopyCurl = null;
+
+  function homeUrl() {
+    const base = (window.__RNITRO_BASE__ || '').replace(/\/$/, '');
+    if (base) return base + '/';
+    // Product pages live under /rnitro on HQ; root site uses /
+    const path = window.location.pathname || '/';
+    if (path === '/rnitro' || path.startsWith('/rnitro/')) return '/rnitro/';
+    return '/';
+  }
 
   function platformForDownload(url) {
     const name = url.toLowerCase();
@@ -2628,23 +2638,27 @@
     document.body.removeChild(a);
   }
 
-  function requestDownload(url) {
-    if (sessionStorage.getItem('rnitro_tc_accepted') === '1') {
-      triggerFileDownload(url);
-      return;
-    }
-    pendingDownloadUrl = url;
+  function openTcModal(forLabel) {
     const agree = document.getElementById('tc-agree');
     const overlay = document.getElementById('tc-overlay');
-    if (!agree || !overlay) {
-      triggerFileDownload(url);
-      return;
-    }
-    updateTcModalContext(url);
+    if (!agree || !overlay) return false;
+    if (forLabel) updateTcModalContext(forLabel);
     agree.checked = false;
     updateTcAgreeButton();
     overlay.classList.add('open');
     document.getElementById('tc-agree-btn')?.focus();
+    return true;
+  }
+
+  function requestDownload(url) {
+    pendingDownloadUrl = url;
+    pendingCopyCurl = null;
+    // Always show T&C for every download (no session skip).
+    if (!openTcModal(url)) {
+      // Modal missing (broken page) — do not silently download.
+      alert('Please accept the Terms and Conditions before downloading.');
+      return;
+    }
   }
 
   function updateTcAgreeButton() {
@@ -2657,19 +2671,28 @@
     document.getElementById('tc-overlay')?.classList.remove('open');
     clearTcModalContext();
     pendingDownloadUrl = null;
+    pendingCopyCurl = null;
+  }
+
+  /** Disagree: clear pending download and return to the product home page. */
+  function disagreeTcAndGoHome() {
+    try { sessionStorage.removeItem('rnitro_tc_accepted'); } catch (e) {}
+    closeTcModal();
+    window.location.href = homeUrl();
   }
 
   function confirmTcAndDownload() {
     const agree = document.getElementById('tc-agree');
     if (!agree?.checked) return;
-    sessionStorage.setItem('rnitro_tc_accepted', '1');
+    try { sessionStorage.setItem('rnitro_tc_accepted', '1'); } catch (e) {}
     document.getElementById('tc-overlay')?.classList.remove('open');
     clearTcModalContext();
     if (pendingCopyCurl) {
       const which = pendingCopyCurl;
       pendingCopyCurl = null;
       pendingDownloadUrl = null;
-      copyCurlCmd(which);
+      // Proceed with copy without re-opening the modal (already agreed this click).
+      _copyCurlCmdUnlocked(which);
       return;
     }
     if (!pendingDownloadUrl) return;
@@ -2682,11 +2705,12 @@
     const overlay = document.getElementById('tc-overlay');
     if (overlay) {
       overlay.addEventListener('click', function(e) {
-        if (e.target === this) closeTcModal();
+        // Click outside modal = disagree → home
+        if (e.target === this) disagreeTcAndGoHome();
       });
     }
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && overlay?.classList.contains('open')) closeTcModal();
+      if (e.key === 'Escape' && overlay?.classList.contains('open')) disagreeTcAndGoHome();
     });
     if (location.protocol === 'file:') {
       document.documentElement.classList.add('file-protocol');
@@ -2762,20 +2786,7 @@
     }, 600);
   }
 
-    function copyCurlCmd(which) {
-    if (sessionStorage.getItem('rnitro_tc_accepted') !== '1') {
-      pendingCopyCurl = which;
-      pendingDownloadUrl = null;
-      const agree = document.getElementById('tc-agree');
-      const overlay = document.getElementById('tc-overlay');
-      if (agree && overlay) {
-        updateTcModalContext(which + ' curl');
-        agree.checked = false;
-        updateTcAgreeButton();
-        overlay.classList.add('open');
-        return;
-      }
-    }
+  function _copyCurlCmdUnlocked(which) {
     let rel = RNITRO_VERSIONS.stable;
     if (which === 'beta') rel = RNITRO_VERSIONS.beta;
     else if (which === 'experimental') rel = RNITRO_VERSIONS.experimental;
@@ -2784,10 +2795,21 @@
     const cmd = rel?.curlInstall || '';
     navigator.clipboard.writeText(cmd).then(() => {
       const toast = document.getElementById('toast');
+      if (!toast) return;
       toast.textContent = '✓ curl command copied';
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2500);
     });
+  }
+
+  function copyCurlCmd(which) {
+    // Always require T&C for curl installers as well.
+    pendingCopyCurl = which;
+    pendingDownloadUrl = null;
+    if (!openTcModal((which || 'curl') + ' install')) {
+      alert('Please accept the Terms and Conditions before copying the install command.');
+      return;
+    }
   }
 
   function copyHash(which) {

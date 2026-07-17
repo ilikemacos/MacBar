@@ -173,8 +173,8 @@ def _terms_overlay() -> str:
     <p>By downloading you agree to the <a href="/terms.html" target="_blank" rel="noopener">rNitro Terms</a>. Software is provided as-is. Beta features may be unstable.</p>
     <p id="tc-download-file" style="font-family:var(--mono); font-size:12px; color:var(--cyan);"></p>
     <div class="tc-actions">
-      <button type="button" class="btn btn-primary" style="background:var(--green); color:#000;" id="tc-agree-btn">Agree &amp; download</button>
-      <button type="button" class="btn btn-secondary" id="tc-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-secondary" id="tc-disagree-btn">I Disagree</button>
+      <button type="button" class="btn btn-primary" style="background:var(--green); color:#000;" id="tc-agree-btn">I Agree &amp; download</button>
     </div>
   </div>
 </div>
@@ -209,7 +209,14 @@ def _download_js(data: dict) -> str:
 <script>
   const RNITRO_VERSIONS = {versions_js};
   let pendingDownload = null;
-  const TERMS_KEY = 'rnitro_terms_ok';
+
+  function homeUrl() {{
+    const base = (window.__RNITRO_BASE__ || '').replace(/\\/$/, '');
+    if (base) return base + '/';
+    const path = window.location.pathname || '/';
+    if (path === '/rnitro' || path.startsWith('/rnitro/')) return '/rnitro/';
+    return '/';
+  }}
 
   function toast(msg) {{
     const el = document.getElementById('toast');
@@ -229,12 +236,7 @@ def _download_js(data: dict) -> str:
 
   function requestDownload(url) {{
     if (!url) return;
-    try {{
-      if (sessionStorage.getItem(TERMS_KEY) === '1') {{
-        window.location.href = url;
-        return;
-      }}
-    }} catch (e) {{ /* private mode */ }}
+    // Always show T&C for every download.
     pendingDownload = url;
     const name = url.split('/').pop();
     const label = document.getElementById('tc-download-file');
@@ -242,8 +244,13 @@ def _download_js(data: dict) -> str:
     document.getElementById('tc-overlay')?.classList.add('open');
   }}
 
+  function disagreeTcAndGoHome() {{
+    pendingDownload = null;
+    document.getElementById('tc-overlay')?.classList.remove('open');
+    window.location.href = homeUrl();
+  }}
+
   document.getElementById('tc-agree-btn')?.addEventListener('click', () => {{
-    try {{ sessionStorage.setItem(TERMS_KEY, '1'); }} catch (e) {{}}
     document.getElementById('tc-overlay')?.classList.remove('open');
     if (pendingDownload) {{
       const u = pendingDownload;
@@ -251,9 +258,14 @@ def _download_js(data: dict) -> str:
       window.location.href = u;
     }}
   }});
-  document.getElementById('tc-cancel-btn')?.addEventListener('click', () => {{
-    pendingDownload = null;
-    document.getElementById('tc-overlay')?.classList.remove('open');
+  document.getElementById('tc-disagree-btn')?.addEventListener('click', disagreeTcAndGoHome);
+  document.getElementById('tc-overlay')?.addEventListener('click', (e) => {{
+    if (e.target && e.target.id === 'tc-overlay') disagreeTcAndGoHome();
+  }});
+  document.addEventListener('keydown', (e) => {{
+    if (e.key === 'Escape' && document.getElementById('tc-overlay')?.classList.contains('open')) {{
+      disagreeTcAndGoHome();
+    }}
   }});
 
   function copyText(cmd, okMsg) {{
