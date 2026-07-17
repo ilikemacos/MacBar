@@ -2,6 +2,25 @@
   "whats_new": [
     {
       "channel": "experimental",
+      "title": "v1.3.7 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "T&C session remember",
+          "text": " \u2014 optional \u201cRemember for this browser session\u201d on download modal."
+        },
+        {
+          "strong": "What's new strip",
+          "text": " \u2014 General shows changelog blurb after updates / on Experimental."
+        },
+        {
+          "strong": "Menu presets",
+          "text": " \u2014 selected preset highlight + restore previous slots."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
       "title": "v1.3.6 Experimental",
       "accent": "purple",
       "items": [

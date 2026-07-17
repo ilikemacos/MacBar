@@ -1206,7 +1206,7 @@ def how_it_works_section(data: dict) -> str:
 
     flow_rows = [
         ("Pick your platform tab", "macOS, Linux, or Windows — the site auto-detects your OS"),
-        ("Accept Terms &amp; Conditions", "Required on <strong>every</strong> download — Agree continues, Disagree returns home"),
+        ("Accept Terms &amp; Conditions", "Agree continues download; Disagree returns home. Optional: remember for this browser session"),
         ("Download recommended file", "Green / orange / purple cards (Stable · Beta · Experimental) — sizes shown on buttons"),
         ("Install", "Follow the <strong>How to install</strong> steps below for your tab"),
         ("Updates", "macOS: in-app prompt → download ZIP → replace app (Experimental channel supported). Linux: checks same <code>version.json</code>. Windows: manual."),

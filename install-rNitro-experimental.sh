@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="c70bd926d5c16186cdb97943178f6e950eeab47dece4394065d68a0fab202f0a"
+EXPECTED_HASH="f07cf377710396ec4ae8dd86788fee6c5292cb799e2dc18822c0c63996726c79"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -376,7 +376,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.6-Experimental"
+let CURRENT_VERSION = "v1.3.7-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -440,6 +440,12 @@ final class UpdateStatusStore: ObservableObject {
         }
     }
 
+    private let lastSeenVersionKey = "rnitro.update.lastSeenVersion"
+    private let whatsNewKey = "rnitro.update.whatsNewCache"
+
+    @Published var whatsNewText: String = ""
+    @Published var showWhatsNewBanner: Bool = false
+
     func markChecked() {
         let now = Date()
         lastCheckAt = now
@@ -455,6 +461,36 @@ final class UpdateStatusStore: ObservableObject {
         let fmt = RelativeDateTimeFormatter()
         fmt.unitsStyle = .short
         lastCheckLabel = "Checked \(fmt.localizedString(for: d, relativeTo: Date()))"
+    }
+
+    /// Load "What's new" for this build; show banner if version changed since last launch.
+    func refreshWhatsNew() {
+        let lastSeen = UserDefaults.standard.string(forKey: lastSeenVersionKey) ?? ""
+        let justUpdated = lastSeen != CURRENT_VERSION && !lastSeen.isEmpty
+        if lastSeen != CURRENT_VERSION {
+            UserDefaults.standard.set(CURRENT_VERSION, forKey: lastSeenVersionKey)
+        }
+        if let cached = UserDefaults.standard.string(forKey: whatsNewKey), !cached.isEmpty,
+           cached.hasPrefix(CURRENT_VERSION) {
+            let body = String(cached.dropFirst(CURRENT_VERSION.count + 1))
+            whatsNewText = body
+            showWhatsNewBanner = justUpdated || RNITRO_FEATURE_EXPERIMENTAL_UI
+            return
+        }
+        UpdateChecker.changelogBlurb(for: CURRENT_VERSION, channel: RNITRO_BUILD_CHANNEL) { blurb in
+            DispatchQueue.main.async {
+                let text = blurb ?? ""
+                self.whatsNewText = text
+                if !text.isEmpty {
+                    UserDefaults.standard.set("\(CURRENT_VERSION)|\(text)", forKey: self.whatsNewKey)
+                }
+                self.showWhatsNewBanner = (justUpdated || RNITRO_FEATURE_EXPERIMENTAL_UI) && !text.isEmpty
+            }
+        }
+    }
+
+    func dismissWhatsNew() {
+        showWhatsNewBanner = false
     }
 
     /// Snooze auto-prompt for these version ids until `until`.
@@ -6369,6 +6405,7 @@ struct SettingsMenubarSection: View {
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 HStack(spacing: 8) {
                     ForEach(MenuBarPreset.allCases) { preset in
+                        let selected = MenuBarConfig.lastPreset == preset
                         Button(preset.label) {
                             MenuBarConfig.applyPreset(preset)
                             menuBarLayoutRaw = MenuBarConfig.layout.rawValue
@@ -6377,7 +6414,20 @@ struct SettingsMenubarSection: View {
                         .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .tint(selected ? .accentColor : nil)
+                        .background(selected ? Color.accentColor.opacity(0.18) : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
+                }
+                if MenuBarConfig.canRestorePreviousSlots {
+                    Button(display.tr("menubar.presets.restore")) {
+                        MenuBarConfig.restorePreviousSlots()
+                        menuBarLayoutRaw = MenuBarConfig.layout.rawValue
+                        slotOrderTick += 1
+                    }
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
                 }
                 Text(display.tr("menubar.presets.hint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
@@ -6685,6 +6735,29 @@ struct SettingsGeneralSection: View {
                             .foregroundColor(.accent)
                         }
                     }
+                    if updateStatus.showWhatsNewBanner, !updateStatus.whatsNewText.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(display.tr("general.whatsNew"))
+                                    .font(rNitroFont(.caption, metrics: metrics, weight: .bold))
+                                    .foregroundColor(updateStatus.channelTint)
+                                Spacer()
+                                Button(display.tr("general.whatsNew.dismiss")) {
+                                    updateStatus.dismissWhatsNew()
+                                }
+                                .font(rNitroFont(.caption, metrics: metrics))
+                                .buttonStyle(.plain)
+                                .foregroundColor(.secondary)
+                            }
+                            Text(updateStatus.whatsNewText)
+                                .font(rNitroFont(.caption, metrics: metrics))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(10)
+                        .background(updateStatus.channelTint.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
                 }
                 .padding(12)
                 .background(Color.primary.opacity(0.04))
@@ -6752,6 +6825,7 @@ struct SettingsGeneralSection: View {
         .onAppear {
             launchAtLogin = LaunchAtLoginManager.isEnabled()
             updateStatus.refreshLabel()
+            updateStatus.refreshWhatsNew()
         }
     }
 }
@@ -8610,11 +8684,14 @@ final class DisplayPreferencesStore: ObservableObject {
         "general.openSite": "Open website",
         "general.title": "General",
         "general.version": "Version",
+        "general.whatsNew": "What's new in this build",
+        "general.whatsNew.dismiss": "Dismiss",
         "menubar.preset.desktop": "Desktop",
         "menubar.preset.laptop": "Laptop",
         "menubar.preset.minimal": "Minimal",
         "menubar.presets": "Presets",
-        "menubar.presets.hint": "Laptop = CPU · Temp · Battery · Power. Desktop = CPU · Temp · RAM · Power · Network. Minimal = CPU only.",
+        "menubar.presets.hint": "Laptop = CPU · Temp · Battery · Power. Desktop = CPU · Temp · RAM · Power · Network. Minimal = CPU only. Active preset is highlighted.",
+        "menubar.presets.restore": "Restore previous slots",
         "lab.alibi": "Process alibi",
         "lab.alibi.copy": "Copy alibi",
         "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
@@ -10244,9 +10321,38 @@ enum MenuBarConfig {
         NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
     }
 
+    private static let lastPresetKey = "rnitro.menubar.lastPreset"
+    private static let previousSlotsKey = "rnitro.menubar.previousSlots"
+    private static let previousLayoutKey = "rnitro.menubar.previousLayout"
+
+    static var lastPreset: MenuBarPreset? {
+        MenuBarPreset(rawValue: UserDefaults.standard.string(forKey: lastPresetKey) ?? "")
+    }
+
+    static var canRestorePreviousSlots: Bool {
+        !(UserDefaults.standard.stringArray(forKey: previousSlotsKey) ?? []).isEmpty
+    }
+
     static func applyPreset(_ preset: MenuBarPreset) {
+        // Save current layout so user can restore.
+        let current = enabledSlots
+        UserDefaults.standard.set(current.map(\.rawValue), forKey: previousSlotsKey)
+        UserDefaults.standard.set(layout.rawValue, forKey: previousLayoutKey)
         setEnabledSlots(preset.slots)
         setLayout(preset.layout)
+        UserDefaults.standard.set(preset.rawValue, forKey: lastPresetKey)
+    }
+
+    static func restorePreviousSlots() {
+        guard let raw = UserDefaults.standard.stringArray(forKey: previousSlotsKey), !raw.isEmpty else { return }
+        let slots = raw.compactMap(MenuBarSlot.init(rawValue:))
+        let prevLayout = MenuBarLayout(rawValue: UserDefaults.standard.string(forKey: previousLayoutKey) ?? "") ?? .inline
+        // Snapshot current before restore (swap)
+        UserDefaults.standard.set(enabledSlots.map(\.rawValue), forKey: previousSlotsKey)
+        UserDefaults.standard.set(layout.rawValue, forKey: previousLayoutKey)
+        setEnabledSlots(slots)
+        setLayout(prevLayout)
+        UserDefaults.standard.removeObject(forKey: lastPresetKey)
     }
 
     static func setSlot(_ slot: MenuBarSlot, enabled: Bool) {
@@ -15531,8 +15637,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.6-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.6-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.7-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.7-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
