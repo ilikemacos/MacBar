@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rNitro FAQ — Free Open Source Mac Menu Bar System Monitor</title>
+<meta name="description" content="FAQ for rNitro: free open-source macOS menu bar CPU and system monitor. Install, Apple Silicon sensors, privacy, updates, Gatekeeper, and iStat alternatives.">
+<link rel="canonical" href="https://chopstickshq.com/rnitro/faq.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="rNitro FAQ — Free Mac Menu Bar System Monitor">
+<meta property="og:description" content="Install, privacy, sensors, Gatekeeper, and channels for the free open-source rNitro monitor.">
+<meta property="og:url" content="https://chopstickshq.com/rnitro/faq.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is rNitro?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "rNitro is a free, open-source menu bar system monitor for macOS (Apple Silicon first). It shows live CPU, temperature, GPU, RAM, battery, and more—no account required."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is rNitro free and open source?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. rNitro is free to download and use. Source is available via the shell installer and GitHub (ilikemacos/rNitro)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I install rNitro on Mac?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Download the App ZIP, PKG, or DMG from chopstickshq.com/rnitro or getrnitro.netlify.app, or use the Terminal one-liner that compiles from source with Xcode Command Line Tools."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does macOS say the app cannot be opened?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Indie builds may not be notarized. Right-click the app → Open → Open, or use System Settings → Privacy & Security → Open Anyway. The shell installer compiles on your Mac and usually avoids Gatekeeper issues."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does rNitro collect telemetry or require an account?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. rNitro has no user accounts and no product telemetry. Optional AI features use API keys you provide, stored on your Mac."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is Stable vs Beta vs Experimental?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Stable is the daily-driver build. Beta adds power-user Lab tools and more AI providers. Experimental includes playground features and may change quickly. Prefer Stable or Beta for everyday use."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does rNitro work on Intel Macs?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Apple Silicon is first-class. Intel builds exist as best-effort; some sensors differ. Check the Intel download section on the site for the last Intel installers."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is rNitro a free iStat Menus alternative?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "rNitro is a free open-source menu bar monitor for CPU, temps, battery, and more. It is not affiliated with iStat. Feature depth differs; rNitro focuses on free, local-first monitoring without a subscription."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do updates work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "macOS builds can check version.json on the website and offer an in-app App ZIP update. You can also re-download from the site or GitHub Releases anytime."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where is data stored?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Preferences and optional local logs stay on your Mac (Application Support / UserDefaults). Nothing is required to leave the device for core monitoring."
+      }
+    }
+  ]
+}
+</script>
+<style>
+  @font-face {
+    font-family: 'Varela Round';
+    src: url('VarelaRound.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0A0A0F; --card: #13131E; --border: #2A2A40;
+    --cyan: #00D9FF; --green: #00FF80; --text: #E8E8F0; --muted: #6B6B8A;
+    --mono: ui-monospace, Menlo, monospace;
+    --sans: 'Varela Round', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--sans);
+    font-size: 15px; line-height: 1.65; min-height: 100vh; padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  a { color: var(--cyan); }
+  h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h1 span { color: var(--cyan); }
+  .sub { color: var(--muted); margin-bottom: 28px; max-width: 52ch; }
+  .back { display: inline-block; margin-bottom: 20px; font-family: var(--mono); font-size: 13px; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 12px;
+  }
+  .card h2 {
+    font-family: var(--mono); font-size: 13px; color: var(--green);
+    margin: 0 0 8px; letter-spacing: 0.02em; font-weight: 600;
+  }
+  .card p { color: var(--text); margin: 0; }
+  .card p + p { margin-top: 8px; }
+  code { font-family: var(--mono); font-size: 12px; color: var(--cyan); }
+  .cta {
+    margin-top: 28px; padding: 18px 20px; border-radius: 12px;
+    border: 1px solid rgba(0,217,255,0.3); background: rgba(0,217,255,0.06);
+  }
+  .cta a.btn {
+    display: inline-block; margin-top: 10px; margin-right: 10px;
+    font-family: var(--mono); font-size: 12px; padding: 10px 14px; border-radius: 8px;
+    background: var(--cyan); color: #041018; text-decoration: none; font-weight: 600;
+  }
+  .cta a.ghost {
+    background: transparent; color: var(--cyan); border: 1px solid rgba(0,217,255,0.35);
+  }
+  .muted { color: var(--muted); font-size: 13px; margin-top: 24px; }
+  html { color-scheme: dark; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="./">← rNitro home</a>
+    <h1><span>FAQ</span> — free Mac menu bar monitor</h1>
+    <p class="sub">
+      Common questions about <strong style="color:var(--text)">rNitro</strong>: free open-source
+      macOS system monitor (CPU, temperature, battery, GPU, RAM). No account required.
+    </p>
+
+    <article class="card" id="what">
+      <h2>What is rNitro?</h2>
+      <p>rNitro is a free, open-source <strong>menu bar system monitor for macOS</strong> (Apple Silicon first). Live CPU, temperature, GPU, RAM, battery, network, and more—without a subscription or account.</p>
+    </article>
+
+    <article class="card" id="free">
+      <h2>Is it free and open source?</h2>
+      <p>Yes. Download and use for free. The shell installer compiles readable source on your Mac; releases and source links live on <a href="https://github.com/ilikemacos/rNitro">GitHub</a> and <a href="https://chopstickshq.com/rnitro/">chopstickshq.com/rnitro</a>.</p>
+    </article>
+
+    <article class="card" id="install">
+      <h2>How do I install on Mac?</h2>
+      <p>From the <a href="./">downloads page</a>: <strong>App ZIP</strong> (drag to Applications), <strong>PKG</strong>, <strong>DMG</strong>, or the <strong>curl one-liner</strong> that compiles with Xcode Command Line Tools (~30s). Prefer the Terminal install if Gatekeeper blocks prebuilt packages.</p>
+    </article>
+
+    <article class="card" id="gatekeeper">
+      <h2>Why does macOS say it can’t be opened?</h2>
+      <p>Indie apps may lack Apple notarization. <strong>Don’t trash the app.</strong> Right-click → Open → Open, or System Settings → Privacy &amp; Security → Open Anyway. Or use the <code>.sh</code> installer so the binary is built on your machine.</p>
+    </article>
+
+    <article class="card" id="privacy">
+      <h2>Accounts, telemetry, privacy?</h2>
+      <p>No accounts, no product telemetry, no ads. Optional AI features use <em>your</em> API keys on-device. See <a href="privacy.html">Privacy</a>.</p>
+    </article>
+
+    <article class="card" id="channels">
+      <h2>Stable vs Beta vs Experimental?</h2>
+      <p><strong>Stable</strong> — daily driver. <strong>Beta</strong> — power-user tools and broader AI. <strong>Experimental</strong> — playground; can change quickly. Use Stable or Beta for everyday monitoring.</p>
+    </article>
+
+    <article class="card" id="intel">
+      <h2>Intel Macs?</h2>
+      <p>Apple Silicon is first-class. Intel installers remain available as best-effort; some sensors differ. Check the Intel section on the <a href="./">macOS downloads</a> page.</p>
+    </article>
+
+    <article class="card" id="istat">
+      <h2>Is rNitro a free iStat alternative?</h2>
+      <p>People looking for a <strong>free open-source mac menu bar monitor</strong> or iStat-style glance often try rNitro. It is not affiliated with iStat Menus. Features differ; rNitro prioritizes free, local-first monitoring without a subscription.</p>
+    </article>
+
+    <article class="card" id="updates">
+      <h2>How do updates work?</h2>
+      <p>macOS builds can check <code>version.json</code> and install an App ZIP in-app. You can always re-download from the site or <a href="https://github.com/ilikemacos/rNitro/releases">GitHub Releases</a>. Previous builds stay under Archives when listed.</p>
+    </article>
+
+    <article class="card" id="data">
+      <h2>Where is my data stored?</h2>
+      <p>Preferences and optional local data stay on your Mac (UserDefaults / Application Support). Core monitoring does not require anything to leave the device.</p>
+    </article>
+
+    <article class="card" id="linux-win">
+      <h2>Linux / Windows / CLI?</h2>
+      <p>Companion builds exist: <a href="cli.html">CLI</a>, <a href="linux.html">Linux</a>, and a last <a href="windows.html">Windows</a> build. macOS is the primary product.</p>
+    </article>
+
+    <div class="cta">
+      <strong style="color:var(--text)">Ready to install?</strong>
+      <p class="sub" style="margin:6px 0 0">Free menu bar CPU &amp; system monitor for Mac — open source, no account.</p>
+      <a class="btn" href="./#download">Download rNitro</a>
+      <a class="btn ghost" href="https://github.com/ilikemacos/rNitro">GitHub</a>
+    </div>
+
+    <p class="muted">Chopsticks HQ · <a href="https://chopstickshq.com/">chopstickshq.com</a> · Canonical product site: <a href="https://chopstickshq.com/rnitro/">/rnitro/</a></p>
+  </div>
+</body>
+</html>

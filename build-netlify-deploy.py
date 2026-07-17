@@ -174,6 +174,18 @@ def stage(data: dict, *, include_bundle_zip: bool | None = None) -> Path:
         "  force = true\n"
         "\n"
         "[[redirects]]\n"
+        "  from = \"/faq\"\n"
+        f"  to = \"{hq}/faq.html\"\n"
+        "  status = 301\n"
+        "  force = true\n"
+        "\n"
+        "[[redirects]]\n"
+        "  from = \"/faq.html\"\n"
+        f"  to = \"{hq}/faq.html\"\n"
+        "  status = 301\n"
+        "  force = true\n"
+        "\n"
+        "[[redirects]]\n"
         "  from = \"/cli\"\n"
         f"  to = \"{hq}/cli.html\"\n"
         "  status = 301\n"
@@ -226,6 +238,8 @@ def stage(data: dict, *, include_bundle_zip: bool | None = None) -> Path:
         f"/archives.html    {hq}/archives.html    301!\n"
         f"/privacy          {hq}/privacy.html     301!\n"
         f"/privacy.html     {hq}/privacy.html     301!\n"
+        f"/faq              {hq}/faq.html         301!\n"
+        f"/faq.html         {hq}/faq.html         301!\n"
         f"/cli              {hq}/cli.html         301!\n"
         f"/cli.html         {hq}/cli.html         301!\n"
         f"/linux            {hq}/linux.html       301!\n"
@@ -349,7 +363,7 @@ AI support chat (optional):
 
     _inject_file_manifest(OUT_DIR)
 
-    for required in ("cli.html", "linux.html", "windows.html", "privacy.html", "sitemap.xml", "robots.txt"):
+    for required in ("cli.html", "linux.html", "windows.html", "privacy.html", "faq.html", "sitemap.xml", "robots.txt"):
         if not (OUT_DIR / required).is_file():
             raise FileNotFoundError(f"Missing staged page: {required}")
 
