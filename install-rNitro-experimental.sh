@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="8b10b9da76a1be25d5dacd42f7ffbee6d189f1b8873b48835cd87611f23af831"
+EXPECTED_HASH="863624a530c182b8ef049b93f0f3382a79d6035febf733753a19589c056c6aa8"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -376,7 +376,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.9-Experimental"
+let CURRENT_VERSION = "v1.3.10-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -2914,6 +2914,9 @@ class BatteryMonitor: ObservableObject {
     private var historyPoints: [(Date, Int)] = []
     private var lastHistorySample: Date?
     private var lastModeKey = ""
+    /// Smoothed pack power (W) — positive while charging, magnitude while discharging.
+    private var smoothedPackWatts: Double = 0
+    private var hasSmoothedPackWatts = false
 
     private struct Snapshot {
         var isPresent = false
@@ -2922,6 +2925,8 @@ class BatteryMonitor: ObservableObject {
         var isOnAC = false
         var isFullyCharged = false
         var chargeWatts: Double = 0
+        /// Negative while discharging (signed pack power in watts).
+        var packWattsSigned: Double = 0
         var chargeRateText = "…"
         var powerSource = "Unknown"
         var timeToFullMinutes: Int?
@@ -2929,6 +2934,11 @@ class BatteryMonitor: ObservableObject {
         var cycleCount: Int?
         var temperatureCelsius: Double?
         var healthPercent: Int?
+        var rawCurrentMah: Int?
+        var rawMaxMah: Int?
+        var designMah: Int?
+        var voltageMv: Int?
+        var amperageMa: Int? // signed: + charge, − discharge
     }
 
     init() {}
@@ -2956,7 +2966,20 @@ class BatteryMonitor: ObservableObject {
     private func poll() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
-            let snap = Self.collectSnapshot(prevLevel: self.prevLevel, prevSampleTime: self.prevSampleTime)
+            var snap = Self.collectSnapshot(prevLevel: self.prevLevel, prevSampleTime: self.prevSampleTime)
+            // Smooth pack watts on the worker so UI doesn't flicker every poll.
+            let rawW = abs(snap.packWattsSigned) > 0.05 ? snap.packWattsSigned : (snap.isCharging ? snap.chargeWatts : -snap.chargeWatts)
+            if abs(rawW) > 0.05 {
+                if self.hasSmoothedPackWatts {
+                    self.smoothedPackWatts = self.smoothedPackWatts * 0.55 + rawW * 0.45
+                } else {
+                    self.smoothedPackWatts = rawW
+                    self.hasSmoothedPackWatts = true
+                }
+                let smoothed = self.smoothedPackWatts
+                snap.packWattsSigned = smoothed
+                snap.chargeWatts = abs(smoothed)
+            }
             if snap.isPresent {
                 self.prevLevel = snap.levelPercent
                 self.prevSampleTime = Date()
@@ -3007,14 +3030,11 @@ class BatteryMonitor: ObservableObject {
     }
 
     private static func collectSnapshot(prevLevel: Int?, prevSampleTime: Date?) -> Snapshot {
-        // Always start with direct IOKit, then blend pmset (menu-bar % / remaining time)
-        // and ioreg for any missing fields. Early-return used to skip pmset once a %
-        // was found, so remaining time and health could stay wrong.
+        // IOKit first (accurate mAh / amps), then pmset for menu-bar % + ETA,
+        // then ioreg for any remaining gaps. Always merge all three when present.
         var snap = readIOKitBattery() ?? Snapshot()
         if let pm = readPmset() { mergePmset(pm, into: &snap) }
-        if !snap.isPresent || snap.levelPercent <= 0 || snap.healthPercent == nil {
-            if let hw = readIoreg() { mergeIoreg(hw, into: &snap) }
-        }
+        if let hw = readIoreg() { mergeIoreg(hw, into: &snap) }
         finalizeSnapshot(&snap, prevLevel: prevLevel, prevSampleTime: prevSampleTime)
         return snap
     }
@@ -3025,12 +3045,33 @@ class BatteryMonitor: ObservableObject {
             snap.powerSource = "AC / Desktop"
             return
         }
+        // Fill missing ETAs from mAh + amperage (more accurate than stale TimeRemaining).
+        estimateMissingETAs(&snap)
+        // Level-delta discharge estimate when InstantAmperage is zero after wake.
+        if !snap.isCharging, !snap.isOnAC, abs(snap.packWattsSigned) < 0.1,
+           let prev = prevLevel, let prevT = prevSampleTime {
+            let dt = Date().timeIntervalSince(prevT)
+            if dt >= 8, let maxMah = snap.rawMaxMah, maxMah > 0 {
+                let dp = Double(prev - snap.levelPercent)
+                if dp > 0 {
+                    let mahPerHr = dp / 100.0 * Double(maxMah) / (dt / 3600.0)
+                    let v = Double(snap.voltageMv ?? 11_500) / 1000.0
+                    let w = mahPerHr / 1000.0 * v
+                    if w > 0.3, w < 80 {
+                        snap.packWattsSigned = -w
+                        snap.chargeWatts = w
+                    }
+                }
+            }
+        }
+
         snap.powerSource = snap.isOnAC ? "AC Power" : "Battery Power"
-        if snap.isCharging && snap.chargeWatts > 0 {
+        let w = snap.chargeWatts
+        if snap.isCharging && w > 0.15 {
             if let eta = snap.timeToFullMinutes, eta > 0, eta < 65535 {
-                snap.chargeRateText = String(format: "%.0f W · %d min", snap.chargeWatts, eta)
+                snap.chargeRateText = String(format: "%.1f W · %d min", w, eta)
             } else {
-                snap.chargeRateText = String(format: "%.0f W", snap.chargeWatts)
+                snap.chargeRateText = String(format: "%.1f W", w)
             }
         } else if snap.isCharging, let eta = snap.timeToFullMinutes, eta > 0, eta < 65535 {
             snap.chargeRateText = String(format: "%d min", eta)
@@ -3041,10 +3082,17 @@ class BatteryMonitor: ObservableObject {
             snap.isFullyCharged = true
         } else if snap.isOnAC {
             snap.chargeRateText = "Plugged in"
+        } else if w > 0.15 {
+            // Discharging: show draw when known
+            if let rem = snap.timeRemainingMinutes, rem > 0, rem < 65535 {
+                snap.chargeRateText = String(format: "−%.1f W · %d min", w, rem)
+            } else {
+                snap.chargeRateText = String(format: "−%.1f W", w)
+            }
         } else {
             snap.chargeRateText = "On battery"
         }
-        if snap.isCharging, snap.chargeWatts <= 0,
+        if snap.isCharging, snap.chargeWatts <= 0.15,
            let prev = prevLevel, let prevT = prevSampleTime {
             let dt = Date().timeIntervalSince(prevT)
             if dt >= 4 {
@@ -3056,15 +3104,49 @@ class BatteryMonitor: ObservableObject {
         }
     }
 
+    /// Estimate AvgTimeToFull / empty from remaining mAh and InstantAmperage.
+    private static func estimateMissingETAs(_ snap: inout Snapshot) {
+        guard let vMv = snap.voltageMv, vMv > 1000 else { return }
+        let amp = snap.amperageMa ?? 0
+        if snap.isCharging {
+            if snap.timeToFullMinutes == nil || snap.timeToFullMinutes == 0 || (snap.timeToFullMinutes ?? 0) >= 65535 {
+                if amp > 50, let cur = snap.rawCurrentMah, let maxC = snap.rawMaxMah, maxC > cur {
+                    let need = maxC - cur
+                    let mins = Int((Double(need) / Double(amp) * 60.0).rounded())
+                    if mins > 0, mins < 24 * 60 {
+                        snap.timeToFullMinutes = mins
+                    }
+                }
+            }
+        } else if !snap.isOnAC {
+            if snap.timeRemainingMinutes == nil || snap.timeRemainingMinutes == 0 || (snap.timeRemainingMinutes ?? 0) >= 65535 {
+                if amp < -50, let cur = snap.rawCurrentMah, cur > 0 {
+                    let mins = Int((Double(cur) / Double(-amp) * 60.0).rounded())
+                    if mins > 0, mins < 48 * 60 {
+                        snap.timeRemainingMinutes = mins
+                    }
+                }
+            }
+        }
+    }
+
     private static func mergePmset(_ pm: Snapshot, into snap: inout Snapshot) {
         if pm.isPresent {
             snap.isPresent = true
-            // pmset % matches the menu bar / System Settings charge figure.
-            if pm.levelPercent > 0 { snap.levelPercent = pm.levelPercent }
+            // pmset % is the menu-bar figure — keep as authoritative UI % when present.
+            if pm.levelPercent > 0 {
+                // If raw mAh ratio exists and disagrees wildly (>8 pts), blend toward pmset
+                // (menu bar) so we don't show a "wrong" vs System Settings number.
+                if let raw = rawLevelPercent(from: snap), abs(raw - pm.levelPercent) > 8 {
+                    snap.levelPercent = Int((Double(pm.levelPercent) * 0.75 + Double(raw) * 0.25).rounded())
+                } else {
+                    snap.levelPercent = pm.levelPercent
+                }
+            }
             snap.isCharging = pm.isCharging
             snap.isOnAC = pm.isOnAC
             snap.isFullyCharged = pm.isFullyCharged
-            // Prefer pmset remaining times (IOKit TimeRemaining is often stale after sleep).
+            // Prefer pmset remaining times when healthy (IOKit TimeRemaining is often stale).
             if let eta = pm.timeToFullMinutes, eta > 0, eta < 65535 {
                 snap.timeToFullMinutes = eta
             }
@@ -3074,13 +3156,19 @@ class BatteryMonitor: ObservableObject {
         }
     }
 
+    private static func rawLevelPercent(from snap: Snapshot) -> Int? {
+        guard let cur = snap.rawCurrentMah, let maxC = snap.rawMaxMah, maxC > 0 else { return nil }
+        return min(100, max(0, Int((Double(cur) / Double(maxC) * 100.0).rounded())))
+    }
+
     private static func mergeIoreg(_ hw: IoregBattery, into snap: inout Snapshot) {
         if hw.levelPercent > 0 || hw.isOnAC || hw.adapterWatts > 0 || hw.batteryInstalled {
             snap.isPresent = true
-            if hw.levelPercent > 0 { snap.levelPercent = hw.levelPercent }
-            snap.isOnAC = hw.isOnAC
+            // Prefer not to overwrite a good IOKit/pmset % with ioreg unless missing.
+            if snap.levelPercent <= 0, hw.levelPercent > 0 { snap.levelPercent = hw.levelPercent }
+            snap.isOnAC = hw.isOnAC || snap.isOnAC
             if hw.hasChargingSignal { snap.isCharging = hw.isCharging }
-            if hw.adapterWatts > 0 { snap.chargeWatts = hw.adapterWatts }
+            if hw.adapterWatts > 0, snap.chargeWatts <= 0 { snap.chargeWatts = hw.adapterWatts }
             if hw.chargeWatts > 0 && snap.isCharging { snap.chargeWatts = hw.chargeWatts }
             if snap.isCharging, snap.timeToFullMinutes == nil, let eta = hw.timeToFullMinutes { snap.timeToFullMinutes = eta }
             if !snap.isCharging, snap.timeRemainingMinutes == nil, let rem = hw.timeRemainingMinutes { snap.timeRemainingMinutes = rem }
@@ -3170,35 +3258,58 @@ class BatteryMonitor: ObservableObject {
         Int(Int32(bitPattern: UInt32(truncatingIfNeeded: UInt64(bitPattern: Int64(raw)))))
     }
 
-    /// Charge wattage from IOKit (ChargerData / Amperage × voltage) — no pmset/ioreg subprocess.
+    /// Pack power from IOKit: InstantAmperage × voltage (signed). ChargingCurrent when charging.
     private static func applyIOKitChargePower(_ service: io_service_t, to snap: inout Snapshot) {
         var voltageMv = ioPropertyInt(service, "AppleRawBatteryVoltage")
             ?? ioPropertyInt(service, "Voltage")
+            ?? ioPropertyInt(service, "LegacyBatteryInfo") // rarely useful
         if voltageMv == nil || voltageMv == 0, let batteryData = ioProperty(service, "BatteryData") {
             voltageMv = ioDictInt(batteryData, "Voltage")
                 ?? ioDictInt(batteryData, "AppleRawBatteryVoltage")
+                ?? ioDictInt(batteryData, "CellVoltage")
+        }
+        // CellVoltage can be an array — try first element via nested read if dict failed
+        if (voltageMv == nil || voltageMv == 0),
+           let batteryData = ioProperty(service, "BatteryData") as? [String: Any],
+           let cells = batteryData["CellVoltage"] as? [Any],
+           let first = cells.first as? NSNumber {
+            // Millivolts per cell; sum if multi-cell
+            var sum = 0
+            for c in cells {
+                if let n = c as? NSNumber { sum += n.intValue }
+            }
+            if sum > 1000 { voltageMv = sum }
+            else if first.intValue > 1000 { voltageMv = first.intValue }
         }
         let voltage = voltageMv ?? 0
+        if voltage > 0 { snap.voltageMv = voltage }
 
-        var chargeMa = 0
-        if let chargerData = ioProperty(service, "ChargerData"),
+        // InstantAmperage is the best live pack current (signed mA).
+        var signedMa = 0
+        if let amp = ioPropertyInt(service, "InstantAmperage")
+            ?? ioPropertyInt(service, "Amperage")
+            ?? ioPropertyInt(service, "AppleRawCurrent") {
+            signedMa = ioRegistrySigned(amp)
+        }
+        // ChargerData.ChargingCurrent is often more stable while charging.
+        if signedMa <= 0, let chargerData = ioProperty(service, "ChargerData"),
            let cc = ioDictInt(chargerData, "ChargingCurrent"), cc > 0 {
-            chargeMa = cc
-        } else if let amp = ioPropertyInt(service, "InstantAmperage") ?? ioPropertyInt(service, "Amperage") {
-            let signed = ioRegistrySigned(amp)
-            if signed > 0 { chargeMa = signed }
+            signedMa = cc
+        }
+        if signedMa != 0 { snap.amperageMa = signedMa }
+
+        if voltage > 0, signedMa != 0 {
+            let watts = Double(abs(signedMa)) / 1000.0 * Double(voltage) / 1000.0
+            snap.packWattsSigned = Double(signedMa) / 1000.0 * Double(voltage) / 1000.0
+            snap.chargeWatts = watts
         }
 
-        if chargeMa > 0, voltage > 0 {
-            snap.chargeWatts = Double(chargeMa) / 1000.0 * Double(voltage) / 1000.0
-        }
-
+        // Adapter rating is not pack draw — only use as last resort while charging.
         if let adapter = ioProperty(service, "AdapterDetails"),
            let adapterW = ioDictInt(adapter, "Watts"), adapterW > 0 {
-            if snap.isCharging, snap.chargeWatts <= 0 {
-                snap.chargeWatts = Double(adapterW)
-            } else if !snap.isCharging {
-                snap.chargeWatts = Double(adapterW)
+            if snap.isCharging, snap.chargeWatts <= 0.2 {
+                snap.chargeWatts = Double(adapterW) * 0.85 // rough pack-side estimate
+                snap.packWattsSigned = snap.chargeWatts
             }
         }
     }
@@ -3224,19 +3335,31 @@ class BatteryMonitor: ObservableObject {
         if installed == false && builtIn == false { return nil }
 
         var snap = Snapshot()
-        let level = batteryLevelPercent(service)
+        // Capture raw mAh for health, ETA, and physical SoC.
+        let rawCur = ioPropertyInt(service, "AppleRawCurrentCapacity")
+        let rawMax = ioPropertyInt(service, "AppleRawMaxCapacity")
+            ?? ioPropertyInt(service, "NominalChargeCapacity")
+        let design = ioPropertyInt(service, "DesignCapacity")
+        snap.rawCurrentMah = rawCur
+        snap.rawMaxMah = rawMax
+        snap.designMah = design
+
+        let level = batteryLevelPercent(service, rawCur: rawCur, rawMax: rawMax)
         snap.levelPercent = min(100, max(0, level))
         snap.isPresent = installed == true || builtIn == true || snap.levelPercent > 0
-            || ioPropertyInt(service, "DesignCapacity") != nil
-            || ioPropertyInt(service, "AppleRawMaxCapacity") != nil
+            || design != nil
+            || rawMax != nil
         guard snap.isPresent else { return nil }
 
         let external = ioPropertyBool(service, "ExternalConnected") == true
             || ioPropertyBool(service, "AppleRawExternalConnected") == true
+            || ioPropertyBool(service, "ExternalChargeCapable") == true
         snap.isOnAC = external
         if let charging = ioPropertyBool(service, "IsCharging") {
             snap.isCharging = charging
             if charging { snap.isOnAC = true }
+        } else if let atCrit = ioPropertyBool(service, "AtCriticalLevel"), atCrit {
+            snap.isCharging = false
         } else if !external, snap.levelPercent > 0 {
             snap.isCharging = false
             snap.isOnAC = false
@@ -3256,61 +3379,85 @@ class BatteryMonitor: ObservableObject {
             }
         }
         if let cycles = ioPropertyInt(service, "CycleCount") { snap.cycleCount = cycles }
-        if let temp = ioPropertyInt(service, "Temperature") ?? ioPropertyInt(service, "AppleRawBatteryTemperature") {
+        // Temperature: prefer VirtualTemperature / BatteryData when present.
+        if let temp = ioPropertyInt(service, "VirtualTemperature")
+            ?? ioPropertyInt(service, "Temperature")
+            ?? ioPropertyInt(service, "AppleRawBatteryTemperature") {
             // Registry uses 0.01°C units when > ~200; otherwise already °C.
-            snap.temperatureCelsius = temp > 200 ? Double(temp) / 100.0 : Double(temp)
+            let c = temp > 200 ? Double(temp) / 100.0 : Double(temp)
+            if c > -20, c < 80 { snap.temperatureCelsius = c }
+        } else if let bd = ioProperty(service, "BatteryData"),
+                  let t = ioDictInt(bd, "Temperature") ?? ioDictInt(bd, "CellTemperature") {
+            let c = t > 200 ? Double(t) / 100.0 : Double(t)
+            if c > -20, c < 80 { snap.temperatureCelsius = c }
         }
-        snap.healthPercent = batteryHealthPercent(service)
+        snap.healthPercent = batteryHealthPercent(service, design: design, rawMax: rawMax)
         snap.isFullyCharged = ioPropertyBool(service, "FullyCharged") == true
             || (snap.levelPercent >= 100 && !snap.isCharging && snap.isOnAC)
         applyIOKitChargePower(service, to: &snap)
+        // Infer charging from positive InstantAmperage when IsCharging is missing.
+        if !snap.isCharging, let ma = snap.amperageMa, ma > 80 {
+            snap.isCharging = true
+            snap.isOnAC = true
+        }
         return snap
     }
 
-    /// Menu-bar–style charge % for modern Apple Silicon (CurrentCapacity is already 0…100).
-    private static func batteryLevelPercent(_ service: io_service_t) -> Int {
+    /// Charge %: prefer menu-bar CurrentCapacity when 0…100; cross-check raw mAh.
+    private static func batteryLevelPercent(_ service: io_service_t, rawCur: Int?, rawMax: Int?) -> Int {
+        var menuBarPct: Int?
         // 1) CurrentCapacity on modern macOS is already a percentage (matches menu bar).
         if let cur = ioPropertyInt(service, "CurrentCapacity"), cur >= 0, cur <= 100 {
-            return cur
+            menuBarPct = cur
         }
-        // 2) BatteryData.StateOfCharge
-        if let bd = ioProperty(service, "BatteryData") {
+        // 2) BatteryData.StateOfCharge / AbsoluteCapacity
+        if menuBarPct == nil, let bd = ioProperty(service, "BatteryData") {
             let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
                 ?? (bd as? NSDictionary)?["StateOfCharge"]
             if let soc = (socValue as? NSNumber)?.intValue ?? cfInt(socValue as? CFTypeRef),
                soc >= 0, soc <= 100 {
-                return soc
+                menuBarPct = soc
             }
         }
-        if let soc = ioPropertyInt(service, "StateOfCharge"), soc >= 0, soc <= 100 {
-            return soc
+        if menuBarPct == nil, let soc = ioPropertyInt(service, "StateOfCharge"), soc >= 0, soc <= 100 {
+            menuBarPct = soc
         }
         // 3) Raw mAh counters (best physical estimate)
-        if let raw = ioPropertyInt(service, "AppleRawCurrentCapacity"),
-           let maxCap = ioPropertyInt(service, "AppleRawMaxCapacity") ?? ioPropertyInt(service, "NominalChargeCapacity"),
-           maxCap > 0 {
-            return min(100, Int((Double(raw) / Double(maxCap) * 100.0).rounded()))
+        var rawPct: Int?
+        if let raw = rawCur,
+           let maxCap = rawMax, maxCap > 0 {
+            rawPct = min(100, max(0, Int((Double(raw) / Double(maxCap) * 100.0).rounded())))
         }
         // 4) Legacy mAh CurrentCapacity/MaxCapacity (MaxCapacity >> 100)
-        if let cur = ioPropertyInt(service, "CurrentCapacity"),
+        if rawPct == nil,
+           let cur = ioPropertyInt(service, "CurrentCapacity"),
            let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 100, cur >= 0 {
-            return min(100, Int((Double(cur) / Double(maxCap) * 100.0).rounded()))
+            rawPct = min(100, Int((Double(cur) / Double(maxCap) * 100.0).rounded()))
         }
-        return 0
+
+        // Prefer menu bar when present; if raw is within 3 pts, average for stability.
+        if let m = menuBarPct, let r = rawPct {
+            if abs(m - r) <= 3 {
+                return Int((Double(m) + Double(r)) / 2.0 + 0.5)
+            }
+            return m
+        }
+        return menuBarPct ?? rawPct ?? 0
     }
 
-    /// Maximum Capacity % (System Settings “Battery Health”), not MaxCapacity when that key is 100.
-    private static func batteryHealthPercent(_ service: io_service_t) -> Int? {
-        let design = ioPropertyInt(service, "DesignCapacity") ?? 0
-        guard design > 0 else { return nil }
+    /// Maximum Capacity % (System Settings “Battery Health”).
+    private static func batteryHealthPercent(_ service: io_service_t, design: Int?, rawMax: Int?) -> Int? {
+        let designCap = design ?? ioPropertyInt(service, "DesignCapacity") ?? 0
+        guard designCap > 0 else { return nil }
         // Prefer raw mAh max / design (matches ~System Settings “Maximum Capacity”).
-        if let rawMax = ioPropertyInt(service, "AppleRawMaxCapacity") ?? ioPropertyInt(service, "NominalChargeCapacity"),
-           rawMax > 0 {
-            return min(100, Int((Double(rawMax) / Double(design) * 100.0).rounded()))
+        if let raw = rawMax ?? ioPropertyInt(service, "AppleRawMaxCapacity")
+            ?? ioPropertyInt(service, "NominalChargeCapacity"),
+           raw > 0 {
+            return min(100, max(0, Int((Double(raw) / Double(designCap) * 100.0).rounded())))
         }
         // Legacy: MaxCapacity was also mAh (never use when MaxCapacity ≤ 100 — that's %).
         if let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 100 {
-            return min(100, Int((Double(maxCap) / Double(design) * 100.0).rounded()))
+            return min(100, Int((Double(maxCap) / Double(designCap) * 100.0).rounded()))
         }
         return nil
     }
@@ -16002,8 +16149,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.9-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.9-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.10-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.10-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
