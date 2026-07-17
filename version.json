@@ -71,6 +71,30 @@
   },
   "archive": [
     {
+      "id": "v1.3.4-Experimental",
+      "channel": "experimental",
+      "sh": "rNitro-v1.3.4-Experimental.sh",
+      "pkg": "rNitro-v1.3.4-Experimental.pkg",
+      "dmg": "rNitro-v1.3.4-Experimental.dmg",
+      "zip": "rNitro-v1.3.4-Experimental.zip"
+    },
+    {
+      "id": "v1.3.5-Experimental",
+      "channel": "experimental",
+      "sh": "rNitro-v1.3.5-Experimental.sh",
+      "pkg": "rNitro-v1.3.5-Experimental.pkg",
+      "dmg": "rNitro-v1.3.5-Experimental.dmg",
+      "zip": "rNitro-v1.3.5-Experimental.zip"
+    },
+    {
+      "id": "v1.3.6-Experimental",
+      "channel": "experimental",
+      "sh": "rNitro-v1.3.6-Experimental.sh",
+      "pkg": "rNitro-v1.3.6-Experimental.pkg",
+      "dmg": "rNitro-v1.3.6-Experimental.dmg",
+      "zip": "rNitro-v1.3.6-Experimental.zip"
+    },
+    {
       "id": "v1.2.8-Final",
       "channel": "stable",
       "sh": "rNitro-v1.2.8-Final.sh",
