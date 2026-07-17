@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="3c630f941d5c8d12362b11d325cef73fb6f3272515f291a7c0f2ead260c3aaf6"
+EXPECTED_HASH="2d7c2ec3cb9e2629487894635be26bad1b99eaac514d130576a0398884e80704"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -400,6 +400,7 @@ private struct VersionManifest: Decodable {
     let beta: String?
     let experimental: String?
     let releases: ReleaseMap
+    let hashes: HashMap?
 
     struct ReleaseMap: Decodable {
         let stable: Channel
@@ -411,6 +412,13 @@ private struct VersionManifest: Decodable {
         let zip: String
     }
 
+    /// SHA-256 hex digests of published App ZIPs (from version.json → hashes).
+    struct HashMap: Decodable {
+        let stable_zip: String?
+        let beta_zip: String?
+        let experimental_zip: String?
+    }
+
     func zipName(for versionId: String) -> String {
         if versionId == latest { return releases.stable.zip }
         if let beta, versionId == beta { return releases.beta.zip }
@@ -419,6 +427,23 @@ private struct VersionManifest: Decodable {
         }
         // Common fallback when manifest omits a channel but the ZIP naming is consistent.
         return "rNitro-\(versionId).zip"
+    }
+
+    /// Expected SHA-256 for a channel ZIP, or nil if the server has not published one yet.
+    func expectedZipSha256(for versionId: String, zipName: String) -> String? {
+        if zipName == releases.stable.zip || versionId == latest {
+            return hashes?.stable_zip
+        }
+        if let beta, zipName == releases.beta.zip || versionId == beta {
+            return hashes?.beta_zip
+        }
+        if let experimental, zipName == (releases.experimental?.zip ?? "") || versionId == experimental {
+            return hashes?.experimental_zip
+        }
+        if zipName == releases.stable.zip { return hashes?.stable_zip }
+        if zipName == releases.beta.zip { return hashes?.beta_zip }
+        if zipName == releases.experimental?.zip { return hashes?.experimental_zip }
+        return nil
     }
 }
 
@@ -905,8 +930,97 @@ enum UpdateInstaller {
     }
 
     private static func systemApplicationsDestination(from dest: URL) -> URL {
-        if dest.path.hasPrefix("/Applications/") { return dest }
+        // Hard-lock admin installs to the canonical system path only.
+        _ = dest
         return URL(fileURLWithPath: "/Applications/rNitro.app")
+    }
+
+    /// Only /Applications/rNitro.app or ~/Applications/rNitro.app (and Data volume twin).
+    private static func isAllowedInstallDestination(_ url: URL) -> Bool {
+        let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+        let homeApps = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Applications/rNitro.app", isDirectory: true)
+            .resolvingSymlinksInPath().path
+        if path == "/Applications/rNitro.app" { return true }
+        if path == "/System/Volumes/Data/Applications/rNitro.app" { return true }
+        if path == homeApps { return true }
+        return false
+    }
+
+    private static func sha256Hex(of file: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while true {
+            let chunk: Data
+            do {
+                guard let data = try handle.read(upToCount: 1024 * 1024) else { break }
+                if data.isEmpty { break }
+                chunk = data
+            } catch {
+                return nil
+            }
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Fail closed when a hash is published; allow legacy manifests without zip hashes.
+    private static func verifyZipIntegrity(zipFile: URL, expectedHex: String?) -> String? {
+        guard let expected = expectedHex?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !expected.isEmpty else {
+            log("No published zip hash for this channel — relying on ZIP magic + codesign")
+            return nil
+        }
+        guard expected.count == 64, expected.unicodeScalars.allSatisfy({ CharacterSet(charactersIn: "0123456789abcdef").contains($0) }) else {
+            return "Server published an invalid SHA-256 for the update package."
+        }
+        guard let actual = sha256Hex(of: zipFile)?.lowercased() else {
+            return "Could not hash the downloaded update package."
+        }
+        if actual != expected {
+            log("ZIP hash mismatch expected=\(expected) actual=\(actual)")
+            return "Update package failed integrity check (SHA-256 mismatch). Refusing to install. Re-download from chopstickshq.com/rnitro."
+        }
+        log("ZIP SHA-256 OK (\(actual.prefix(16))…)")
+        return nil
+    }
+
+    /// Ensure staged bundle looks like rNitro and passes codesign --verify.
+    private static func verifyStagedApp(_ app: URL) -> String? {
+        let plist = app.appendingPathComponent("Contents/Info.plist")
+        guard FileManager.default.fileExists(atPath: plist.path) else {
+            return "Staged app is missing Info.plist."
+        }
+        let exe = app.appendingPathComponent("Contents/MacOS/rNitro")
+        guard FileManager.default.isExecutableFile(atPath: exe.path) else {
+            return "Staged app is missing a runnable MacOS/rNitro binary."
+        }
+        // Bundle identifier must be our product family.
+        let idProc = Process()
+        idProc.executableURL = URL(fileURLWithPath: "/usr/libexec/PlistBuddy")
+        idProc.arguments = ["-c", "Print :CFBundleIdentifier", plist.path]
+        let idOut = Pipe()
+        idProc.standardOutput = idOut
+        idProc.standardError = Pipe()
+        guard (try? idProc.run()) != nil else {
+            return "Could not read staged app bundle id."
+        }
+        idProc.waitUntilExit()
+        let bid = String(data: idOut.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !bid.lowercased().contains("rnitro") {
+            log("Unexpected bundle id: \(bid)")
+            return "Staged app bundle id is not rNitro (\(bid)). Refusing to install."
+        }
+        // codesign --verify (ad-hoc signed builds still verify as valid)
+        let verify = runCommand("/usr/bin/codesign", ["--verify", "--deep", app.path])
+        if verify.0 != 0 {
+            log("codesign --verify failed: \(verify.1)")
+            return "Staged app failed code signature verification. Refusing to install. Re-download from chopstickshq.com/rnitro."
+        }
+        log("codesign --verify OK for \(app.lastPathComponent) id=\(bid)")
+        return nil
     }
 
     private static func log(_ message: String) {
@@ -1160,8 +1274,15 @@ enum UpdateInstaller {
             return .failure("Downloaded package is too small (\(size) bytes). Try again or use the website.")
         }
 
+        // Integrity: published SHA-256 from version.json (when present).
+        let expectedSha = manifest?.expectedZipSha256(for: remoteVersion, zipName: zipName)
+        if let hashErr = verifyZipIntegrity(zipFile: zipFile, expectedHex: expectedSha) {
+            try? fm.removeItem(at: zipFile)
+            return .failure(hashErr)
+        }
+
         DispatchQueue.main.async {
-            progressDetail?.stringValue = "Installing \(remoteVersion)…"
+            progressDetail?.stringValue = "Verifying & installing \(remoteVersion)…"
             progressBar?.isIndeterminate = true
             progressBar?.startAnimation(nil)
         }
@@ -1173,10 +1294,18 @@ enum UpdateInstaller {
         }
         guard let staged = findAppBundle(in: extractDir) else {
             log("rNitro.app missing after extract")
-            return .failure("rNitro.app not found inside \(zipName). Download manually from getrnitro.netlify.app.")
+            return .failure("rNitro.app not found inside \(zipName). Download manually from chopstickshq.com/rnitro.")
+        }
+        if let stageErr = verifyStagedApp(staged) {
+            try? fm.removeItem(at: extractDir)
+            return .failure(stageErr)
         }
 
         let dest = installDestination()
+        if !isAllowedInstallDestination(dest) {
+            log("Refusing install destination: \(dest.path)")
+            return .failure("Refusing to install outside /Applications or ~/Applications.")
+        }
         log("Installing to \(dest.path) (running from \(Bundle.main.bundlePath))")
         let replace = replaceApp(stagedApp: staged, destination: dest)
         if let installError = replace.error {
@@ -1254,7 +1383,7 @@ enum UpdateInstaller {
     }
 
     private static func installDestination() -> URL {
-        let current = URL(fileURLWithPath: Bundle.main.bundlePath)
+        let current = URL(fileURLWithPath: Bundle.main.bundlePath).standardizedFileURL
         let homeApp = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Applications/rNitro.app", isDirectory: true)
         let path = current.path
@@ -1269,9 +1398,12 @@ enum UpdateInstaller {
             return systemApplicationsDestination(from: current)
         }
 
-        let parent = current.deletingLastPathComponent()
-        if FileManager.default.isWritableFile(atPath: parent.path) {
-            return current
+        // Only update in place when already under ~/Applications/rNitro.app.
+        if isAllowedInstallDestination(current) {
+            let parent = current.deletingLastPathComponent()
+            if FileManager.default.isWritableFile(atPath: parent.path) {
+                return current
+            }
         }
         return homeApp
     }
@@ -1290,6 +1422,14 @@ enum UpdateInstaller {
 
     private static func replaceApp(stagedApp: URL, destination: URL) -> ReplaceResult {
         let fm = FileManager.default
+        // Re-check destination is allowlisted (defense in depth).
+        if !isAllowedInstallDestination(destination) {
+            return ReplaceResult(error: "Refusing to install outside /Applications or ~/Applications.")
+        }
+        if let stageErr = verifyStagedApp(stagedApp) {
+            return ReplaceResult(error: stageErr)
+        }
+
         let parent = destination.deletingLastPathComponent()
         try? fm.createDirectory(at: parent, withIntermediateDirectories: true)
 
@@ -1305,23 +1445,61 @@ enum UpdateInstaller {
                 ? "Could not stage the update package."
                 : stageCopy.1)
         }
+        if let stageErr = verifyStagedApp(durableStage) {
+            try? fm.removeItem(at: durableStage)
+            return ReplaceResult(error: stageErr)
+        }
 
         let adminDest = isSystemApplicationsBundle(destination.path)
-            ? systemApplicationsDestination(from: destination) : destination
+            ? systemApplicationsDestination(from: destination)
+            : destination.standardizedFileURL
+        if !isAllowedInstallDestination(adminDest) {
+            return ReplaceResult(error: "Refusing admin install to unexpected path \(adminDest.path).")
+        }
+        // Admin path must be exactly system Applications — never a user-controlled string.
+        let adminTargetPath = "/Applications/rNitro.app"
         let staged = shellQuote(durableStage.path)
-        let target = shellQuote(adminDest.path)
-        let parentPath = shellQuote(adminDest.deletingLastPathComponent().path)
+        let target = shellQuote(
+            isSystemApplicationsBundle(destination.path) ? adminTargetPath : adminDest.path
+        )
+        let parentPath = shellQuote(
+            isSystemApplicationsBundle(destination.path)
+                ? "/Applications"
+                : adminDest.deletingLastPathComponent().path
+        )
         let pid = ProcessInfo.processInfo.processIdentifier
         let logPath = shellQuote(updateLogURL.path)
         let resultPath = shellQuote(updateResultURL.path)
 
         if isSystemApplicationsBundle(destination.path) {
+            // Fixed destination only; run a small helper script via admin privileges.
+            let adminHelper = fm.temporaryDirectory.appendingPathComponent("rnitro-admin-update.sh")
+            let adminScript = """
+#!/bin/bash
+set -euo pipefail
+STAGED='\(staged)'
+test -d "$STAGED"
+test -x "$STAGED/Contents/MacOS/rNitro"
+/usr/bin/codesign --verify --deep "$STAGED"
+mkdir -p /Applications
+rm -rf /Applications/rNitro.app
+/usr/bin/ditto "$STAGED" /Applications/rNitro.app
+/usr/bin/xattr -cr /Applications/rNitro.app || true
+/usr/bin/codesign --verify --deep /Applications/rNitro.app
+"""
+            do {
+                try adminScript.write(to: adminHelper, atomically: true, encoding: .utf8)
+                try fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: adminHelper.path)
+            } catch {
+                return ReplaceResult(error: "Could not prepare the admin update helper.")
+            }
+            let helperQ = shellQuote(adminHelper.path)
             let errPipe = Pipe()
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
             proc.arguments = [
                 "-e",
-                "do shell script \"mkdir -p /Applications && rm -rf '\(target)' && /usr/bin/ditto '\(staged)' '\(target)' && /usr/bin/xattr -cr '\(target)'\" with administrator privileges"
+                "do shell script \"/bin/bash \(helperQ)\" with administrator privileges"
             ]
             proc.standardError = errPipe
             proc.standardOutput = Pipe()
@@ -1329,37 +1507,52 @@ enum UpdateInstaller {
                 return ReplaceResult(error: "Could not request administrator access to update /Applications.")
             }
             proc.waitUntilExit()
+            try? fm.removeItem(at: adminHelper)
             if proc.terminationStatus != 0 {
                 let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
                 log("Admin install failed (status \(proc.terminationStatus)): \(err)")
-                return ReplaceResult(error: "Could not replace rNitro in /Applications. Enter your Mac password when prompted, or download the App ZIP from getrnitro.netlify.app.")
+                return ReplaceResult(error: "Could not replace rNitro in /Applications (admin install failed or signature check failed). Download the App ZIP from chopstickshq.com/rnitro.")
             }
             return ReplaceResult(opensBeforeQuit: true)
         }
 
         let scriptURL = fm.temporaryDirectory.appendingPathComponent("rnitro-apply-update.sh")
+        // Non-admin helper: only write to pre-validated target under Applications.
         let script = """
 #!/bin/bash
+set -euo pipefail
 LOG='\(logPath)'
 RESULT='\(resultPath)'
+STAGED='\(staged)'
+TARGET='\(target)'
+PARENT='\(parentPath)'
 write_result() {
   printf '%s|%s\n' "$1" "$2" > "$RESULT"
 }
 trap 'code=$?; if [ ! -f "$RESULT" ] || [ ! -s "$RESULT" ]; then write_result fail "Update helper exited with code $code. See $LOG"; fi' EXIT
 write_result pending "Update in progress…"
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] apply-update pid=\(pid) dest=\(target)" >> "$LOG"
+echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] apply-update pid=\(pid) dest=$TARGET" >> "$LOG"
+# Path must end with rNitro.app and live under Applications
+case "$TARGET" in
+  */Applications/rNitro.app) ;;
+  *) write_result fail "Refusing unexpected install path"; exit 1 ;;
+esac
+test -d "$STAGED" || { write_result fail "Staged app missing"; exit 1; }
+test -x "$STAGED/Contents/MacOS/rNitro" || { write_result fail "Staged binary missing"; exit 1; }
+/usr/bin/codesign --verify --deep "$STAGED" || { write_result fail "Staged app failed codesign"; exit 1; }
 while kill -0 \(pid) 2>/dev/null; do sleep 0.25; done
 sleep 0.5
-mkdir -p '\(parentPath)' || { write_result fail "Could not create install folder"; exit 1; }
-rm -rf '\(target)' || { write_result fail "Could not remove old rNitro.app"; exit 1; }
-if ! /usr/bin/ditto '\(staged)' '\(target)' 2>>"$LOG"; then
+mkdir -p "$PARENT" || { write_result fail "Could not create install folder"; exit 1; }
+rm -rf "$TARGET" || { write_result fail "Could not remove old rNitro.app"; exit 1; }
+if ! /usr/bin/ditto "$STAGED" "$TARGET" 2>>"$LOG"; then
   write_result fail "ditto failed copying the update. See $LOG"
   exit 1
 fi
-xattr -cr '\(target)' 2>/dev/null || true
+xattr -cr "$TARGET" 2>/dev/null || true
+/usr/bin/codesign --verify --deep "$TARGET" || { write_result fail "Installed app failed codesign"; exit 1; }
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] apply-update done" >> "$LOG"
 write_result ok ""
-open '\(target)'
+open "$TARGET"
 """
         do {
             try script.write(to: scriptURL, atomically: true, encoding: .utf8)
