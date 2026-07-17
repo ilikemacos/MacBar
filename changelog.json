@@ -2,58 +2,50 @@
   "whats_new": [
     {
       "channel": "stable",
-      "title": "v1.2.7 Final",
+      "title": "v1.2.9 Final",
       "accent": "green",
       "items": [
         {
-          "strong": "UI font library",
-          "text": " \u2014 Appearance picker with 50+ Google Fonts (EB Garamond, Audiowide, Caveat, Inter, \u2026), OFL, offline."
+          "strong": "Light & dark theme",
+          "text": " \u2014 Appearance \u2192 Theme: System / Dark / Light."
         },
         {
-          "strong": "Modern stable",
-          "text": " \u2014 customizable menubar/UI, accents, thresholds, \u2318Q; OpenAI + OpenRouter only."
+          "strong": "UI fonts",
+          "text": " \u2014 searchable catalog + OFL fonts."
         },
         {
-          "strong": "No Lab noise",
-          "text": " \u2014 Lab, Dev Mode, and Experimental toys stay on Beta/Experimental."
-        },
-        {
-          "strong": "Install",
-          "text": " \u2014 App ZIP recommended; PKG/DMG/.sh also available."
+          "strong": "Stable scope",
+          "text": " \u2014 OpenAI/OpenRouter only; no Lab."
         }
       ]
     },
     {
       "channel": "experimental",
-      "title": "v1.3.1 Experimental",
+      "title": "v1.3.3 Experimental",
       "accent": "purple",
       "items": [
         {
-          "strong": "50+ UI fonts",
-          "text": " \u2014 Appearance \u2192 UI font: EB Garamond, Audiowide, Caveat, and many more (Google Fonts OFL)."
+          "strong": "Theme + Dev Deck",
+          "text": " \u2014 app theme picker; site light/dark + Dev Deck (Ctrl+Shift+D)."
         },
         {
-          "strong": "All prior toys",
-          "text": " \u2014 TOC chips, forecast, haiku, cosplay, overnight, roulette, chaos + classic playground."
+          "strong": "All toys",
+          "text": " \u2014 experimental Lab playground."
         }
       ]
     },
     {
       "channel": "beta",
-      "title": "v1.2.10 Beta",
+      "title": "v1.2.12 Beta",
       "accent": "orange",
       "items": [
         {
-          "strong": "UI font library",
-          "text": " \u2014 50+ Google Fonts in Appearance (offline bundled)."
+          "strong": "Theme + Dev toolkit",
+          "text": " \u2014 light/dark mode; Dev Mode surprise tools (CDN ping, font map, accent shuffle)."
         },
         {
-          "strong": "Process intelligence",
-          "text": " \u2014 Why hot?; Dev Mode kill/reveal/Copy PID."
-        },
-        {
-          "strong": "Developer Mode",
-          "text": " \u2014 UI config import/export, dumps, high sample rate."
+          "strong": "Lab",
+          "text": " \u2014 full beta Lab + process tools."
         }
       ]
     },
@@ -78,6 +70,14 @@
     }
   ],
   "releases": [
+    {
+      "title": "v1.3.3 Experimental / v1.2.12 Beta / v1.2.9 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">Light & dark mode</strong> on website + app. <strong>Dev toolkit</strong>: site Dev Deck (CDN ping, grid, party mode); app Dev Mode environment manifest, font map, CDN ping, accent shuffle."
+    },
+    {
+      "title": "v1.3.2 Experimental / v1.2.11 Beta / v1.2.8 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">Font picker UX</strong> \u2014 search fonts, filter Sans/Serif/Display/Script/Mono, star favorites, OFL credit. 50+ Google Fonts still offline."
+    },
     {
       "title": "v1.3.1 Experimental / v1.2.10 Beta / v1.2.7 Final",
       "body_html": "<strong style=\"color:var(--orange);\">Version bump</strong> \u2014 same UI font library (50+ Google Fonts OFL). Patch release for channel versioning and distribution."
