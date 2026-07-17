@@ -60,7 +60,24 @@ Google may queue these for hours–days.
 [ ] Request index: /rnitro/faq.html
 [ ] Request index: /rnitro/terms.html
 [ ] Request index: /rnitro/privacy.html
+[ ] Optional smoke: python3 scripts/smoke-hq-deploy.py
 ```
+
+### Automated smoke (after Netlify HQ deploy)
+
+From `rnitro-site/`:
+
+```bash
+python3 scripts/smoke-hq-deploy.py
+# or
+python3 scripts/smoke-hq-deploy.py --base https://chopstickshq.com/rnitro
+```
+
+Checks `version.json` channel ids, Stable/Beta/Experimental ZIP sizes, and that live HTML includes Terms disagree + remember checkbox strings.
+
+### What only you can do in the browser
+
+Google does not expose a free API for “Request indexing” in this workflow. Open [Search Console](https://search.google.com/search-console) with the property owner account and run the checklist above after each major site ship.
 
 ## 4. Keywords we target
 
