@@ -2,6 +2,17 @@
   "whats_new": [
     {
       "channel": "experimental",
+      "title": "v1.3.10 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Battery accuracy",
+          "text": " \u2014 raw mAh SoC cross-check, signed InstantAmperage pack watts, discharge W, ETA from capacity when IOKit times are stale."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
       "title": "v1.3.9 Experimental",
       "accent": "purple",
       "items": [
