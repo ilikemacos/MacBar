@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="7f1e5fcef6b467e9232060c59b01001e195fad61e1c350d1ba206c43a499ce17"
+EXPECTED_HASH="1852e0bd6e042d0b07ecdf2b529a87418f366e39f3cd84c689f5a84ab2beb207"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -374,7 +374,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against https://getrnitro.netlify.app/version.json on every launch.
-let CURRENT_VERSION = "v1.3.1-Experimental"
+let CURRENT_VERSION = "v1.3.3-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -1871,6 +1871,8 @@ class CPUMonitor: ObservableObject {
         var memLen = MemoryLayout<UInt64>.size
         if sysctlbyname("hw.memsize", &memSize, &memLen, nil, 0) == 0, memSize > 0 {
             cachedMemsizeGB = Double(memSize) / 1_073_741_824
+            // Publish total immediately so UI never shows "0 GB" before first sample.
+            memoryTotalGB = cachedMemsizeGB
         }
     }
 
@@ -1880,8 +1882,10 @@ class CPUMonitor: ObservableObject {
         stopMonitoring()
         syncHistoryBuffers()
         pollInterval = MonitorActivity.cpuInterval
+        // Immediate first tick so RAM/CPU aren't stuck at 0% until the first interval.
+        workQueue.async { [weak self] in self?.update() }
         let source = DispatchSource.makeTimerSource(queue: workQueue)
-        source.schedule(deadline: .now(), repeating: pollInterval)
+        source.schedule(deadline: .now() + pollInterval, repeating: pollInterval)
         source.setEventHandler { [weak self] in self?.update() }
         source.resume()
         pollSource = source
@@ -1931,9 +1935,10 @@ class CPUMonitor: ObservableObject {
         case .slotAware, .full:
             cpu = updateCPUUsage()
         }
+        // Always sample memory (cheap host_statistics64). Previously this was gated
+        // on popoverOpen || menubar RAM slot, so Monitor could show 0% forever.
         var mem: MemorySample? = nil
-        if MonitorActivity.samplesMemory,
-           now.timeIntervalSince(lastMemorySampleTime) >= MonitorActivity.memoryInterval {
+        if now.timeIntervalSince(lastMemorySampleTime) >= MonitorActivity.memoryInterval {
             mem = sampleMemory()
             lastMemorySampleTime = now
         }
@@ -2007,25 +2012,42 @@ class CPUMonitor: ObservableObject {
     }
 
     private func sampleMemory() -> MemorySample? {
-        let totalGB = cachedMemsizeGB > 0 ? cachedMemsizeGB : memoryTotalGB
+        var totalGB = cachedMemsizeGB > 0 ? cachedMemsizeGB : memoryTotalGB
+        if totalGB <= 0 {
+            var memSize: UInt64 = 0
+            var memLen = MemoryLayout<UInt64>.size
+            if sysctlbyname("hw.memsize", &memSize, &memLen, nil, 0) == 0, memSize > 0 {
+                totalGB = Double(memSize) / 1_073_741_824
+                cachedMemsizeGB = totalGB
+            }
+        }
         guard totalGB > 0 else { return nil }
 
         var stats = vm_statistics64()
-        var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
+        // Use stride (not size) so the integer_t count matches the kernel layout.
+        var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.stride / MemoryLayout<integer_t>.stride)
         let result = withUnsafeMutablePointer(to: &stats) {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
                 host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
             }
         }
         guard result == KERN_SUCCESS else { return nil }
-        let pageSize = Double(vm_kernel_page_size)
+        // Prefer kernel page size; fall back to host_page_size if zero.
+        var pageSizeU: vm_size_t = 0
+        if vm_kernel_page_size > 0 {
+            pageSizeU = vm_kernel_page_size
+        } else {
+            host_page_size(mach_host_self(), &pageSizeU)
+        }
+        let pageSize = Double(pageSizeU > 0 ? pageSizeU : 16_384)
         let wiredGB = (Double(stats.wire_count) * pageSize) / 1_073_741_824
         let compressedGB = (Double(stats.compressor_page_count) * pageSize) / 1_073_741_824
+        // App-used ≈ active + wired + compressor (Activity Monitor–style; not file cache).
         let usedPages = Double(stats.active_count + stats.wire_count + stats.compressor_page_count)
-        let freePages = Double(stats.free_count + stats.inactive_count)
-        let usedGB = (usedPages * pageSize) / 1_073_741_824
-        let freeGB = (freePages * pageSize) / 1_073_741_824
-        let usedPct = totalGB > 0 ? min(100, usedGB / totalGB * 100) : 0
+        let freePages = Double(stats.free_count + stats.inactive_count + stats.speculative_count)
+        let usedGB = min(totalGB, max(0, (usedPages * pageSize) / 1_073_741_824))
+        let freeGB = max(0, (freePages * pageSize) / 1_073_741_824)
+        let usedPct = totalGB > 0 ? min(100, max(0, usedGB / totalGB * 100)) : 0
         var swapUsedGB: Double = 0
         var swap = xsw_usage()
         var swapSize = MemoryLayout<xsw_usage>.size
@@ -2333,25 +2355,15 @@ class BatteryMonitor: ObservableObject {
         healthPercent = snap.healthPercent
     }
 
-    private static func iokitSnapshotComplete(_ snap: Snapshot) -> Bool {
-        guard snap.isPresent && snap.levelPercent > 0 else { return false }
-        // Keep ioreg/pmset fallback when charging but wattage (or ETA) is still missing.
-        if snap.isCharging {
-            if snap.chargeWatts > 0 { return true }
-            if let eta = snap.timeToFullMinutes, eta > 0, eta < 65535 { return true }
-            return false
-        }
-        return true
-    }
-
     private static func collectSnapshot(prevLevel: Int?, prevSampleTime: Date?) -> Snapshot {
+        // Always start with direct IOKit, then blend pmset (menu-bar % / remaining time)
+        // and ioreg for any missing fields. Early-return used to skip pmset once a %
+        // was found, so remaining time and health could stay wrong.
         var snap = readIOKitBattery() ?? Snapshot()
-        if iokitSnapshotComplete(snap) {
-            finalizeSnapshot(&snap, prevLevel: prevLevel, prevSampleTime: prevSampleTime)
-            return snap
-        }
         if let pm = readPmset() { mergePmset(pm, into: &snap) }
-        if let hw = readIoreg() { mergeIoreg(hw, into: &snap) }
+        if !snap.isPresent || snap.levelPercent <= 0 || snap.healthPercent == nil {
+            if let hw = readIoreg() { mergeIoreg(hw, into: &snap) }
+        }
         finalizeSnapshot(&snap, prevLevel: prevLevel, prevSampleTime: prevSampleTime)
         return snap
     }
@@ -2396,12 +2408,18 @@ class BatteryMonitor: ObservableObject {
     private static func mergePmset(_ pm: Snapshot, into snap: inout Snapshot) {
         if pm.isPresent {
             snap.isPresent = true
+            // pmset % matches the menu bar / System Settings charge figure.
             if pm.levelPercent > 0 { snap.levelPercent = pm.levelPercent }
             snap.isCharging = pm.isCharging
             snap.isOnAC = pm.isOnAC
             snap.isFullyCharged = pm.isFullyCharged
-            if let eta = pm.timeToFullMinutes { snap.timeToFullMinutes = eta }
-            if let rem = pm.timeRemainingMinutes { snap.timeRemainingMinutes = rem }
+            // Prefer pmset remaining times (IOKit TimeRemaining is often stale after sleep).
+            if let eta = pm.timeToFullMinutes, eta > 0, eta < 65535 {
+                snap.timeToFullMinutes = eta
+            }
+            if let rem = pm.timeRemainingMinutes, rem > 0, rem < 65535 {
+                snap.timeRemainingMinutes = rem
+            }
         }
     }
 
@@ -2551,35 +2569,15 @@ class BatteryMonitor: ObservableObject {
 
         let installed = ioPropertyBool(service, "BatteryInstalled")
         let builtIn = ioPropertyBool(service, "built-in")
-        guard installed != false, builtIn != false else { return nil }
+        // BatteryInstalled can be absent; treat any SmartBattery service as present.
+        if installed == false && builtIn == false { return nil }
 
         var snap = Snapshot()
-        var level = 0
-
-        if let bd = ioProperty(service, "BatteryData") {
-            let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
-                ?? (bd as? NSDictionary)?["StateOfCharge"]
-            if let soc = socValue as? Int {
-                level = soc
-            } else if let n = socValue as? NSNumber {
-                level = n.intValue
-            } else if let soc = cfInt(socValue as? CFTypeRef) {
-                level = soc
-            }
-        }
-        if level <= 0, let soc = ioPropertyInt(service, "StateOfCharge") { level = soc }
-        if level <= 0, let cur = ioPropertyInt(service, "CurrentCapacity"), cur <= 100 { level = cur }
-        if level <= 0, let raw = ioPropertyInt(service, "AppleRawCurrentCapacity"),
-           let maxCap = ioPropertyInt(service, "AppleRawMaxCapacity"), maxCap > 0 {
-            level = Int(Double(raw) / Double(maxCap) * 100.0)
-        }
-        if level <= 0, let cur = ioPropertyInt(service, "CurrentCapacity"),
-           let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 0, cur <= maxCap {
-            level = Int(Double(cur) / Double(maxCap) * 100.0)
-        }
-
+        let level = batteryLevelPercent(service)
         snap.levelPercent = min(100, max(0, level))
         snap.isPresent = installed == true || builtIn == true || snap.levelPercent > 0
+            || ioPropertyInt(service, "DesignCapacity") != nil
+            || ioPropertyInt(service, "AppleRawMaxCapacity") != nil
         guard snap.isPresent else { return nil }
 
         let external = ioPropertyBool(service, "ExternalConnected") == true
@@ -2592,20 +2590,78 @@ class BatteryMonitor: ObservableObject {
             snap.isCharging = false
             snap.isOnAC = false
         }
-        if let tr = ioPropertyInt(service, "TimeRemaining"), tr > 0, tr < 65535 {
-            if snap.isCharging { snap.timeToFullMinutes = tr } else { snap.timeRemainingMinutes = tr }
+        // Prefer AvgTimeTo* when present; TimeRemaining alone is often wrong after sleep.
+        if snap.isCharging {
+            if let avg = ioPropertyInt(service, "AvgTimeToFull"), avg > 0, avg < 65535 {
+                snap.timeToFullMinutes = avg
+            } else if let tr = ioPropertyInt(service, "TimeRemaining"), tr > 0, tr < 65535 {
+                snap.timeToFullMinutes = tr
+            }
+        } else if !snap.isOnAC {
+            if let empty = ioPropertyInt(service, "AvgTimeToEmpty"), empty > 0, empty < 65535 {
+                snap.timeRemainingMinutes = empty
+            } else if let tr = ioPropertyInt(service, "TimeRemaining"), tr > 0, tr < 65535 {
+                snap.timeRemainingMinutes = tr
+            }
         }
         if let cycles = ioPropertyInt(service, "CycleCount") { snap.cycleCount = cycles }
         if let temp = ioPropertyInt(service, "Temperature") ?? ioPropertyInt(service, "AppleRawBatteryTemperature") {
+            // Registry uses 0.01°C units when > ~200; otherwise already °C.
             snap.temperatureCelsius = temp > 200 ? Double(temp) / 100.0 : Double(temp)
         }
-        if let maxCap = ioPropertyInt(service, "MaxCapacity"),
-           let design = ioPropertyInt(service, "DesignCapacity"), design > 0, maxCap > 0 {
-            snap.healthPercent = min(100, Int(Double(maxCap) / Double(design) * 100.0))
-        }
-        snap.isFullyCharged = snap.levelPercent >= 100 && !snap.isCharging && snap.isOnAC
+        snap.healthPercent = batteryHealthPercent(service)
+        snap.isFullyCharged = ioPropertyBool(service, "FullyCharged") == true
+            || (snap.levelPercent >= 100 && !snap.isCharging && snap.isOnAC)
         applyIOKitChargePower(service, to: &snap)
         return snap
+    }
+
+    /// Menu-bar–style charge % for modern Apple Silicon (CurrentCapacity is already 0…100).
+    private static func batteryLevelPercent(_ service: io_service_t) -> Int {
+        // 1) CurrentCapacity on modern macOS is already a percentage (matches menu bar).
+        if let cur = ioPropertyInt(service, "CurrentCapacity"), cur >= 0, cur <= 100 {
+            return cur
+        }
+        // 2) BatteryData.StateOfCharge
+        if let bd = ioProperty(service, "BatteryData") {
+            let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
+                ?? (bd as? NSDictionary)?["StateOfCharge"]
+            if let soc = (socValue as? NSNumber)?.intValue ?? cfInt(socValue as? CFTypeRef),
+               soc >= 0, soc <= 100 {
+                return soc
+            }
+        }
+        if let soc = ioPropertyInt(service, "StateOfCharge"), soc >= 0, soc <= 100 {
+            return soc
+        }
+        // 3) Raw mAh counters (best physical estimate)
+        if let raw = ioPropertyInt(service, "AppleRawCurrentCapacity"),
+           let maxCap = ioPropertyInt(service, "AppleRawMaxCapacity") ?? ioPropertyInt(service, "NominalChargeCapacity"),
+           maxCap > 0 {
+            return min(100, Int((Double(raw) / Double(maxCap) * 100.0).rounded()))
+        }
+        // 4) Legacy mAh CurrentCapacity/MaxCapacity (MaxCapacity >> 100)
+        if let cur = ioPropertyInt(service, "CurrentCapacity"),
+           let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 100, cur >= 0 {
+            return min(100, Int((Double(cur) / Double(maxCap) * 100.0).rounded()))
+        }
+        return 0
+    }
+
+    /// Maximum Capacity % (System Settings “Battery Health”), not MaxCapacity when that key is 100.
+    private static func batteryHealthPercent(_ service: io_service_t) -> Int? {
+        let design = ioPropertyInt(service, "DesignCapacity") ?? 0
+        guard design > 0 else { return nil }
+        // Prefer raw mAh max / design (matches ~System Settings “Maximum Capacity”).
+        if let rawMax = ioPropertyInt(service, "AppleRawMaxCapacity") ?? ioPropertyInt(service, "NominalChargeCapacity"),
+           rawMax > 0 {
+            return min(100, Int((Double(rawMax) / Double(design) * 100.0).rounded()))
+        }
+        // Legacy: MaxCapacity was also mAh (never use when MaxCapacity ≤ 100 — that's %).
+        if let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 100 {
+            return min(100, Int((Double(maxCap) / Double(design) * 100.0).rounded()))
+        }
+        return nil
     }
 
     private static func readPmset() -> Snapshot? {
@@ -2704,9 +2760,21 @@ class BatteryMonitor: ObservableObject {
         if let raw = matchInt(#"Temperature"=\s*(\d+)"#, in: out) ?? matchInt(#"AppleRawBatteryTemperature"=\s*(\d+)"#, in: out) {
             info.temperatureCelsius = raw > 200 ? Double(raw) / 100.0 : Double(raw)
         }
-        if let maxCap = matchInt(#"MaxCapacity"=\s*(\d+)"#, in: out),
-           let design = matchInt(#"DesignCapacity"=\s*(\d+)"#, in: out), design > 0, maxCap > 0 {
-            info.healthPercent = min(100, Int(Double(maxCap) / Double(design) * 100.0))
+        // Health: AppleRawMaxCapacity / DesignCapacity (never MaxCapacity when it's 0–100 %).
+        if let design = matchInt(#"DesignCapacity"\s*=\s*(\d+)"#, in: out), design > 0 {
+            if let rawMax = matchInt(#"AppleRawMaxCapacity"\s*=\s*(\d+)"#, in: out)
+                ?? matchInt(#"NominalChargeCapacity"\s*=\s*(\d+)"#, in: out), rawMax > 0 {
+                info.healthPercent = min(100, Int((Double(rawMax) / Double(design) * 100.0).rounded()))
+            } else if let maxCap = matchInt(#"MaxCapacity"\s*=\s*(\d+)"#, in: out), maxCap > 100 {
+                info.healthPercent = min(100, Int((Double(maxCap) / Double(design) * 100.0).rounded()))
+            }
+        }
+        // Level: prefer CurrentCapacity when already 0…100 (menu-bar style).
+        if let cur = matchInt(#"CurrentCapacity"\s*=\s*(\d+)"#, in: out), cur <= 100 {
+            info.levelPercent = cur
+        } else if let raw = matchInt(#"AppleRawCurrentCapacity"\s*=\s*(\d+)"#, in: out),
+                  let rawMax = matchInt(#"AppleRawMaxCapacity"\s*=\s*(\d+)"#, in: out), rawMax > 0 {
+            info.levelPercent = min(100, Int((Double(raw) / Double(rawMax) * 100.0).rounded()))
         }
         return info.levelPercent > 0 || info.isOnAC || info.adapterWatts > 0 || info.batteryInstalled ? info : nil
     }
@@ -3312,9 +3380,28 @@ class WeatherService: ObservableObject {
 }
 
 extension Color {
-    static let bg      = Color(red:0.05,green:0.05,blue:0.08)
-    static let card    = Color(red:0.10,green:0.10,blue:0.14)
-    static let border  = Color(red:0.20,green:0.20,blue:0.28)
+    /// Dynamic light/dark brand surface colors (follow preferredColorScheme).
+    private static func adaptive(light: NSColor, dark: NSColor) -> Color {
+        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
+            let darkMatch = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return darkMatch ? dark : light
+        }))
+    }
+    private static func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> NSColor {
+        NSColor(calibratedRed: r, green: g, blue: b, alpha: 1)
+    }
+    static let bg = adaptive(
+        light: rgb(0.96, 0.96, 0.98),
+        dark: rgb(0.05, 0.05, 0.08)
+    )
+    static let card = adaptive(
+        light: rgb(1.0, 1.0, 1.0),
+        dark: rgb(0.10, 0.10, 0.14)
+    )
+    static let border = adaptive(
+        light: rgb(0.82, 0.84, 0.90),
+        dark: rgb(0.20, 0.20, 0.28)
+    )
     /// Dynamic accent from UI customization (default cyan).
     static var accent: Color { UICustomizationStore.shared.accentColor }
     static let nGreen  = Color(red:0.1, green:1.0, blue:0.5)
@@ -3351,10 +3438,11 @@ enum MenubarDensity: String, CaseIterable, Identifiable {
     case compact, comfortable, spacious
     var id: String { rawValue }
     var label: String {
+        let d = DisplayPreferencesStore.shared
         switch self {
-        case .compact: return "Compact"
-        case .comfortable: return "Comfortable"
-        case .spacious: return "Spacious"
+        case .compact: return d.tr("density.compact")
+        case .comfortable: return d.tr("density.comfortable")
+        case .spacious: return d.tr("density.spacious")
         }
     }
     /// Separator between menubar values
@@ -3370,7 +3458,9 @@ enum MenubarDensity: String, CaseIterable, Identifiable {
 enum AccentPreset: String, CaseIterable, Identifiable {
     case cyan, green, orange, purple, pink, blue
     var id: String { rawValue }
-    var label: String { rawValue.capitalized }
+    var label: String {
+        DisplayPreferencesStore.shared.tr("accent.\(rawValue)")
+    }
     var color: Color {
         switch self {
         case .cyan: return Color(red: 0.0, green: 0.85, blue: 1.0)
@@ -3485,6 +3575,91 @@ final class DeveloperModeStore: ObservableObject {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(str, forType: .string)
         }
+    }
+
+    /// Surprise toolkit — path/font/CDN diagnostics for power users.
+    func copyEnvironmentManifest() {
+        let fontsDir = Bundle.main.resourceURL?.appendingPathComponent("Fonts")
+        var fontFiles: [String] = []
+        if let fontsDir, let items = try? FileManager.default.contentsOfDirectory(atPath: fontsDir.path) {
+            fontFiles = items.filter { $0.hasSuffix(".ttf") || $0.hasSuffix(".otf") }.sorted()
+        }
+        let lines = [
+            "rNitro environment manifest",
+            "version: \(CURRENT_VERSION)",
+            "channel: \(RNITRO_BUILD_CHANNEL)",
+            "bundle: \(Bundle.main.bundlePath)",
+            "exec: \(Bundle.main.executablePath ?? "—")",
+            "resources: \(Bundle.main.resourcePath ?? "—")",
+            "fontsBundled: \(fontFiles.count)",
+            "fontSample: \(fontFiles.prefix(8).joined(separator: ", "))",
+            "logs: ~/Library/Logs/rNitro",
+            "appearance: \(DisplayPreferencesStore.shared.appearanceMode.rawValue)",
+            "uiFont: \(DisplayPreferencesStore.shared.uiFontName)",
+            "updateURL: \(UPDATE_CHECK_URL.absoluteString)",
+            "pid: \(ProcessInfo.processInfo.processIdentifier)",
+            "host: \(ProcessInfo.processInfo.hostName)",
+            "os: \(ProcessInfo.processInfo.operatingSystemVersionString)"
+        ]
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+        log("environment manifest copied")
+    }
+
+    func copyRegisteredFonts() {
+        let names = UIFontCatalog.all.map { "\($0.id) → \($0.family) [\($0.category.rawValue)]" }
+        let body = (["rNitro UI font catalog (\(names.count))"] + names).joined(separator: "\n")
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(body, forType: .string)
+    }
+
+    func pingUpdateCDN(completion: @escaping (String) -> Void) {
+        let url = UPDATE_CHECK_URL
+        let t0 = CFAbsoluteTimeGetCurrent()
+        var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 12)
+        req.httpMethod = "GET"
+        URLSession.shared.dataTask(with: req) { data, resp, err in
+            let ms = Int((CFAbsoluteTimeGetCurrent() - t0) * 1000)
+            DispatchQueue.main.async {
+                if let err {
+                    completion("CDN ping failed: \(err.localizedDescription) (\(ms)ms)")
+                    return
+                }
+                let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+                var extra = ""
+                if let data, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let latest = obj["latest"] as? String ?? "?"
+                    let beta = obj["beta"] as? String ?? "?"
+                    let exp = obj["experimental"] as? String ?? "?"
+                    extra = " latest=\(latest) beta=\(beta) exp=\(exp)"
+                }
+                completion("CDN HTTP \(code) in \(ms)ms\(extra)")
+            }
+        }.resume()
+    }
+
+    func revealBundleInFinder() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    }
+
+    func shuffleAccentTemporarily() {
+        let presets = AccentPreset.allCases
+        guard let pick = presets.randomElement() else { return }
+        let ui = UICustomizationStore.shared
+        let previous = ui.accentPreset
+        ui.accentPreset = pick
+        log("accent shuffled to \(pick.rawValue)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            ui.accentPreset = previous
+            self.log("accent restored to \(previous.rawValue)")
+        }
+    }
+
+    func copySampleLoopStats() {
+        let cpu = CPUMonitor.shared
+        let line = "sampleLoop  cpu=\(String(format: "%.1f", cpu.totalUsage))%  temp=\(String(format: "%.1f", cpu.temperature))°C  power=\(String(format: "%.2f", cpu.packagePowerWatts))W  highRate=\(forceHighSampleRate)  idleProfile=\(UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "—")"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(line, forType: .string)
     }
 }
 
@@ -3728,9 +3903,8 @@ enum MonitorActivity {
     static var includeSmcSample: Bool {
         popoverOpen || enabledSlots.contains(.temp) || enabledSlots.contains(.weather) || CompileFarmDetector.shared.shouldForceSampling
     }
-    static var samplesMemory: Bool {
-        popoverOpen || enabledSlots.contains(.ram)
-    }
+    /// Always sample RAM — Monitor UI needs it even when menubar has no RAM slot.
+    static var samplesMemory: Bool { true }
     static var includePerCoreSampling: Bool { popoverOpen }
     static var recordsHistory: Bool { popoverOpen }
     static var historyCapacity: Int { popoverOpen ? 80 : 0 }
@@ -5428,7 +5602,7 @@ enum SettingsSection: String, Identifiable {
         case .monitor: return DisplayPreferencesStore.shared.tr("settings.monitor")
         case .alerts: return DisplayPreferencesStore.shared.tr("settings.alerts")
         case .general: return DisplayPreferencesStore.shared.tr("settings.general")
-        case .developer: return "Developer"
+        case .developer: return DisplayPreferencesStore.shared.tr("settings.developer")
         }
     }
 
@@ -5660,6 +5834,74 @@ struct ChatAPISection: View {
     }
 }
 
+
+struct FontFamilyPickerView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
+    @State private var search = ""
+    @State private var category: UIFontCategory = .all
+
+    private var filtered: [UIFontCatalog.Choice] {
+        UIFontCatalog.filtered(search: search, category: category, favorites: display.favoriteFontIDs)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField(display.tr("appearance.fontSearch"), text: $search)
+                .textFieldStyle(.roundedBorder)
+                .font(rNitroFont(.caption, metrics: metrics))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(UIFontCategory.allCases) { cat in
+                        let on = category == cat
+                        Button {
+                            category = cat
+                        } label: {
+                            Text(cat.label)
+                                .font(rNitroFont(.micro, metrics: metrics, weight: on ? .semibold : .regular))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            Picker(display.tr("appearance.fontFamily"), selection: Binding(
+                get: { display.fontFamilyID },
+                set: { display.setFontFamily($0) }
+            )) {
+                ForEach(filtered) { font in
+                    Text((display.isFavoriteFont(font.id) ? "★ " : "") + font.label)
+                        .font(.custom(font.family, size: 13))
+                        .tag(font.id)
+                }
+            }
+            .pickerStyle(.menu)
+            if let current = UIFontCatalog.all.first(where: { $0.id == display.fontFamilyID }) {
+                HStack(spacing: 8) {
+                    Text(current.label)
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
+                    Spacer(minLength: 0)
+                    Button {
+                        display.toggleFavoriteFont(current.id)
+                    } label: {
+                        Text(display.isFavoriteFont(current.id) ? display.tr("appearance.fontUnfavorite") : display.tr("appearance.fontFavorite"))
+                            .font(rNitroFont(.micro, metrics: metrics))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentColor)
+                }
+            }
+            if filtered.isEmpty {
+                Text(display.tr("appearance.fontEmpty"))
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
 struct SettingsAppearanceSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
@@ -5672,6 +5914,19 @@ struct SettingsAppearanceSection: View {
                 Text(display.tr("appearance.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("appearance.subtitle"))
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Text(display.tr("appearance.theme"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Picker(display.tr("appearance.theme"), selection: Binding(
+                    get: { display.appearanceMode },
+                    set: { display.setAppearanceMode($0) }
+                )) {
+                    ForEach(AppAppearanceMode.allCases) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(display.tr("appearance.theme.hint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("appearance.fontSize"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
@@ -5689,24 +5944,17 @@ struct SettingsAppearanceSection: View {
                     .padding(.top, 4)
                 Text(display.tr("appearance.fontFamily.hint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                Picker(display.tr("appearance.fontFamily"), selection: Binding(
-                    get: { display.fontFamilyID },
-                    set: { display.setFontFamily($0) }
-                )) {
-                    ForEach(UIFontCatalog.all) { font in
-                        Text(font.family)
-                            .font(.custom(font.family, size: 13))
-                            .tag(font.id)
-                    }
-                }
-                .pickerStyle(.menu)
-                Text("The quick brown fox — 0123456789")
+                FontFamilyPickerView()
+                Text(display.tr("appearance.pangram"))
                     .font(rNitroFont(.body, metrics: metrics))
                     .padding(.vertical, 2)
-                Text("Accent color")
+                Text(display.tr("appearance.fontOFL"))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary.opacity(0.85))
+                Text(display.tr("appearance.accent"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
-                Picker("Accent", selection: $ui.accentPreset) {
+                Picker(display.tr("appearance.accent"), selection: $ui.accentPreset) {
                     ForEach(AccentPreset.allCases) { p in
                         Text(p.label).tag(p)
                     }
@@ -5714,7 +5962,7 @@ struct SettingsAppearanceSection: View {
                 .pickerStyle(.segmented)
                 HStack(spacing: 8) {
                     Circle().fill(ui.accentColor).frame(width: 14, height: 14)
-                    Text("Preview accent").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("appearance.accent.preview")).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
                 Text(display.tr("appearance.language"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
@@ -5739,22 +5987,22 @@ struct SettingsAppearanceSection: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                Text("Monitor sections")
+                Text(display.tr("appearance.sections"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 6)
                 Toggle(isOn: $ui.showPerCore) {
-                    Text("Show per-core bars").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("appearance.showPerCore")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $ui.showFans) {
-                    Text("Show fans / sensors detail").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("appearance.showFans")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $ui.showProcesses) {
-                    Text("Show top processes").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("appearance.showProcesses")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
-                Button("Reset appearance defaults") { ui.resetAppearanceDefaults() }
+                Button(display.tr("appearance.reset")) { ui.resetAppearanceDefaults() }
                     .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
                     .buttonStyle(.plain)
@@ -5980,12 +6228,12 @@ struct SettingsAlertsSection: View {
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("alerts.thresholds"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
-                thresholdRow("Temp warn °C", value: $advisor.thresholds.tempWarning, range: 55...95, step: 1)
-                thresholdRow("Temp critical °C", value: $advisor.thresholds.tempCritical, range: 65...105, step: 1)
-                thresholdRow("CPU %", value: $advisor.thresholds.cpuWarning, range: 50...100, step: 1)
-                thresholdRow("RAM %", value: $advisor.thresholds.ramWarning, range: 50...100, step: 1)
-                thresholdRow("GPU %", value: $advisor.thresholds.gpuWarning, range: 50...100, step: 1)
-                thresholdRow("Battery low %", value: $advisor.thresholds.batteryLow, range: 5...40, step: 1)
+                thresholdRow(display.tr("alerts.tempWarn"), value: $advisor.thresholds.tempWarning, range: 55...95, step: 1)
+                thresholdRow(display.tr("alerts.tempCrit"), value: $advisor.thresholds.tempCritical, range: 65...105, step: 1)
+                thresholdRow(display.tr("alerts.cpuPct"), value: $advisor.thresholds.cpuWarning, range: 50...100, step: 1)
+                thresholdRow(display.tr("alerts.ramPct"), value: $advisor.thresholds.ramWarning, range: 50...100, step: 1)
+                thresholdRow(display.tr("alerts.gpuPct"), value: $advisor.thresholds.gpuWarning, range: 50...100, step: 1)
+                thresholdRow(display.tr("alerts.batteryLow"), value: $advisor.thresholds.batteryLow, range: 5...40, step: 1)
                 Toggle(isOn: $advisor.thresholds.proactiveEnabled) {
                     Text(display.tr("alerts.proactive")).font(rNitroFont(.label, metrics: metrics))
                 }
@@ -5996,14 +6244,14 @@ struct SettingsAlertsSection: View {
                 }
                 .toggleStyle(.switch)
                 .onChange(of: advisor.thresholds.criticalTempBannersEnabled) { _, _ in advisor.refreshThresholds() }
-                Text("Color thresholds (rings & menubar)")
+                Text(display.tr("alerts.colorThresholds"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 8)
-                Text("Customize when CPU % and temp turn green / orange / red. Available without Developer Mode.")
+                Text(display.tr("alerts.colorHint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                colorThresholdRow("CPU green below %", value: $ui.cpuGreenMax, range: 10...60)
-                colorThresholdRow("CPU orange below %", value: $ui.cpuOrangeMax, range: 40...90)
-                colorThresholdRow("CPU red from %", value: $ui.cpuRedMin, range: 70...100)
+                colorThresholdRow(display.tr("alerts.cpuGreen"), value: $ui.cpuGreenMax, range: 10...60)
+                colorThresholdRow(display.tr("alerts.cpuOrange"), value: $ui.cpuOrangeMax, range: 40...90)
+                colorThresholdRow(display.tr("alerts.cpuRed"), value: $ui.cpuRedMin, range: 70...100)
                 colorThresholdRow("Temp green below °C", value: $ui.tempGreenMax, range: 40...75)
                 colorThresholdRow("Temp orange below °C", value: $ui.tempOrangeMax, range: 55...95)
                 Button("Reset color thresholds") { ui.resetColorThresholds() }
@@ -6102,7 +6350,7 @@ struct SettingsGeneralSection: View {
                     Divider().padding(.vertical, 4)
                     Toggle(isOn: $devMode.isEnabled) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Developer Mode").font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                            Text(display.tr("general.developerMode")).font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                             Text("Unlock advanced sampling, sensor dump, logging, and a Developer settings tab. Basic UI customization stays available either way.")
                                 .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                         }
@@ -6112,7 +6360,7 @@ struct SettingsGeneralSection: View {
                 MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
                 MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
                 MinimalButton(title: display.tr("general.checkUpdates"), action: { UpdateChecker.checkManually() })
-                MinimalButton(title: "Launch CLI", action: { CLIIntegration.copyLaunchCommand() })
+                MinimalButton(title: display.tr("general.launchCLI"), action: { CLIIntegration.copyLaunchCommand() })
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -6122,6 +6370,7 @@ struct SettingsGeneralSection: View {
 
 struct SettingsDeveloperSection: View {
     @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
     @ObservedObject private var dev = DeveloperModeStore.shared
     @State private var copiedNote = ""
     @State private var importDraft = ""
@@ -6129,42 +6378,71 @@ struct SettingsDeveloperSection: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Developer")
+                Text(display.tr("dev.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
-                Text("Power tools for debugging and advanced sampling. Turn off Developer Mode in General to hide this tab.")
+                Text(display.tr("dev.subtitle"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Toggle(isOn: $dev.forceHighSampleRate) {
-                    Text("Force high sample rate (~0.75s CPU)").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("dev.highSample")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $dev.verboseLogging) {
-                    Text("Verbose logging to ~/Library/Logs/rNitro").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("dev.verbose")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $dev.showRawSensors) {
-                    Text("Prefer raw sensor detail in Monitor").font(rNitroFont(.label, metrics: metrics))
+                    Text(display.tr("dev.rawSensors")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
-                MinimalButton(title: "Copy sensor dump", action: {
+                MinimalButton(title: display.tr("dev.copySensor"), action: {
                     dev.copySensorDump()
-                    copiedNote = "Sensor dump copied"
+                    copiedNote = display.tr("dev.copied.sensor")
                     dev.log("sensor dump copied")
                 })
-                MinimalButton(title: "Copy snapshot JSON", action: {
+                MinimalButton(title: display.tr("dev.copyJSON"), action: {
                     dev.copySnapshotJSON()
-                    copiedNote = "JSON snapshot copied"
+                    copiedNote = display.tr("dev.copied.json")
                 })
-                MinimalButton(title: "Open log folder", action: { dev.openLogFolder() })
+                MinimalButton(title: display.tr("dev.openLogs"), action: { dev.openLogFolder() })
                 Divider().padding(.vertical, 4)
-                Text("UI config")
+                Text(display.tr("dev.surprise"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
-                MinimalButton(title: "Copy UI config JSON", action: {
+                Text(display.tr("dev.surprise.hint"))
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                MinimalButton(title: display.tr("dev.envManifest"), action: {
+                    dev.copyEnvironmentManifest()
+                    copiedNote = display.tr("dev.copied.env")
+                })
+                MinimalButton(title: display.tr("dev.fontMap"), action: {
+                    dev.copyRegisteredFonts()
+                    copiedNote = display.tr("dev.copied.fonts")
+                })
+                MinimalButton(title: display.tr("dev.pingCDN"), action: {
+                    copiedNote = display.tr("dev.pinging")
+                    dev.pingUpdateCDN { msg in copiedNote = msg }
+                })
+                MinimalButton(title: display.tr("dev.revealApp"), action: {
+                    dev.revealBundleInFinder()
+                    copiedNote = display.tr("dev.revealed")
+                })
+                MinimalButton(title: display.tr("dev.shuffleAccent"), action: {
+                    dev.shuffleAccentTemporarily()
+                    copiedNote = display.tr("dev.shuffled")
+                })
+                MinimalButton(title: display.tr("dev.sampleStats"), action: {
+                    dev.copySampleLoopStats()
+                    copiedNote = display.tr("dev.copied.sample")
+                })
+                Divider().padding(.vertical, 4)
+                Text(display.tr("dev.uiConfig"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                MinimalButton(title: display.tr("dev.copyUIConfig"), action: {
                     let json = UICustomizationStore.shared.exportConfigJSON()
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(json, forType: .string)
-                    copiedNote = "UI config copied"
+                    copiedNote = display.tr("dev.copied.ui")
                 })
-                Text("Paste a config JSON below, then Import.")
+                Text(display.tr("dev.importHint"))
                     .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                 TextEditor(text: $importDraft)
                     .font(rNitroFont(.micro, metrics: metrics))
@@ -6172,12 +6450,12 @@ struct SettingsDeveloperSection: View {
                     .padding(6)
                     .background(Color.card)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.5), lineWidth: 1))
-                MinimalButton(title: "Import UI config", action: {
+                MinimalButton(title: display.tr("dev.import"), action: {
                     if UICustomizationStore.shared.importConfigJSON(importDraft) {
-                        copiedNote = "UI config imported"
+                        copiedNote = display.tr("dev.import.ok")
                         NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
                     } else {
-                        copiedNote = "Import failed — check JSON"
+                        copiedNote = display.tr("dev.import.fail")
                     }
                 })
                 if !copiedNote.isEmpty {
@@ -7491,6 +7769,8 @@ enum MonitorPreferences {
     static let idleProfileKey = "rnitro.idleProfile"
     static let fontSizeKey = "rnitro.fontSize"
     static let fontFamilyKey = "rnitro.fontFamily"
+    static let fontFavoritesKey = "rnitro.fontFavorites"
+    static let appearanceModeKey = "rnitro.appearanceMode"
     static let languageKey = "rnitro.language"
     // Beta experimental features (1·2·3·4·6)
     static let whisperModeKey = "rnitro.whisperMode"
@@ -7529,75 +7809,147 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
 
 // Google Fonts (OFL) bundled UI catalog — regular weight; pick in Appearance.
+enum UIFontCategory: String, CaseIterable, Identifiable {
+    case all = "all"
+    case favorites = "favorites"
+    case sans = "sans"
+    case serif = "serif"
+    case display = "display"
+    case script = "script"
+    case mono = "mono"
+    var id: String { rawValue }
+    var label: String {
+        let d = DisplayPreferencesStore.shared
+        switch self {
+        case .all: return d.tr("font.category.all")
+        case .favorites: return d.tr("font.category.favorites")
+        case .sans: return d.tr("font.category.sans")
+        case .serif: return d.tr("font.category.serif")
+        case .display: return d.tr("font.category.display")
+        case .script: return d.tr("font.category.script")
+        case .mono: return d.tr("font.category.mono")
+        }
+    }
+}
+
 enum UIFontCatalog {
     struct Choice: Identifiable, Hashable {
         let id: String
+        /// PostScript/family name for Font.custom / registration
         let family: String
+        /// Short label shown in the picker
+        let label: String
+        let category: UIFontCategory
         var fileStem: String { id }
     }
     static let defaultID = "VarelaRound"
     static let all: [Choice] = [
-        Choice(id: "VarelaRound", family: "Varela Round"),
-        Choice(id: "EBGaramond", family: "EB Garamond"),
-        Choice(id: "Audiowide", family: "Audiowide"),
-        Choice(id: "Caveat", family: "Caveat"),
-        Choice(id: "Roboto", family: "Roboto"),
-        Choice(id: "OpenSans", family: "Open Sans"),
-        Choice(id: "Lato", family: "Lato"),
-        Choice(id: "Montserrat", family: "Montserrat"),
-        Choice(id: "Poppins", family: "Poppins"),
-        Choice(id: "Inter", family: "Inter"),
-        Choice(id: "Nunito", family: "Nunito"),
-        Choice(id: "NunitoSans", family: "Nunito Sans"),
-        Choice(id: "Raleway", family: "Raleway"),
-        Choice(id: "Oswald", family: "Oswald"),
-        Choice(id: "Merriweather", family: "Merriweather"),
-        Choice(id: "PlayfairDisplay", family: "Playfair Display"),
-        Choice(id: "SourceSans3", family: "Source Sans 3"),
-        Choice(id: "Ubuntu", family: "Ubuntu"),
-        Choice(id: "Rubik", family: "Rubik"),
-        Choice(id: "WorkSans", family: "Work Sans"),
-        Choice(id: "FiraSans", family: "Fira Sans"),
-        Choice(id: "NotoSans", family: "Noto Sans"),
-        Choice(id: "NotoSerif", family: "Noto Serif"),
-        Choice(id: "PTSans", family: "PT Sans"),
-        Choice(id: "PTSerif", family: "PT Serif"),
-        Choice(id: "LibreBaskerville", family: "Libre Baskerville"),
-        Choice(id: "CrimsonText", family: "Crimson Text"),
-        Choice(id: "CormorantGaramond", family: "Cormorant Garamond"),
-        Choice(id: "SpaceGrotesk", family: "Space Grotesk"),
-        Choice(id: "DMSans", family: "DM Sans"),
-        Choice(id: "Outfit", family: "Outfit Thin"),
-        Choice(id: "Manrope", family: "Manrope"),
-        Choice(id: "PlusJakartaSans", family: "Plus Jakarta Sans"),
-        Choice(id: "JosefinSans", family: "Josefin Sans"),
-        Choice(id: "Comfortaa", family: "Comfortaa"),
-        Choice(id: "Quicksand", family: "Quicksand Light"),
-        Choice(id: "Pacifico", family: "Pacifico"),
-        Choice(id: "DancingScript", family: "Dancing Script"),
-        Choice(id: "GreatVibes", family: "Great Vibes"),
-        Choice(id: "Satisfy", family: "Satisfy"),
-        Choice(id: "PermanentMarker", family: "Permanent Marker"),
-        Choice(id: "Bangers", family: "Bangers"),
-        Choice(id: "Lobster", family: "Lobster"),
-        Choice(id: "Righteous", family: "Righteous"),
-        Choice(id: "Orbitron", family: "Orbitron"),
-        Choice(id: "PressStart2P", family: "Press Start 2P"),
-        Choice(id: "SpaceMono", family: "Space Mono"),
-        Choice(id: "Inconsolata", family: "Inconsolata"),
-        Choice(id: "JetBrainsMono", family: "JetBrains Mono"),
-        Choice(id: "IBMPlexSans", family: "IBM Plex Sans"),
-        Choice(id: "IBMPlexMono", family: "IBM Plex Mono"),
-        Choice(id: "BebasNeue", family: "Bebas Neue"),
-        Choice(id: "Anton", family: "Anton"),
-        Choice(id: "ArchivoBlack", family: "Archivo Black"),
-        Choice(id: "Barlow", family: "Barlow"),
-        Choice(id: "Exo2", family: "Exo 2"),
+        Choice(id: "VarelaRound", family: "Varela Round", label: "Varela Round", category: .sans),
+        Choice(id: "EBGaramond", family: "EB Garamond", label: "EB Garamond", category: .serif),
+        Choice(id: "Audiowide", family: "Audiowide", label: "Audiowide", category: .display),
+        Choice(id: "Caveat", family: "Caveat", label: "Caveat", category: .script),
+        Choice(id: "Roboto", family: "Roboto", label: "Roboto", category: .sans),
+        Choice(id: "OpenSans", family: "Open Sans", label: "Open Sans", category: .sans),
+        Choice(id: "Lato", family: "Lato", label: "Lato", category: .sans),
+        Choice(id: "Montserrat", family: "Montserrat", label: "Montserrat", category: .sans),
+        Choice(id: "Poppins", family: "Poppins", label: "Poppins", category: .sans),
+        Choice(id: "Inter", family: "Inter", label: "Inter", category: .sans),
+        Choice(id: "Nunito", family: "Nunito", label: "Nunito", category: .sans),
+        Choice(id: "NunitoSans", family: "Nunito Sans", label: "Nunito Sans", category: .sans),
+        Choice(id: "Raleway", family: "Raleway", label: "Raleway", category: .sans),
+        Choice(id: "Oswald", family: "Oswald", label: "Oswald", category: .display),
+        Choice(id: "Merriweather", family: "Merriweather", label: "Merriweather", category: .serif),
+        Choice(id: "PlayfairDisplay", family: "Playfair Display", label: "Playfair Display", category: .serif),
+        Choice(id: "SourceSans3", family: "Source Sans 3", label: "Source Sans 3", category: .sans),
+        Choice(id: "Ubuntu", family: "Ubuntu", label: "Ubuntu", category: .sans),
+        Choice(id: "Rubik", family: "Rubik", label: "Rubik", category: .sans),
+        Choice(id: "WorkSans", family: "Work Sans", label: "Work Sans", category: .sans),
+        Choice(id: "FiraSans", family: "Fira Sans", label: "Fira Sans", category: .sans),
+        Choice(id: "NotoSans", family: "Noto Sans", label: "Noto Sans", category: .sans),
+        Choice(id: "NotoSerif", family: "Noto Serif", label: "Noto Serif", category: .serif),
+        Choice(id: "PTSans", family: "PT Sans", label: "PT Sans", category: .sans),
+        Choice(id: "PTSerif", family: "PT Serif", label: "PT Serif", category: .serif),
+        Choice(id: "LibreBaskerville", family: "Libre Baskerville", label: "Libre Baskerville", category: .serif),
+        Choice(id: "CrimsonText", family: "Crimson Text", label: "Crimson Text", category: .serif),
+        Choice(id: "CormorantGaramond", family: "Cormorant Garamond", label: "Cormorant Garamond", category: .serif),
+        Choice(id: "SpaceGrotesk", family: "Space Grotesk", label: "Space Grotesk", category: .sans),
+        Choice(id: "DMSans", family: "DM Sans", label: "DM Sans", category: .sans),
+        Choice(id: "Outfit", family: "Outfit Thin", label: "Outfit", category: .sans),
+        Choice(id: "Manrope", family: "Manrope", label: "Manrope", category: .sans),
+        Choice(id: "PlusJakartaSans", family: "Plus Jakarta Sans", label: "Plus Jakarta Sans", category: .sans),
+        Choice(id: "JosefinSans", family: "Josefin Sans", label: "Josefin Sans", category: .sans),
+        Choice(id: "Comfortaa", family: "Comfortaa", label: "Comfortaa", category: .sans),
+        Choice(id: "Quicksand", family: "Quicksand Light", label: "Quicksand", category: .sans),
+        Choice(id: "Pacifico", family: "Pacifico", label: "Pacifico", category: .script),
+        Choice(id: "DancingScript", family: "Dancing Script", label: "Dancing Script", category: .script),
+        Choice(id: "GreatVibes", family: "Great Vibes", label: "Great Vibes", category: .script),
+        Choice(id: "Satisfy", family: "Satisfy", label: "Satisfy", category: .script),
+        Choice(id: "PermanentMarker", family: "Permanent Marker", label: "Permanent Marker", category: .script),
+        Choice(id: "Bangers", family: "Bangers", label: "Bangers", category: .display),
+        Choice(id: "Lobster", family: "Lobster", label: "Lobster", category: .script),
+        Choice(id: "Righteous", family: "Righteous", label: "Righteous", category: .display),
+        Choice(id: "Orbitron", family: "Orbitron", label: "Orbitron", category: .display),
+        Choice(id: "PressStart2P", family: "Press Start 2P", label: "Press Start 2P", category: .display),
+        Choice(id: "SpaceMono", family: "Space Mono", label: "Space Mono", category: .mono),
+        Choice(id: "Inconsolata", family: "Inconsolata", label: "Inconsolata", category: .mono),
+        Choice(id: "JetBrainsMono", family: "JetBrains Mono", label: "JetBrains Mono", category: .mono),
+        Choice(id: "IBMPlexSans", family: "IBM Plex Sans", label: "IBM Plex Sans", category: .sans),
+        Choice(id: "IBMPlexMono", family: "IBM Plex Mono", label: "IBM Plex Mono", category: .mono),
+        Choice(id: "BebasNeue", family: "Bebas Neue", label: "Bebas Neue", category: .display),
+        Choice(id: "Anton", family: "Anton", label: "Anton", category: .display),
+        Choice(id: "ArchivoBlack", family: "Archivo Black", label: "Archivo Black", category: .display),
+        Choice(id: "Barlow", family: "Barlow", label: "Barlow", category: .sans),
+        Choice(id: "Exo2", family: "Exo 2", label: "Exo 2", category: .sans),
     ]
     static func choice(id: String) -> Choice {
         all.first(where: { $0.id == id }) ?? all[0]
     }
+    static func filtered(search: String, category: UIFontCategory, favorites: [String]) -> [Choice] {
+        let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return all.filter { c in
+            let catOK: Bool
+            switch category {
+            case .all: catOK = true
+            case .favorites: catOK = favorites.contains(c.id)
+            default: catOK = c.category == category
+            }
+            guard catOK else { return false }
+            if q.isEmpty { return true }
+            return c.label.lowercased().contains(q) || c.family.lowercased().contains(q) || c.id.lowercased().contains(q)
+        }
+    }
 }
+
+enum AppAppearanceMode: String, CaseIterable, Identifiable {
+    case system, dark, light
+    var id: String { rawValue }
+    var label: String {
+        let d = DisplayPreferencesStore.shared
+        switch self {
+        case .system: return d.tr("appearance.theme.system")
+        case .dark: return d.tr("appearance.theme.dark")
+        case .light: return d.tr("appearance.theme.light")
+        }
+    }
+    var preferredColorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .dark: return .dark
+        case .light: return .light
+        }
+    }
+    func applyToApp() {
+        switch self {
+        case .system:
+            NSApp.appearance = nil
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        }
+    }
+}
+
 enum FontSizePreset: String, CaseIterable, Identifiable {
     case small, medium, large, xlarge
     var id: String { rawValue }
@@ -7618,6 +7970,8 @@ final class DisplayPreferencesStore: ObservableObject {
     @Published var language: AppLanguage
     @Published var fontSize: FontSizePreset
     @Published var fontFamilyID: String
+    @Published var favoriteFontIDs: [String]
+    @Published var appearanceMode: AppAppearanceMode
 
     private init() {
         let langRaw = UserDefaults.standard.string(forKey: MonitorPreferences.languageKey) ?? AppLanguage.english.rawValue
@@ -7626,6 +7980,16 @@ final class DisplayPreferencesStore: ObservableObject {
         fontSize = FontSizePreset(rawValue: sizeRaw) ?? .medium
         let famRaw = UserDefaults.standard.string(forKey: MonitorPreferences.fontFamilyKey) ?? UIFontCatalog.defaultID
         fontFamilyID = UIFontCatalog.all.contains(where: { $0.id == famRaw }) ? famRaw : UIFontCatalog.defaultID
+        favoriteFontIDs = UserDefaults.standard.stringArray(forKey: MonitorPreferences.fontFavoritesKey) ?? []
+        let appRaw = UserDefaults.standard.string(forKey: MonitorPreferences.appearanceModeKey) ?? AppAppearanceMode.system.rawValue
+        appearanceMode = AppAppearanceMode(rawValue: appRaw) ?? .system
+        appearanceMode.applyToApp()
+    }
+
+    func setAppearanceMode(_ mode: AppAppearanceMode) {
+        appearanceMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: MonitorPreferences.appearanceModeKey)
+        mode.applyToApp()
     }
 
     var uiFontName: String {
@@ -7648,6 +8012,22 @@ final class DisplayPreferencesStore: ObservableObject {
         UserDefaults.standard.set(resolved, forKey: MonitorPreferences.fontFamilyKey)
     }
 
+    func isFavoriteFont(_ id: String) -> Bool {
+        favoriteFontIDs.contains(id)
+    }
+
+    func toggleFavoriteFont(_ id: String) {
+        if let idx = favoriteFontIDs.firstIndex(of: id) {
+            favoriteFontIDs.remove(at: idx)
+        } else {
+            favoriteFontIDs.append(id)
+            if favoriteFontIDs.count > 8 {
+                favoriteFontIDs = Array(favoriteFontIDs.suffix(8))
+            }
+        }
+        UserDefaults.standard.set(favoriteFontIDs, forKey: MonitorPreferences.fontFavoritesKey)
+    }
+
     func tr(_ key: String) -> String {
         Self.table[language]?[key] ?? Self.table[.english]?[key] ?? key
     }
@@ -7660,291 +8040,1507 @@ final class DisplayPreferencesStore: ObservableObject {
     ]
 
     private static let enStrings: [String: String] = [
-        "tab.monitor": "Monitor", "tab.advisor": "Advisor", "tab.chat": "Chat",
-        "tab.cleaner": "Cleaner", "tab.lab": "Lab", "tab.settings": "Settings",
+        "accent.blue": "Blue",
+        "accent.cyan": "Cyan",
+        "accent.green": "Green",
+        "accent.orange": "Orange",
+        "accent.pink": "Pink",
+        "accent.purple": "Purple",
+        "accent.red": "Red",
+        "advisor.liveSpecs": "Live specs · alert thresholds in Settings → Alerts",
+        "advisor.suggestion": "Suggestion",
+        "advisor.title": "System Advisor",
+        "alerts.advisorSubtitle": "Warning thresholds and notification behavior for the Advisor tab.",
+        "alerts.advisorTitle": "System Advisor alerts",
+        "alerts.banners": "macOS banners for critical temps",
+        "alerts.batteryLow": "Battery low %",
+        "alerts.colorHint": "Customize when CPU % and temp turn green / orange / red. Available without Developer Mode.",
+        "alerts.colorThresholds": "Color thresholds (rings & menubar)",
+        "alerts.cpuGreen": "CPU green below %",
+        "alerts.cpuOrange": "CPU orange below %",
+        "alerts.cpuPct": "CPU %",
+        "alerts.cpuRed": "CPU red from %",
+        "alerts.gpuPct": "GPU %",
+        "alerts.proactive": "Proactive alerts in chat",
+        "alerts.ramPct": "RAM %",
+        "alerts.resetColors": "Reset color thresholds",
+        "alerts.subtitle": "System Advisor thresholds and notification banners.",
+        "alerts.tempCrit": "Temp critical °C",
+        "alerts.tempGreen": "Temp green below °C",
+        "alerts.tempOrange": "Temp orange below °C",
+        "alerts.tempRed": "Temp red from °C",
+        "alerts.tempWarn": "Temp warn °C",
+        "alerts.thresholds": "Warning thresholds",
+        "alerts.title": "Alerts",
+        "appearance.accent": "Accent color",
+        "appearance.accent.preview": "Preview accent",
+        "appearance.fontFamily": "UI font",
+        "appearance.fontFamily.hint": "50+ Google Fonts (OFL) bundled offline. Preview updates immediately.",
+        "appearance.fontSize": "Font size",
+        "appearance.language": "Language",
+        "appearance.monitorUI": "Monitor UI",
+        "appearance.monitorUI.hint": "Modern uses iStats-style accordion sections. Legacy is the compact classic layout.",
+        "appearance.pangram": "The quick brown fox — 0123456789",
+        "appearance.reset": "Reset appearance defaults",
+        "appearance.sections": "Monitor sections",
+        "appearance.showFans": "Show fans / sensors detail",
+        "appearance.showPerCore": "Show per-core bars",
+        "appearance.showProcesses": "Show top processes",
+        "appearance.subtitle": "Theme, UI font, size, language, and monitor layout.",
+        "appearance.theme": "Theme",
+        "appearance.theme.dark": "Dark",
+        "appearance.theme.hint": "System follows macOS. Light & Dark force the app chrome.",
+        "appearance.theme.light": "Light",
+        "appearance.theme.system": "System",
+        "appearance.title": "Display",
+        "btn.run": "Run",
+        "btn.running": "Running…",
+        "btn.start": "Start",
+        "btn.stop": "Stop",
+        "chat.apiKey": "API key (optional)",
+        "chat.compose": "Compose",
+        "chat.getKey": "Get a key: %@",
+        "chat.needsSetup": "Set up %@ before chatting.",
+        "chat.openAPI": "Open API Setup",
+        "chat.openAPI.hint": "Open the API sub-tab to save keys and test connections.",
+        "chat.openAPI.main": "Open Chat → API to save keys and test connections.",
+        "chat.privacy": "Privacy: keys stay on this Mac. Chat messages are sent only to the provider you pick.",
+        "chat.providers": "AI Providers",
+        "chat.subtab.api": "API",
+        "chat.subtab.chat": "Chat",
+        "chat.subtitle": "Chat with your provider or manage API keys.",
+        "chat.title": "AI Chat",
+        "cleaner.leftovers": "Leftover files",
+        "cleaner.none": "No leftover files found",
+        "cleaner.removeSelected": "Remove Selected",
+        "cleaner.scanning": "Scanning…",
+        "cleaner.scanningLeft": "Scanning leftovers…",
+        "cleaner.trash": "Move App to Trash",
+        "common.cancel": "Cancel",
+        "common.clear": "Clear",
+        "common.close": "Close",
+        "common.copy": "Copy",
+        "common.enable": "Enable",
+        "common.quit": "Quit",
+        "common.refresh": "Refresh",
+        "common.removeKey": "Remove Key",
+        "common.reset": "Reset",
+        "common.saveKey": "Save Key",
+        "common.send": "Send",
+        "cores": "Cores",
+        "cpu.power60": "CPU power (last ~60s)",
+        "density.comfortable": "Comfortable",
+        "density.compact": "Compact",
+        "density.spacious": "Spacious",
+        "detective.whyHot": "Why hot?",
+        "dev.copied.env": "Environment manifest copied",
+        "dev.copied.fonts": "Font catalog copied",
+        "dev.copied.json": "JSON snapshot copied",
+        "dev.copied.sample": "Sample-loop stats copied",
+        "dev.copied.sensor": "Sensor dump copied",
+        "dev.copied.ui": "UI config copied",
+        "dev.copyJSON": "Copy snapshot JSON",
+        "dev.copySensor": "Copy sensor dump",
+        "dev.copyUIConfig": "Copy UI config JSON",
+        "dev.envManifest": "Copy environment manifest",
+        "dev.fontMap": "Copy font catalog map",
+        "dev.highSample": "Force high sample rate (~0.75s CPU)",
+        "dev.import": "Import UI config",
+        "dev.import.fail": "Import failed — check JSON",
+        "dev.import.ok": "UI config imported",
+        "dev.importHint": "Paste a config JSON below, then Import.",
+        "dev.openLogs": "Open log folder",
+        "dev.pingCDN": "Ping update CDN",
+        "dev.pinging": "Pinging…",
+        "dev.rawSensors": "Prefer raw sensor detail in Monitor",
+        "dev.revealApp": "Reveal app in Finder",
+        "dev.revealed": "Revealed in Finder",
+        "dev.sampleStats": "Copy sample-loop stats",
+        "dev.shuffleAccent": "Shuffle accent 4s",
+        "dev.shuffled": "Accent shuffled (restores in 4s)",
+        "dev.subtitle": "Power tools for debugging and advanced sampling. Turn off Developer Mode in General to hide this tab.",
+        "dev.surprise": "Surprise toolkit",
+        "dev.surprise.hint": "Diagnostics & toys for people who open Dev Mode on purpose.",
+        "dev.title": "Developer",
+        "dev.uiConfig": "UI config",
+        "dev.verbose": "Verbose logging to ~/Library/Logs/rNitro",
+        "duel.expand": "Expand for LAN host/join duel (no cloud).",
+        "duel.host": "Host",
+        "duel.join": "Join",
+        "duel.local": "Local network only — no cloud. Host on one Mac, join with the code on another.",
+        "duel.room": "Room",
+        "duel.title": "Stress duel (LAN)",
+        "duel.you": "You",
+        "font.category.all": "All",
+        "font.category.display": "Display",
+        "font.category.favorites": "★",
+        "font.category.mono": "Mono",
+        "font.category.sans": "Sans",
+        "font.category.script": "Script",
+        "font.category.serif": "Serif",
+        "font.large": "Large",
+        "font.medium": "Medium",
+        "font.small": "Small",
+        "font.xlarge": "Extra Large",
+        "general.checkUpdates": "Check for Updates",
+        "general.compileFarm": "Compile-farm mode",
+        "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
+        "general.developerMode": "Developer Mode",
+        "general.developerMode.hint": "Unlocks the Developer settings tab and process tools.",
+        "general.idleAggressive": "Aggressive (lowest RAM)",
+        "general.idleBalanced": "Balanced",
+        "general.idleEfficiency": "Idle efficiency",
+        "general.idleHint": "Balanced keeps the menu bar snappy. Aggressive uses slower polls and skips history buffers until the popover opens.",
+        "general.idleProfile": "Idle profile",
+        "general.installLocation": "Install location",
+        "general.launchAtLogin": "Launch at Login",
+        "general.launchAtLogin.req": "Launch at Login requires macOS 13 or later.",
+        "general.launchCLI": "Launch CLI",
+        "general.title": "General",
+        "general.version": "Version",
+        "lab.alibi": "Process alibi",
+        "lab.alibi.copy": "Copy alibi",
+        "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
+        "lab.budget": "SOC budget",
+        "lab.budget.goal": "Daily goal (Wh)",
+        "lab.budget.hint": "Daily energy goal (estimated Wh from package power). Local only; resets at midnight.",
+        "lab.chaos": "Chaos blip",
+        "lab.chaos.hint": "⚠️ Short self-stress (0.5–2s) to demo sensors. Off by default. Do not spam.",
+        "lab.cloak": "Meeting cloak",
+        "lab.cloak.hint": "When Zoom/Teams/Webex is running, hush the menubar (local process names only).",
+        "lab.confess": "Cooling confession",
+        "lab.confess.dismiss": "Dismiss",
+        "lab.confess.hint": "After a Heatwave/Storm cools to Clear/Breezy, a 3-panel recap appears.",
+        "lab.copied": "Copied",
+        "lab.cosplay": "Throttle cosplay",
+        "lab.cosplay.enable": "Enable menubar flair",
+        "lab.cosplay.hint": "Menubar flair when hot/busy. Pure theater — does not throttle your Mac.",
+        "lab.detective": "Why is my Mac hot?",
+        "lab.detective.copy": "Copy report",
+        "lab.detective.refresh": "Refresh report",
+        "lab.duel": "Stress duel (LAN)",
+        "lab.duel.show": "Show stress duel",
+        "lab.farm": "Compile-farm",
+        "lab.farm.hint": "Detect swiftc / clang / xcodebuild, boost sampling while building, then cool down.",
+        "lab.forecast": "Thermal forecast",
+        "lab.forecast.hint": "Naive slope from recent temps — not weather science. Experimental only.",
+        "lab.ghost": "Ghost-load radar",
+        "lab.ghost.hint": "Approx CPU-minutes last hour — quiet processes that still burn power.",
+        "lab.haiku": "Heat haiku",
+        "lab.haiku.hint": "Three-line nonsense from temp, load, weather, and top process.",
+        "lab.horizon": "Horizon (min)",
+        "lab.idleSpicy": "Idle — fires when temp/CPU get spicy",
+        "lab.jump": "Jump to",
+        "lab.ledger": "Build ledger",
+        "lab.ledger.clear": "Clear ledger",
+        "lab.meeting.hush": "Meeting hush active",
+        "lab.noBuilds": "No finished builds recorded yet.",
+        "lab.noConfess": "No recent cool-down story yet. Create some heat, then chill.",
+        "lab.open": "Open Lab",
+        "lab.overnight": "Overnight watch",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.peer": "Polite peer",
+        "lab.peer.active": "Peer active — sampling eased",
+        "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
+        "lab.peer.idle": "No peer profilers detected",
+        "lab.preset.build": "Build day",
+        "lab.preset.full": "Full stats",
+        "lab.preset.quiet": "Quiet day",
+        "lab.presets": "Presets",
+        "lab.receipt": "Power receipt",
+        "lab.receipt.copy": "Copy receipt",
+        "lab.receipt.hint": "Estimated energy this session from package power (not a wall meter).",
+        "lab.receipt.reset": "Reset session",
+        "lab.roulette": "Core roulette",
+        "lab.roulette.hint": "Pick the busiest (or a random) core. No stakes.",
+        "lab.roulette.spin": "Spin to pick a core",
+        "lab.sampling": "Sampling… leave Lab open a minute while apps run.",
+        "lab.scrub": "Time-scrub",
+        "lab.scrub.hint": "Last ~90s of CPU, temperature, and package power. Drag to scrub.",
+        "lab.scrub.needMore": "Need a few more seconds of history to scrub…",
+        "lab.scrub.now": "Jump to now",
         "lab.sidebar.section": "Experimental Features",
-        "lab.title": "Lab",
+        "lab.snapshot": "AirDrop snapshot card",
+        "lab.snapshot.copied": "Card saved",
+        "lab.snapshot.export": "Export & share",
+        "lab.snapshot.hint": "One-shot local snapshot (.rnitrocard). Share via AirDrop or Files — no cloud, no fleet server.",
         "lab.subtitle": "Experimental tools (beta, local only) — weather, detective, ghost-load, power, whisper, meetings, builds, duel.",
+        "lab.title": "Lab",
+        "lab.toc.alibi": "Alibi",
+        "lab.toc.budget": "Budget",
+        "lab.toc.chaos": "Chaos",
+        "lab.toc.cloak": "Cloak",
+        "lab.toc.confess": "Confess",
+        "lab.toc.cosplay": "Cosplay",
+        "lab.toc.detective": "Detective",
+        "lab.toc.duel": "Duel",
+        "lab.toc.farm": "Farm",
+        "lab.toc.forecast": "Forecast",
+        "lab.toc.ghost": "Ghost",
+        "lab.toc.haiku": "Haiku",
+        "lab.toc.overnight": "Overnight",
+        "lab.toc.peer": "Peer",
+        "lab.toc.receipt": "Receipt",
+        "lab.toc.roulette": "Roulette",
+        "lab.toc.scrub": "Scrub",
+        "lab.toc.snapshot": "Share",
+        "lab.toc.weather": "Weather",
+        "lab.toc.whisper": "Whisper",
+        "lab.toc.widget": "Widget",
         "lab.weather": "Thermal weather",
         "lab.weather.hint": "Maps load + temp into Clear → Storm. Optional menubar slot.",
         "lab.weather.menubar": "Show weather in menubar",
-        "lab.detective": "Why is my Mac hot?",
-        "lab.detective.refresh": "Refresh report",
-        "lab.detective.copy": "Copy report",
         "lab.whisper": "Whisper menubar",
         "lab.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
         "lab.whisper.sensitivity": "Sensitivity",
-        "lab.farm": "Compile-farm",
-        "lab.farm.hint": "Detect swiftc / clang / xcodebuild, boost sampling while building, then cool down.",
-        "lab.duel": "Stress duel (LAN)",
-        "lab.duel.show": "Show stress duel",
-        "lab.open": "Open Lab",
-        "lab.presets": "Presets",
-        "lab.preset.quiet": "Quiet day",
-        "lab.preset.build": "Build day",
-        "lab.preset.full": "Full stats",
-        "lab.ghost": "Ghost-load radar",
-        "lab.ghost.hint": "Approx CPU-minutes last hour — quiet processes that still burn power.",
-        "lab.receipt": "Power receipt",
-        "lab.receipt.hint": "Estimated energy this session from package power (not a wall meter).",
-        "lab.receipt.copy": "Copy receipt",
-        "lab.receipt.reset": "Reset session",
-        "lab.cloak": "Meeting cloak",
-        "lab.cloak.hint": "When Zoom/Teams/Webex is running, hush the menubar (local process names only).",
-        "lab.ledger": "Build ledger",
-        "lab.ledger.clear": "Clear ledger",
-        "lab.alibi": "Process alibi",
-        "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
-        "lab.alibi.copy": "Copy alibi",
-        "lab.copied": "Copied",
-        "lab.toc.weather": "Weather", "lab.toc.detective": "Detective", "lab.toc.ghost": "Ghost",
-        "lab.toc.receipt": "Receipt", "lab.toc.whisper": "Whisper", "lab.toc.cloak": "Cloak",
-        "lab.toc.farm": "Farm", "lab.toc.alibi": "Alibi", "lab.toc.duel": "Duel", "lab.toc.scrub": "Scrub",
-        "lab.toc.peer": "Peer",
-        "lab.scrub": "Time-scrub",
-        "lab.scrub.hint": "Last ~90s of CPU, temperature, and package power. Drag to scrub.",
-        "lab.scrub.now": "Jump to now",
-        "lab.peer": "Polite peer",
-        "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
-        "lab.peer.active": "Peer active — sampling eased",
-        "lab.peer.idle": "No peer profilers detected",
-        "lab.toc.snapshot": "Share", "lab.toc.budget": "Budget", "lab.toc.confess": "Confess", "lab.toc.widget": "Widget",
-        "lab.toc.forecast": "Forecast", "lab.toc.haiku": "Haiku", "lab.toc.cosplay": "Cosplay",
-        "lab.toc.overnight": "Overnight", "lab.toc.roulette": "Roulette", "lab.toc.chaos": "Chaos",
-        "lab.forecast": "Thermal forecast",
-        "lab.forecast.hint": "Naive slope from recent temps — not weather science. Experimental only.",
-        "lab.haiku": "Heat haiku",
-        "lab.haiku.hint": "Three-line nonsense from temp, load, weather, and top process.",
-        "lab.cosplay": "Throttle cosplay",
-        "lab.cosplay.hint": "Menubar flair when hot/busy. Pure theater — does not throttle your Mac.",
-        "lab.overnight": "Overnight watch",
-        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
-        "lab.roulette": "Core roulette",
-        "lab.roulette.hint": "Pick the busiest (or a random) core. No stakes.",
-        "lab.chaos": "Chaos blip",
-        "lab.chaos.hint": "⚠️ Short self-stress (0.5–2s) to demo sensors. Off by default. Do not spam.",
-        "lab.snapshot": "AirDrop snapshot card",
-        "lab.snapshot.hint": "One-shot local snapshot (.rnitrocard). Share via AirDrop or Files — no cloud, no fleet server.",
-        "lab.snapshot.export": "Export & share",
-        "lab.snapshot.copied": "Card saved",
-        "lab.budget": "SOC budget",
-        "lab.budget.hint": "Daily energy goal (estimated Wh from package power). Local only; resets at midnight.",
-        "lab.budget.goal": "Daily goal (Wh)",
-        "lab.confess": "Cooling confession",
-        "lab.confess.hint": "After a Heatwave/Storm cools to Clear/Breezy, a 3-panel recap appears.",
-        "lab.confess.dismiss": "Dismiss",
         "lab.widget": "Desktop widget",
+        "lab.widget.hide": "Hide widget",
         "lab.widget.hint": "Floating mini panel with thermal weather + temperature (beta stand-in for WidgetKit).",
         "lab.widget.show": "Show widget",
-        "lab.widget.hide": "Hide widget",
-        "lab.jump": "Jump to",
-        "chat.title": "AI Chat", "chat.subtitle": "Chat with your provider or manage API keys.",
-        "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
-        "settings.title": "Settings",
-        "settings.subtitle": "Monitor layout, menubar, alerts, and startup options.",
-        "settings.appearance": "Appearance", "settings.menubar": "Menubar",
-        "settings.monitor": "Monitor", "settings.alerts": "Alerts", "settings.general": "General",
-        "appearance.title": "Display", "appearance.subtitle": "UI font, size, language, and monitor layout style.",
-        "appearance.fontSize": "Font size", "appearance.fontFamily": "UI font", "appearance.fontFamily.hint": "50+ Google Fonts (OFL) bundled offline. Preview updates immediately.", "appearance.language": "Language",
-        "font.small": "Small", "font.medium": "Medium", "font.large": "Large", "font.xlarge": "Extra Large",
-        "appearance.monitorUI": "Monitor UI", "appearance.monitorUI.hint": "Modern uses iStats-style accordion sections. Legacy is the compact classic layout.",
-        "ui.modern": "Modern (iStats-style)", "ui.legacy": "Legacy",
-        "menubar.title": "Menu bar icon", "menubar.subtitle": "Choose layout and which stats appear in the top-right menubar.",
-        "menubar.layout": "Menu Bar Layout", "layout.compact": "Compact", "layout.inline": "Inline", "layout.minimal": "Minimal",
-        "slot.cpu": "CPU", "slot.temp": "Temp", "slot.ram": "RAM", "slot.power": "Power",
-        "slot.network": "Network", "slot.battery": "Battery", "slot.btc": "Bitcoin", "slot.weather": "Thermal weather",
-        "menubar.whisper": "Whisper mode", "menubar.whisper.toggle": "Whisper when calm",
+        "layout.compact": "Compact",
+        "layout.inline": "Inline",
+        "layout.minimal": "Minimal",
+        "live": "Live",
+        "menubar.density": "Density",
+        "menubar.layout": "Menu Bar Layout",
+        "menubar.leftClick": "Left-click action",
+        "menubar.openMain": "Open main window",
+        "menubar.reset": "Reset menubar defaults",
+        "menubar.slots": "Slots (toggle + reorder)",
+        "menubar.subtitle": "Choose layout and which stats appear in the top-right menubar.",
+        "menubar.title": "Menu bar icon",
+        "menubar.whisper": "Whisper mode",
         "menubar.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
         "menubar.whisper.sensitivity": "Sensitivity",
-        "general.compileFarm": "Compile-farm mode",
-        "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
-        "detective.whyHot": "Why hot?",
-        "monitor.title": "Monitor sections", "monitor.subtitle": "Control which panels and tools appear on the Monitor tab.",
-        "monitor.stress": "Show Stress Test", "monitor.benchmark": "Show Benchmark", "monitor.network": "Show Network",
-        "monitor.solo": "Solo Mode (one panel open)", "monitor.weather": "Show weather on Network",
-        "monitor.panels": "Visible panels", "monitor.tools": "Tools",
-        "alerts.title": "Alerts", "alerts.subtitle": "System Advisor thresholds and notification banners.",
-        "alerts.advisorTitle": "System Advisor alerts", "alerts.advisorSubtitle": "Warning thresholds and notification behavior for the Advisor tab.",
-        "alerts.thresholds": "Warning thresholds",
-        "alerts.proactive": "Proactive alerts in chat", "alerts.banners": "macOS banners for critical temps",
-        "general.title": "General", "general.launchAtLogin": "Launch at Login",
-        "general.launchAtLogin.req": "Launch at Login requires macOS 13 or later.",
-        "general.idleEfficiency": "Idle efficiency", "general.idleProfile": "Idle profile",
-        "general.idleBalanced": "Balanced", "general.idleAggressive": "Aggressive (lowest RAM)",
-        "general.idleHint": "Balanced keeps the menu bar snappy. Aggressive uses slower polls and skips history buffers until the popover opens.",
-        "general.version": "Version", "general.installLocation": "Install location", "general.checkUpdates": "Check for Updates",
-        "section.battery": "Battery & Power", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "Memory",
-        "section.disk": "Disk", "section.network": "Network", "section.sensors": "Sensors",
-        "section.tools": "Stress & Benchmark", "section.tools.summary": "Stress & Benchmark",
-        "row.usage": "Usage", "row.loadAvg": "Load avg", "row.uptime": "Uptime", "row.clock": "Clock",
-        "row.temperature": "Temperature", "row.power": "Power", "row.pressure": "Pressure",
-        "row.wired": "Wired", "row.compressed": "Compressed", "row.swap": "Swap used",
-        "row.read": "Read", "row.write": "Write", "row.ip": "IP", "row.wifi": "Wi-Fi",
-        "row.weather": "Weather", "row.location": "Location", "row.loading": "Loading…",
-        "row.download": "Download", "row.upload": "Upload", "row.lowPower": "Low Power Mode", "row.on": "On",
-        "row.stress": "Stress Test", "row.benchmark": "Benchmark", "row.bitcoin": "Bitcoin",
-        "row.status": "Status", "row.tip": "Tip", "row.noSensors": "No temperature or fan sensors found",
+        "menubar.whisper.toggle": "Whisper when calm",
+        "monitor.benchTitle": "Benchmark",
+        "monitor.benchmark": "Show Benchmark",
+        "monitor.bitcoin": "Bitcoin",
+        "monitor.multi": "Multi",
+        "monitor.network": "Show Network",
+        "monitor.oneCore": "1-core",
+        "monitor.panels": "Visible panels",
+        "monitor.solo": "Solo Mode (one panel open)",
+        "monitor.stress": "Show Stress Test",
+        "monitor.stressTitle": "Stress",
+        "monitor.subtitle": "Control which panels and tools appear on the Monitor tab.",
+        "monitor.title": "Monitor sections",
+        "monitor.tools": "Tools",
+        "monitor.weather": "Show weather on Network",
+        "openMainWindow": "Open main window",
+        "panel.battery": "Battery & Power",
+        "panel.cleaner": "Cleaner",
+        "panel.cpu": "CPU",
+        "panel.disk": "Disk",
+        "panel.gpu": "GPU",
+        "panel.memory": "Memory",
+        "panel.network": "Network",
+        "panel.sensors": "Sensors",
+        "panel.settings": "Settings",
+        "processes.col.cpu": "CPU",
+        "processes.col.ram": "RAM",
+        "processes.copyPID": "Copy PID",
+        "processes.devOnly": "Developer Mode only. Prefer SIGTERM first. Force quit can lose unsaved work.",
+        "processes.none": "Sampling…",
+        "processes.quit": "Quit",
+        "processes.reveal": "Reveal",
+        "processes.sigkill": "Force quit (SIGKILL)",
+        "processes.sigterm": "Send SIGTERM",
+        "processes.topCpu": "Top processes (CPU)",
+        "processes.topRam": "Top processes (RAM)",
+        "processes.whyHot": "Why hot?",
+        "row.benchmark": "Benchmark",
+        "row.bitcoin": "Bitcoin",
+        "row.clock": "Clock",
+        "row.compressed": "Compressed",
+        "row.download": "Download",
+        "row.ip": "IP",
+        "row.loadAvg": "Load avg",
+        "row.loading": "Loading…",
+        "row.location": "Location",
+        "row.lowPower": "Low Power Mode",
+        "row.noSensors": "No temperature or fan sensors found",
+        "row.on": "On",
+        "row.power": "Power",
+        "row.pressure": "Pressure",
+        "row.read": "Read",
         "row.sensorsTip": "SMC keys vary by chip — CPU temp still shown above",
-        "btn.start": "Start", "btn.stop": "Stop", "btn.run": "Run", "btn.running": "Running…",
-        "openMainWindow": "Open main window", "live": "Live", "cores": "Cores",
-        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Memory", "panel.disk": "Disk",
-        "panel.network": "Network", "panel.battery": "Battery & Power", "panel.sensors": "Sensors",
-        "panel.settings": "Settings", "panel.cleaner": "Cleaner",
-        "processes.topCpu": "Top processes (CPU)", "processes.topRam": "Top processes (RAM)",
-        "processes.none": "Sampling…", "processes.col.cpu": "CPU", "processes.col.ram": "RAM",
+        "row.status": "Status",
+        "row.stress": "Stress Test",
+        "row.swap": "Swap used",
+        "row.temperature": "Temperature",
+        "row.tip": "Tip",
+        "row.upload": "Upload",
+        "row.uptime": "Uptime",
+        "row.usage": "Usage",
+        "row.weather": "Weather",
+        "row.wifi": "Wi-Fi",
+        "row.wired": "Wired",
+        "row.write": "Write",
+        "section.battery": "Battery & Power",
+        "section.cpu": "CPU",
+        "section.disk": "Disk",
+        "section.gpu": "GPU",
+        "section.memory": "Memory",
+        "section.network": "Network",
+        "section.sensors": "Sensors",
+        "section.tools": "Stress & Benchmark",
+        "section.tools.summary": "Stress & Benchmark",
+        "settings.alerts": "Alerts",
+        "settings.appearance": "Appearance",
+        "settings.developer": "Developer",
+        "settings.general": "General",
+        "settings.menubar": "Menubar",
+        "settings.monitor": "Monitor",
+        "settings.subtitle": "Monitor layout, menubar, alerts, and startup options.",
+        "settings.title": "Settings",
+        "slot.battery": "Battery",
+        "slot.btc": "Bitcoin",
+        "slot.cpu": "CPU",
+        "slot.network": "Network",
+        "slot.power": "Power",
+        "slot.ram": "RAM",
+        "slot.temp": "Temp",
+        "slot.weather": "Thermal weather",
+        "tab.advisor": "Advisor",
+        "tab.chat": "Chat",
+        "tab.cleaner": "Cleaner",
+        "tab.lab": "Lab",
+        "tab.monitor": "Monitor",
+        "tab.settings": "Settings",
+        "tips.gotIt": "Got it — open monitor",
+        "tips.quick": "Quick start — takes 10 seconds.",
+        "tips.title": "Welcome to rNitro",
+        "ui.legacy": "Legacy",
+        "ui.modern": "Modern (iStats-style)",
     ]
 
     private static let zhStrings: [String: String] = [
-        "tab.monitor": "監控", "tab.advisor": "顧問", "tab.chat": "聊天", "tab.cleaner": "清理", "tab.lab": "實驗室", "tab.settings": "設定",
-        "chat.title": "AI 聊天", "chat.subtitle": "與 AI 對話或管理 API 密鑰。",
-        "chat.subtab.chat": "聊天", "chat.subtab.api": "API",
-        "settings.title": "設定", "settings.subtitle": "監控版面、選單列、提醒與啟動選項。",
-        "settings.appearance": "外觀", "settings.menubar": "選單列",
-        "settings.monitor": "監控", "settings.alerts": "提醒", "settings.general": "一般",
-        "appearance.title": "顯示", "appearance.subtitle": "字體大小、語言與監控介面樣式。",
-        "appearance.fontSize": "字體大小", "appearance.fontFamily": "介面字型", "appearance.fontFamily.hint": "內建 50+ Google Fonts（OFL）。", "appearance.language": "語言",
-        "font.small": "小", "font.medium": "中", "font.large": "大", "font.xlarge": "特大",
-        "appearance.monitorUI": "監控介面", "appearance.monitorUI.hint": "現代模式使用 iStats 風格摺疊分區；經典模式為緊湊版面。",
-        "ui.modern": "現代 (iStats 風格)", "ui.legacy": "經典",
-        "menubar.title": "選單列圖示", "menubar.subtitle": "選擇版面與右上角選單列顯示的統計項目。",
-        "menubar.layout": "選單列版面", "layout.compact": "緊湊", "layout.inline": "單行", "layout.minimal": "極簡",
-        "slot.cpu": "CPU", "slot.temp": "溫度", "slot.ram": "記憶體", "slot.power": "功耗",
-        "slot.network": "網路", "slot.battery": "電池", "slot.btc": "比特幣",
-        "monitor.title": "監控分區", "monitor.subtitle": "控制監控頁顯示的面板與工具。",
-        "monitor.stress": "顯示壓力測試", "monitor.benchmark": "顯示基準測試", "monitor.network": "顯示網路",
-        "monitor.solo": "單獨模式（一次只展開一個面板）", "monitor.weather": "在網路分區顯示天氣",
-        "monitor.panels": "可見面板", "monitor.tools": "工具",
-        "alerts.title": "提醒", "alerts.subtitle": "系統顧問閾值與通知橫幅。",
-        "alerts.advisorTitle": "系統顧問提醒", "alerts.advisorSubtitle": "顧問頁的警告閾值與通知行為。",
+        "accent.blue": "藍",
+        "accent.cyan": "青",
+        "accent.green": "綠",
+        "accent.orange": "橘",
+        "accent.pink": "粉",
+        "accent.purple": "紫",
+        "accent.red": "紅",
+        "advisor.liveSpecs": "即時規格 · 設定 → 提醒",
+        "advisor.suggestion": "建議",
+        "advisor.title": "系統顧問",
+        "alerts.advisorSubtitle": "顧問頁的警告閾值與通知行為。",
+        "alerts.advisorTitle": "系統顧問提醒",
+        "alerts.banners": "嚴重溫度時顯示 macOS 橫幅",
+        "alerts.batteryLow": "低電量 %",
+        "alerts.colorHint": "自訂 CPU％ 與溫度何時變綠／橘／紅。",
+        "alerts.colorThresholds": "顏色閾值（環形與選單列）",
+        "alerts.cpuGreen": "CPU 綠低於 %",
+        "alerts.cpuOrange": "CPU 橘低於 %",
+        "alerts.cpuPct": "CPU %",
+        "alerts.cpuRed": "CPU 紅從 %",
+        "alerts.gpuPct": "GPU %",
+        "alerts.proactive": "聊天中的主動提醒",
+        "alerts.ramPct": "記憶體 %",
+        "alerts.resetColors": "重設顏色閾值",
+        "alerts.subtitle": "系統顧問閾值與通知橫幅。",
+        "alerts.tempCrit": "溫度危急 °C",
+        "alerts.tempGreen": "溫度綠低於 °C",
+        "alerts.tempOrange": "溫度橘低於 °C",
+        "alerts.tempRed": "溫度紅從 °C",
+        "alerts.tempWarn": "溫度警告 °C",
         "alerts.thresholds": "警告閾值",
-        "alerts.proactive": "聊天中的主動提醒", "alerts.banners": "嚴重溫度時顯示 macOS 橫幅",
-        "general.title": "一般", "general.launchAtLogin": "登入時啟動",
-        "general.launchAtLogin.req": "登入時啟動需要 macOS 13 或更高版本。",
-        "general.idleEfficiency": "閒置效率", "general.idleProfile": "閒置設定",
-        "general.idleBalanced": "平衡", "general.idleAggressive": "激進（最低記憶體）",
+        "alerts.title": "提醒",
+        "appearance.accent": "強調色",
+        "appearance.accent.preview": "強調色預覽",
+        "appearance.fontFamily": "介面字型",
+        "appearance.fontFamily.hint": "內建 50+ Google Fonts（OFL）。",
+        "appearance.fontSize": "字體大小",
+        "appearance.language": "語言",
+        "appearance.monitorUI": "監控介面",
+        "appearance.monitorUI.hint": "現代模式使用 iStats 風格摺疊分區；經典模式為緊湊版面。",
+        "appearance.pangram": "The quick brown fox — 0123456789",
+        "appearance.reset": "重設外觀預設",
+        "appearance.sections": "監控區塊",
+        "appearance.showFans": "顯示風扇／感測器細節",
+        "appearance.showPerCore": "顯示每核心長條",
+        "appearance.showProcesses": "顯示最佔資源行程",
+        "appearance.subtitle": "主題、介面字型、大小、語言與監控版面。",
+        "appearance.theme": "主題",
+        "appearance.theme.dark": "深色",
+        "appearance.theme.hint": "系統跟隨 macOS；淺色／深色強制套用介面。",
+        "appearance.theme.light": "淺色",
+        "appearance.theme.system": "系統",
+        "appearance.title": "顯示",
+        "btn.run": "執行",
+        "btn.running": "執行中…",
+        "btn.start": "開始",
+        "btn.stop": "停止",
+        "chat.apiKey": "API 密鑰（選填）",
+        "chat.compose": "撰寫",
+        "chat.getKey": "取得密鑰：%@",
+        "chat.needsSetup": "請先設定 %@ 再聊天。",
+        "chat.openAPI": "開啟 API 設定",
+        "chat.openAPI.hint": "開啟 API 子分頁。",
+        "chat.openAPI.main": "開啟聊天 → API。",
+        "chat.privacy": "隱私：密鑰只存在此 Mac。",
+        "chat.providers": "AI 提供者",
+        "chat.subtab.api": "API",
+        "chat.subtab.chat": "聊天",
+        "chat.subtitle": "與 AI 對話或管理 API 密鑰。",
+        "chat.title": "AI 聊天",
+        "cleaner.leftovers": "殘餘檔案",
+        "cleaner.none": "未找到殘餘檔",
+        "cleaner.removeSelected": "移除所選",
+        "cleaner.scanning": "掃描中…",
+        "cleaner.scanningLeft": "掃描殘餘檔…",
+        "cleaner.trash": "移至垃圾桶",
+        "common.cancel": "取消",
+        "common.clear": "清除",
+        "common.close": "關閉",
+        "common.copy": "複製",
+        "common.enable": "啟用",
+        "common.quit": "結束",
+        "common.refresh": "重新整理",
+        "common.removeKey": "移除密鑰",
+        "common.reset": "重設",
+        "common.saveKey": "儲存密鑰",
+        "common.send": "傳送",
+        "cores": "核心",
+        "cpu.power60": "CPU 功耗（近 60 秒）",
+        "density.comfortable": "舒適",
+        "density.compact": "緊湊",
+        "density.spacious": "寬鬆",
+        "detective.whyHot": "Why hot?",
+        "dev.copied.env": "已複製環境清單",
+        "dev.copied.fonts": "已複製字型表",
+        "dev.copied.json": "已複製 JSON 快照",
+        "dev.copied.sample": "已複製取樣統計",
+        "dev.copied.sensor": "已複製感測器傾印",
+        "dev.copied.ui": "已複製 UI 設定",
+        "dev.copyJSON": "複製快照 JSON",
+        "dev.copySensor": "複製感測器傾印",
+        "dev.copyUIConfig": "複製 UI 設定 JSON",
+        "dev.envManifest": "複製環境清單",
+        "dev.fontMap": "複製字型對照表",
+        "dev.highSample": "強制高取樣率（約 0.75 秒）",
+        "dev.import": "匯入 UI 設定",
+        "dev.import.fail": "匯入失敗 — 請檢查 JSON",
+        "dev.import.ok": "已匯入 UI 設定",
+        "dev.importHint": "貼上設定 JSON，再按匯入。",
+        "dev.openLogs": "開啟日誌資料夾",
+        "dev.pingCDN": "Ping 更新 CDN",
+        "dev.pinging": "Ping 中…",
+        "dev.rawSensors": "監控中優先顯示原始感測器",
+        "dev.revealApp": "在 Finder 中顯示 App",
+        "dev.revealed": "已在 Finder 顯示",
+        "dev.sampleStats": "複製取樣迴圈統計",
+        "dev.shuffleAccent": "強調色亂跳 4 秒",
+        "dev.shuffled": "強調色已亂跳（4 秒後恢復）",
+        "dev.subtitle": "除錯與進階取樣工具。在「一般」關閉開發者模式可隱藏此分頁。",
+        "dev.surprise": "驚喜工具箱",
+        "dev.surprise.hint": "給認真開啟開發者模式的人的診斷與小玩具。",
+        "dev.title": "開發者",
+        "dev.uiConfig": "UI 設定",
+        "dev.verbose": "詳細日誌寫入 ~/Library/Logs/rNitro",
+        "duel.expand": "展開區域網對決。",
+        "duel.host": "主機",
+        "duel.join": "加入",
+        "duel.local": "僅區域網路 — 無雲端。",
+        "duel.room": "房間",
+        "duel.title": "壓力對決（區域網）",
+        "duel.you": "你",
+        "font.category.all": "全部",
+        "font.category.display": "展示",
+        "font.category.favorites": "★",
+        "font.category.mono": "等寬",
+        "font.category.sans": "無襯線",
+        "font.category.script": "手寫",
+        "font.category.serif": "襯線",
+        "font.large": "大",
+        "font.medium": "中",
+        "font.small": "小",
+        "font.xlarge": "特大",
+        "general.checkUpdates": "檢查更新",
+        "general.compileFarm": "Compile-farm mode",
+        "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
+        "general.developerMode": "開發者模式",
+        "general.developerMode.hint": "解鎖開發者設定分頁與行程工具。",
+        "general.idleAggressive": "激進（最低記憶體）",
+        "general.idleBalanced": "平衡",
+        "general.idleEfficiency": "閒置效率",
         "general.idleHint": "平衡模式保持選單列回應迅速；激進模式降低輪詢頻率，彈出視窗關閉前不記錄歷史資料。",
-        "general.version": "版本", "general.installLocation": "安裝位置", "general.checkUpdates": "檢查更新",
-        "section.battery": "電池與功耗", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "記憶體",
-        "section.disk": "磁碟", "section.network": "網路", "section.sensors": "感測器",
-        "section.tools": "壓力與基準測試", "section.tools.summary": "壓力與基準測試",
-        "row.usage": "使用率", "row.loadAvg": "平均負載", "row.uptime": "執行時間", "row.clock": "頻率",
-        "row.temperature": "溫度", "row.power": "功耗", "row.pressure": "壓力",
-        "row.wired": "連線", "row.compressed": "壓縮", "row.swap": "交換區已用",
-        "row.read": "讀取", "row.write": "寫入", "row.ip": "IP", "row.wifi": "Wi-Fi",
-        "row.weather": "天氣", "row.location": "位置", "row.loading": "載入中…",
-        "row.download": "下載", "row.upload": "上傳", "row.lowPower": "低電量模式", "row.on": "開",
-        "row.stress": "壓力測試", "row.benchmark": "基準測試", "row.bitcoin": "比特幣",
-        "row.status": "狀態", "row.tip": "提示", "row.noSensors": "未找到溫度或風扇感測器",
+        "general.idleProfile": "閒置設定",
+        "general.installLocation": "安裝位置",
+        "general.launchAtLogin": "登入時啟動",
+        "general.launchAtLogin.req": "登入時啟動需要 macOS 13 或更高版本。",
+        "general.launchCLI": "啟動 CLI",
+        "general.title": "一般",
+        "general.version": "版本",
+        "lab.alibi": "Process alibi",
+        "lab.alibi.copy": "Copy alibi",
+        "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
+        "lab.budget": "SOC budget",
+        "lab.budget.goal": "Daily goal (Wh)",
+        "lab.budget.hint": "Daily energy goal (estimated Wh from package power). Local only; resets at midnight.",
+        "lab.chaos": "Chaos blip",
+        "lab.chaos.hint": "⚠️ Short self-stress (0.5–2s) to demo sensors. Off by default. Do not spam.",
+        "lab.cloak": "Meeting cloak",
+        "lab.cloak.hint": "When Zoom/Teams/Webex is running, hush the menubar (local process names only).",
+        "lab.confess": "Cooling confession",
+        "lab.confess.dismiss": "Dismiss",
+        "lab.confess.hint": "After a Heatwave/Storm cools to Clear/Breezy, a 3-panel recap appears.",
+        "lab.copied": "Copied",
+        "lab.cosplay": "Throttle cosplay",
+        "lab.cosplay.enable": "啟用選單列花絮",
+        "lab.cosplay.hint": "Menubar flair when hot/busy. Pure theater — does not throttle your Mac.",
+        "lab.detective": "Why is my Mac hot?",
+        "lab.detective.copy": "Copy report",
+        "lab.detective.refresh": "Refresh report",
+        "lab.duel": "Stress duel (LAN)",
+        "lab.duel.show": "Show stress duel",
+        "lab.farm": "Compile-farm",
+        "lab.farm.hint": "Detect swiftc / clang / xcodebuild, boost sampling while building, then cool down.",
+        "lab.forecast": "Thermal forecast",
+        "lab.forecast.hint": "Naive slope from recent temps — not weather science. Experimental only.",
+        "lab.ghost": "Ghost-load radar",
+        "lab.ghost.hint": "Approx CPU-minutes last hour — quiet processes that still burn power.",
+        "lab.haiku": "Heat haiku",
+        "lab.haiku.hint": "Three-line nonsense from temp, load, weather, and top process.",
+        "lab.horizon": "視野（分）",
+        "lab.idleSpicy": "閒置 — 溫度／CPU 升高時觸發",
+        "lab.jump": "Jump to",
+        "lab.ledger": "Build ledger",
+        "lab.ledger.clear": "Clear ledger",
+        "lab.meeting.hush": "會議靜音中",
+        "lab.noBuilds": "尚無編譯紀錄。",
+        "lab.noConfess": "尚無冷卻故事。",
+        "lab.open": "Open Lab",
+        "lab.overnight": "Overnight watch",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.peer": "Polite peer",
+        "lab.peer.active": "Peer active — sampling eased",
+        "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
+        "lab.peer.idle": "No peer profilers detected",
+        "lab.preset.build": "Build day",
+        "lab.preset.full": "Full stats",
+        "lab.preset.quiet": "Quiet day",
+        "lab.presets": "Presets",
+        "lab.receipt": "Power receipt",
+        "lab.receipt.copy": "Copy receipt",
+        "lab.receipt.hint": "Estimated energy this session from package power (not a wall meter).",
+        "lab.receipt.reset": "Reset session",
+        "lab.roulette": "Core roulette",
+        "lab.roulette.hint": "Pick the busiest (or a random) core. No stakes.",
+        "lab.roulette.spin": "旋轉抽核心",
+        "lab.sampling": "取樣中…",
+        "lab.scrub": "Time-scrub",
+        "lab.scrub.hint": "Last ~90s of CPU, temperature, and package power. Drag to scrub.",
+        "lab.scrub.needMore": "還需要幾秒歷史…",
+        "lab.scrub.now": "Jump to now",
+        "lab.sidebar.section": "Experimental Features",
+        "lab.snapshot": "AirDrop snapshot card",
+        "lab.snapshot.copied": "Card saved",
+        "lab.snapshot.export": "Export & share",
+        "lab.snapshot.hint": "One-shot local snapshot (.rnitrocard). Share via AirDrop or Files — no cloud, no fleet server.",
+        "lab.subtitle": "Experimental tools (beta, local only) — weather, detective, ghost-load, power, whisper, meetings, builds, duel.",
+        "lab.title": "Lab",
+        "lab.toc.alibi": "Alibi",
+        "lab.toc.budget": "Budget",
+        "lab.toc.chaos": "Chaos",
+        "lab.toc.cloak": "Cloak",
+        "lab.toc.confess": "Confess",
+        "lab.toc.cosplay": "Cosplay",
+        "lab.toc.detective": "Detective",
+        "lab.toc.duel": "Duel",
+        "lab.toc.farm": "Farm",
+        "lab.toc.forecast": "Forecast",
+        "lab.toc.ghost": "Ghost",
+        "lab.toc.haiku": "Haiku",
+        "lab.toc.overnight": "Overnight",
+        "lab.toc.peer": "Peer",
+        "lab.toc.receipt": "Receipt",
+        "lab.toc.roulette": "Roulette",
+        "lab.toc.scrub": "Scrub",
+        "lab.toc.snapshot": "Share",
+        "lab.toc.weather": "Weather",
+        "lab.toc.whisper": "Whisper",
+        "lab.toc.widget": "Widget",
+        "lab.weather": "Thermal weather",
+        "lab.weather.hint": "Maps load + temp into Clear → Storm. Optional menubar slot.",
+        "lab.weather.menubar": "Show weather in menubar",
+        "lab.whisper": "Whisper menubar",
+        "lab.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "lab.whisper.sensitivity": "Sensitivity",
+        "lab.widget": "Desktop widget",
+        "lab.widget.hide": "Hide widget",
+        "lab.widget.hint": "Floating mini panel with thermal weather + temperature (beta stand-in for WidgetKit).",
+        "lab.widget.show": "Show widget",
+        "layout.compact": "緊湊",
+        "layout.inline": "單行",
+        "layout.minimal": "極簡",
+        "live": "即時",
+        "menubar.density": "密度",
+        "menubar.layout": "選單列版面",
+        "menubar.leftClick": "左鍵動作",
+        "menubar.openMain": "開啟主視窗",
+        "menubar.reset": "重設選單列預設",
+        "menubar.slots": "欄位（開關與排序）",
+        "menubar.subtitle": "選擇版面與右上角選單列顯示的統計項目。",
+        "menubar.title": "選單列圖示",
+        "menubar.whisper": "Whisper mode",
+        "menubar.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "menubar.whisper.sensitivity": "Sensitivity",
+        "menubar.whisper.toggle": "Whisper when calm",
+        "monitor.benchTitle": "基準",
+        "monitor.benchmark": "顯示基準測試",
+        "monitor.bitcoin": "比特幣",
+        "monitor.multi": "多核",
+        "monitor.network": "顯示網路",
+        "monitor.oneCore": "單核",
+        "monitor.panels": "可見面板",
+        "monitor.solo": "單獨模式（一次只展開一個面板）",
+        "monitor.stress": "顯示壓力測試",
+        "monitor.stressTitle": "壓力",
+        "monitor.subtitle": "控制監控頁顯示的面板與工具。",
+        "monitor.title": "監控分區",
+        "monitor.tools": "工具",
+        "monitor.weather": "在網路分區顯示天氣",
+        "openMainWindow": "開啟主視窗",
+        "panel.battery": "電池與功耗",
+        "panel.cleaner": "清理",
+        "panel.cpu": "CPU",
+        "panel.disk": "磁碟",
+        "panel.gpu": "GPU",
+        "panel.memory": "記憶體",
+        "panel.network": "網路",
+        "panel.sensors": "感測器",
+        "panel.settings": "設定",
+        "processes.col.cpu": "CPU",
+        "processes.col.ram": "記憶體",
+        "processes.copyPID": "複製 PID",
+        "processes.devOnly": "僅開發者模式。請先 SIGTERM。",
+        "processes.none": "採樣中…",
+        "processes.quit": "結束",
+        "processes.reveal": "顯示位置",
+        "processes.sigkill": "強制結束 (SIGKILL)",
+        "processes.sigterm": "傳送 SIGTERM",
+        "processes.topCpu": "CPU 佔用最高程式",
+        "processes.topRam": "記憶體佔用最高程式",
+        "processes.whyHot": "為何發熱？",
+        "row.benchmark": "基準測試",
+        "row.bitcoin": "比特幣",
+        "row.clock": "頻率",
+        "row.compressed": "壓縮",
+        "row.download": "下載",
+        "row.ip": "IP",
+        "row.loadAvg": "平均負載",
+        "row.loading": "載入中…",
+        "row.location": "位置",
+        "row.lowPower": "低電量模式",
+        "row.noSensors": "未找到溫度或風扇感測器",
+        "row.on": "開",
+        "row.power": "功耗",
+        "row.pressure": "壓力",
+        "row.read": "讀取",
         "row.sensorsTip": "SMC 鍵因晶片而異 — CPU 溫度仍顯示在上方",
-        "btn.start": "開始", "btn.stop": "停止", "btn.run": "執行", "btn.running": "執行中…",
-        "openMainWindow": "開啟主視窗", "live": "即時", "cores": "核心",
-        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "記憶體", "panel.disk": "磁碟",
-        "panel.network": "網路", "panel.battery": "電池與功耗", "panel.sensors": "感測器",
-        "panel.settings": "設定", "panel.cleaner": "清理",
-        "processes.topCpu": "CPU 佔用最高程式", "processes.topRam": "記憶體佔用最高程式",
-        "processes.none": "採樣中…", "processes.col.cpu": "CPU", "processes.col.ram": "記憶體",
+        "row.status": "狀態",
+        "row.stress": "壓力測試",
+        "row.swap": "交換區已用",
+        "row.temperature": "溫度",
+        "row.tip": "提示",
+        "row.upload": "上傳",
+        "row.uptime": "執行時間",
+        "row.usage": "使用率",
+        "row.weather": "天氣",
+        "row.wifi": "Wi-Fi",
+        "row.wired": "連線",
+        "row.write": "寫入",
+        "section.battery": "電池與功耗",
+        "section.cpu": "CPU",
+        "section.disk": "磁碟",
+        "section.gpu": "GPU",
+        "section.memory": "記憶體",
+        "section.network": "網路",
+        "section.sensors": "感測器",
+        "section.tools": "壓力與基準測試",
+        "section.tools.summary": "壓力與基準測試",
+        "settings.alerts": "提醒",
+        "settings.appearance": "外觀",
+        "settings.developer": "開發者",
+        "settings.general": "一般",
+        "settings.menubar": "選單列",
+        "settings.monitor": "監控",
+        "settings.subtitle": "監控版面、選單列、提醒與啟動選項。",
+        "settings.title": "設定",
+        "slot.battery": "電池",
+        "slot.btc": "比特幣",
+        "slot.cpu": "CPU",
+        "slot.network": "網路",
+        "slot.power": "功耗",
+        "slot.ram": "記憶體",
+        "slot.temp": "溫度",
+        "slot.weather": "Thermal weather",
+        "tab.advisor": "顧問",
+        "tab.chat": "聊天",
+        "tab.cleaner": "清理",
+        "tab.lab": "實驗室",
+        "tab.monitor": "監控",
+        "tab.settings": "設定",
+        "tips.gotIt": "知道了 — 開啟監控",
+        "tips.quick": "快速開始 — 約 10 秒。",
+        "tips.title": "歡迎使用 rNitro",
+        "ui.legacy": "經典",
+        "ui.modern": "現代 (iStats 風格)",
     ]
 
     private static let esStrings: [String: String] = [
-        "tab.monitor": "Monitor", "tab.advisor": "Asesor", "tab.chat": "Chat", "tab.cleaner": "Limpiador", "tab.lab": "Lab", "tab.settings": "Ajustes",
-        "chat.title": "Chat IA", "chat.subtitle": "Chatea con tu proveedor o gestiona claves API.",
-        "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
-        "settings.title": "Ajustes", "settings.subtitle": "Diseño del monitor, barra de menú, alertas y opciones de inicio.",
-        "settings.appearance": "Apariencia", "settings.menubar": "Barra de menú",
-        "settings.monitor": "Monitor", "settings.alerts": "Alertas", "settings.general": "General",
-        "appearance.title": "Pantalla", "appearance.subtitle": "Tamaño de fuente, idioma y estilo del monitor.",
-        "appearance.fontSize": "Tamaño de fuente", "appearance.fontFamily": "Fuente de la UI", "appearance.fontFamily.hint": "Más de 50 Google Fonts (OFL) incluidas.", "appearance.language": "Idioma",
-        "font.small": "Pequeño", "font.medium": "Mediano", "font.large": "Grande", "font.xlarge": "Extra grande",
-        "appearance.monitorUI": "Interfaz del monitor", "appearance.monitorUI.hint": "Moderno usa secciones plegables estilo iStats. Clásico es el diseño compacto.",
-        "ui.modern": "Moderno (estilo iStats)", "ui.legacy": "Clásico",
-        "menubar.title": "Icono de barra de menú", "menubar.subtitle": "Elige el diseño y las estadísticas en la barra superior.",
-        "menubar.layout": "Diseño de barra", "layout.compact": "Compacto", "layout.inline": "En línea", "layout.minimal": "Mínimo",
-        "slot.cpu": "CPU", "slot.temp": "Temp", "slot.ram": "RAM", "slot.power": "Potencia",
-        "slot.network": "Red", "slot.battery": "Batería", "slot.btc": "Bitcoin",
-        "monitor.title": "Secciones del monitor", "monitor.subtitle": "Controla qué paneles y herramientas aparecen.",
-        "monitor.stress": "Mostrar prueba de estrés", "monitor.benchmark": "Mostrar benchmark", "monitor.network": "Mostrar red",
-        "monitor.solo": "Modo solo (un panel abierto)", "monitor.weather": "Mostrar clima en Red",
-        "monitor.panels": "Paneles visibles", "monitor.tools": "Herramientas",
-        "alerts.title": "Alertas", "alerts.subtitle": "Umbrales del asesor del sistema y banners de notificación.",
-        "alerts.advisorTitle": "Alertas del asesor del sistema", "alerts.advisorSubtitle": "Umbrales de advertencia y notificaciones para la pestaña Asesor.",
+        "accent.blue": "Azul",
+        "accent.cyan": "Cian",
+        "accent.green": "Verde",
+        "accent.orange": "Naranja",
+        "accent.pink": "Rosa",
+        "accent.purple": "Morado",
+        "accent.red": "Rojo",
+        "advisor.liveSpecs": "Especs · Ajustes → Alertas",
+        "advisor.suggestion": "Sugerencia",
+        "advisor.title": "Asesor del sistema",
+        "alerts.advisorSubtitle": "Umbrales de advertencia y notificaciones para la pestaña Asesor.",
+        "alerts.advisorTitle": "Alertas del asesor del sistema",
+        "alerts.banners": "Banners de macOS para temperaturas críticas",
+        "alerts.batteryLow": "Batería baja %",
+        "alerts.colorHint": "Cuándo CPU/temp son verde/naranja/rojo.",
+        "alerts.colorThresholds": "Umbrales de color",
+        "alerts.cpuGreen": "CPU verde bajo %",
+        "alerts.cpuOrange": "CPU naranja bajo %",
+        "alerts.cpuPct": "CPU %",
+        "alerts.cpuRed": "CPU rojo desde %",
+        "alerts.gpuPct": "GPU %",
+        "alerts.proactive": "Alertas proactivas en el chat",
+        "alerts.ramPct": "RAM %",
+        "alerts.resetColors": "Restablecer colores",
+        "alerts.subtitle": "Umbrales del asesor del sistema y banners de notificación.",
+        "alerts.tempCrit": "Temp crítica °C",
+        "alerts.tempGreen": "Temp verde bajo °C",
+        "alerts.tempOrange": "Temp naranja bajo °C",
+        "alerts.tempRed": "Temp roja desde °C",
+        "alerts.tempWarn": "Temp aviso °C",
         "alerts.thresholds": "Umbrales de advertencia",
-        "alerts.proactive": "Alertas proactivas en el chat", "alerts.banners": "Banners de macOS para temperaturas críticas",
-        "general.title": "General", "general.launchAtLogin": "Iniciar al arrancar",
-        "general.launchAtLogin.req": "Iniciar al arrancar requiere macOS 13 o posterior.",
-        "general.idleEfficiency": "Eficiencia en reposo", "general.idleProfile": "Perfil en reposo",
-        "general.idleBalanced": "Equilibrado", "general.idleAggressive": "Agresivo (menor RAM)",
+        "alerts.title": "Alertas",
+        "appearance.accent": "Color de acento",
+        "appearance.accent.preview": "Vista previa del acento",
+        "appearance.fontFamily": "Fuente de la UI",
+        "appearance.fontFamily.hint": "Más de 50 Google Fonts (OFL) incluidas.",
+        "appearance.fontSize": "Tamaño de fuente",
+        "appearance.language": "Idioma",
+        "appearance.monitorUI": "Interfaz del monitor",
+        "appearance.monitorUI.hint": "Moderno usa secciones plegables estilo iStats. Clásico es el diseño compacto.",
+        "appearance.pangram": "The quick brown fox — 0123456789",
+        "appearance.reset": "Restablecer apariencia",
+        "appearance.sections": "Secciones del monitor",
+        "appearance.showFans": "Ventiladores / sensores",
+        "appearance.showPerCore": "Barras por núcleo",
+        "appearance.showProcesses": "Procesos principales",
+        "appearance.subtitle": "Tema, fuente de UI, tamaño, idioma y diseño.",
+        "appearance.theme": "Tema",
+        "appearance.theme.dark": "Oscuro",
+        "appearance.theme.hint": "Sistema sigue a macOS.",
+        "appearance.theme.light": "Claro",
+        "appearance.theme.system": "Sistema",
+        "appearance.title": "Pantalla",
+        "btn.run": "Ejecutar",
+        "btn.running": "Ejecutando…",
+        "btn.start": "Iniciar",
+        "btn.stop": "Detener",
+        "chat.apiKey": "Clave API (opcional)",
+        "chat.compose": "Escribir",
+        "chat.getKey": "Clave: %@",
+        "chat.needsSetup": "Configura %@ primero.",
+        "chat.openAPI": "Abrir API",
+        "chat.openAPI.hint": "Subpestaña API.",
+        "chat.openAPI.main": "Chat → API.",
+        "chat.privacy": "Claves solo en este Mac.",
+        "chat.providers": "Proveedores IA",
+        "chat.subtab.api": "API",
+        "chat.subtab.chat": "Chat",
+        "chat.subtitle": "Chatea con tu proveedor o gestiona claves API.",
+        "chat.title": "Chat IA",
+        "cleaner.leftovers": "Restos",
+        "cleaner.none": "Sin restos",
+        "cleaner.removeSelected": "Eliminar selección",
+        "cleaner.scanning": "Escaneando…",
+        "cleaner.scanningLeft": "Buscando restos…",
+        "cleaner.trash": "A la Papelera",
+        "common.cancel": "Cancelar",
+        "common.clear": "Borrar",
+        "common.close": "Cerrar",
+        "common.copy": "Copiar",
+        "common.enable": "Activar",
+        "common.quit": "Salir",
+        "common.refresh": "Actualizar",
+        "common.removeKey": "Quitar clave",
+        "common.reset": "Restablecer",
+        "common.saveKey": "Guardar clave",
+        "common.send": "Enviar",
+        "cores": "Núcleos",
+        "cpu.power60": "Potencia CPU (~60 s)",
+        "density.comfortable": "Cómodo",
+        "density.compact": "Compacto",
+        "density.spacious": "Espacioso",
+        "detective.whyHot": "Why hot?",
+        "dev.copied.env": "Manifiesto copiado",
+        "dev.copied.fonts": "Fuentes copiadas",
+        "dev.copied.json": "JSON copiado",
+        "dev.copied.sample": "Stats copiados",
+        "dev.copied.sensor": "Copiado",
+        "dev.copied.ui": "UI copiada",
+        "dev.copyJSON": "Copiar JSON",
+        "dev.copySensor": "Copiar sensores",
+        "dev.copyUIConfig": "Copiar JSON UI",
+        "dev.envManifest": "Manifiesto de entorno",
+        "dev.fontMap": "Mapa de fuentes",
+        "dev.highSample": "Muestreo alto (~0,75 s)",
+        "dev.import": "Importar UI",
+        "dev.import.fail": "Error al importar",
+        "dev.import.ok": "Importado",
+        "dev.importHint": "Pega JSON e importa.",
+        "dev.openLogs": "Abrir logs",
+        "dev.pingCDN": "Ping CDN",
+        "dev.pinging": "Ping…",
+        "dev.rawSensors": "Sensores en bruto",
+        "dev.revealApp": "Mostrar en Finder",
+        "dev.revealed": "En Finder",
+        "dev.sampleStats": "Stats de muestreo",
+        "dev.shuffleAccent": "Barajar acento 4 s",
+        "dev.shuffled": "Acento barajado",
+        "dev.subtitle": "Herramientas de depuración. Desactívalo en General para ocultar la pestaña.",
+        "dev.surprise": "Caja de sorpresas",
+        "dev.surprise.hint": "Diagnósticos y juguetes.",
+        "dev.title": "Desarrollador",
+        "dev.uiConfig": "Config UI",
+        "dev.verbose": "Log en ~/Library/Logs/rNitro",
+        "duel.expand": "Expandir duelo.",
+        "duel.host": "Alojar",
+        "duel.join": "Unirse",
+        "duel.local": "Solo red local.",
+        "duel.room": "Sala",
+        "duel.title": "Duelo LAN",
+        "duel.you": "Tú",
+        "font.category.all": "Todas",
+        "font.category.display": "Display",
+        "font.category.favorites": "★",
+        "font.category.mono": "Mono",
+        "font.category.sans": "Sans",
+        "font.category.script": "Script",
+        "font.category.serif": "Serif",
+        "font.large": "Grande",
+        "font.medium": "Mediano",
+        "font.small": "Pequeño",
+        "font.xlarge": "Extra grande",
+        "general.checkUpdates": "Buscar actualizaciones",
+        "general.compileFarm": "Compile-farm mode",
+        "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
+        "general.developerMode": "Modo desarrollador",
+        "general.developerMode.hint": "Activa la pestaña Desarrollador.",
+        "general.idleAggressive": "Agresivo (menor RAM)",
+        "general.idleBalanced": "Equilibrado",
+        "general.idleEfficiency": "Eficiencia en reposo",
         "general.idleHint": "Equilibrado mantiene la barra ágil. Agresivo usa sondeos más lentos y omite historiales hasta abrir el panel.",
-        "general.version": "Versión", "general.installLocation": "Ubicación de instalación", "general.checkUpdates": "Buscar actualizaciones",
-        "section.battery": "Batería y energía", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "Memoria",
-        "section.disk": "Disco", "section.network": "Red", "section.sensors": "Sensores",
-        "section.tools": "Estrés y benchmark", "section.tools.summary": "Estrés y benchmark",
-        "row.usage": "Uso", "row.loadAvg": "Carga media", "row.uptime": "Tiempo activo", "row.clock": "Reloj",
-        "row.temperature": "Temperatura", "row.power": "Potencia", "row.pressure": "Presión",
-        "row.wired": "Residente", "row.compressed": "Comprimida", "row.swap": "Swap usado",
-        "row.read": "Lectura", "row.write": "Escritura", "row.ip": "IP", "row.wifi": "Wi-Fi",
-        "row.weather": "Clima", "row.location": "Ubicación", "row.loading": "Cargando…",
-        "row.download": "Descarga", "row.upload": "Subida", "row.lowPower": "Modo bajo consumo", "row.on": "Activado",
-        "row.stress": "Prueba de estrés", "row.benchmark": "Benchmark", "row.bitcoin": "Bitcoin",
-        "row.status": "Estado", "row.tip": "Consejo", "row.noSensors": "No se encontraron sensores de temperatura o ventilador",
+        "general.idleProfile": "Perfil en reposo",
+        "general.installLocation": "Ubicación de instalación",
+        "general.launchAtLogin": "Iniciar al arrancar",
+        "general.launchAtLogin.req": "Iniciar al arrancar requiere macOS 13 o posterior.",
+        "general.launchCLI": "Abrir CLI",
+        "general.title": "General",
+        "general.version": "Versión",
+        "lab.alibi": "Process alibi",
+        "lab.alibi.copy": "Copy alibi",
+        "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
+        "lab.budget": "SOC budget",
+        "lab.budget.goal": "Daily goal (Wh)",
+        "lab.budget.hint": "Daily energy goal (estimated Wh from package power). Local only; resets at midnight.",
+        "lab.chaos": "Chaos blip",
+        "lab.chaos.hint": "⚠️ Short self-stress (0.5–2s) to demo sensors. Off by default. Do not spam.",
+        "lab.cloak": "Meeting cloak",
+        "lab.cloak.hint": "When Zoom/Teams/Webex is running, hush the menubar (local process names only).",
+        "lab.confess": "Cooling confession",
+        "lab.confess.dismiss": "Dismiss",
+        "lab.confess.hint": "After a Heatwave/Storm cools to Clear/Breezy, a 3-panel recap appears.",
+        "lab.copied": "Copied",
+        "lab.cosplay": "Throttle cosplay",
+        "lab.cosplay.enable": "Adorno de menú",
+        "lab.cosplay.hint": "Menubar flair when hot/busy. Pure theater — does not throttle your Mac.",
+        "lab.detective": "Why is my Mac hot?",
+        "lab.detective.copy": "Copy report",
+        "lab.detective.refresh": "Refresh report",
+        "lab.duel": "Stress duel (LAN)",
+        "lab.duel.show": "Show stress duel",
+        "lab.farm": "Compile-farm",
+        "lab.farm.hint": "Detect swiftc / clang / xcodebuild, boost sampling while building, then cool down.",
+        "lab.forecast": "Thermal forecast",
+        "lab.forecast.hint": "Naive slope from recent temps — not weather science. Experimental only.",
+        "lab.ghost": "Ghost-load radar",
+        "lab.ghost.hint": "Approx CPU-minutes last hour — quiet processes that still burn power.",
+        "lab.haiku": "Heat haiku",
+        "lab.haiku.hint": "Three-line nonsense from temp, load, weather, and top process.",
+        "lab.horizon": "Horizonte (min)",
+        "lab.idleSpicy": "Inactivo — salta con calor",
+        "lab.jump": "Jump to",
+        "lab.ledger": "Build ledger",
+        "lab.ledger.clear": "Clear ledger",
+        "lab.meeting.hush": "Silencio reunión",
+        "lab.noBuilds": "Sin builds.",
+        "lab.noConfess": "Sin enfriamiento.",
+        "lab.open": "Open Lab",
+        "lab.overnight": "Overnight watch",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.peer": "Polite peer",
+        "lab.peer.active": "Peer active — sampling eased",
+        "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
+        "lab.peer.idle": "No peer profilers detected",
+        "lab.preset.build": "Build day",
+        "lab.preset.full": "Full stats",
+        "lab.preset.quiet": "Quiet day",
+        "lab.presets": "Presets",
+        "lab.receipt": "Power receipt",
+        "lab.receipt.copy": "Copy receipt",
+        "lab.receipt.hint": "Estimated energy this session from package power (not a wall meter).",
+        "lab.receipt.reset": "Reset session",
+        "lab.roulette": "Core roulette",
+        "lab.roulette.hint": "Pick the busiest (or a random) core. No stakes.",
+        "lab.roulette.spin": "Elegir núcleo",
+        "lab.sampling": "Muestreando…",
+        "lab.scrub": "Time-scrub",
+        "lab.scrub.hint": "Last ~90s of CPU, temperature, and package power. Drag to scrub.",
+        "lab.scrub.needMore": "Más historial…",
+        "lab.scrub.now": "Jump to now",
+        "lab.sidebar.section": "Experimental Features",
+        "lab.snapshot": "AirDrop snapshot card",
+        "lab.snapshot.copied": "Card saved",
+        "lab.snapshot.export": "Export & share",
+        "lab.snapshot.hint": "One-shot local snapshot (.rnitrocard). Share via AirDrop or Files — no cloud, no fleet server.",
+        "lab.subtitle": "Experimental tools (beta, local only) — weather, detective, ghost-load, power, whisper, meetings, builds, duel.",
+        "lab.title": "Lab",
+        "lab.toc.alibi": "Alibi",
+        "lab.toc.budget": "Budget",
+        "lab.toc.chaos": "Chaos",
+        "lab.toc.cloak": "Cloak",
+        "lab.toc.confess": "Confess",
+        "lab.toc.cosplay": "Cosplay",
+        "lab.toc.detective": "Detective",
+        "lab.toc.duel": "Duel",
+        "lab.toc.farm": "Farm",
+        "lab.toc.forecast": "Forecast",
+        "lab.toc.ghost": "Ghost",
+        "lab.toc.haiku": "Haiku",
+        "lab.toc.overnight": "Overnight",
+        "lab.toc.peer": "Peer",
+        "lab.toc.receipt": "Receipt",
+        "lab.toc.roulette": "Roulette",
+        "lab.toc.scrub": "Scrub",
+        "lab.toc.snapshot": "Share",
+        "lab.toc.weather": "Weather",
+        "lab.toc.whisper": "Whisper",
+        "lab.toc.widget": "Widget",
+        "lab.weather": "Thermal weather",
+        "lab.weather.hint": "Maps load + temp into Clear → Storm. Optional menubar slot.",
+        "lab.weather.menubar": "Show weather in menubar",
+        "lab.whisper": "Whisper menubar",
+        "lab.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "lab.whisper.sensitivity": "Sensitivity",
+        "lab.widget": "Desktop widget",
+        "lab.widget.hide": "Hide widget",
+        "lab.widget.hint": "Floating mini panel with thermal weather + temperature (beta stand-in for WidgetKit).",
+        "lab.widget.show": "Show widget",
+        "layout.compact": "Compacto",
+        "layout.inline": "En línea",
+        "layout.minimal": "Mínimo",
+        "live": "En vivo",
+        "menubar.density": "Densidad",
+        "menubar.layout": "Diseño de barra",
+        "menubar.leftClick": "Clic izquierdo",
+        "menubar.openMain": "Abrir ventana principal",
+        "menubar.reset": "Restablecer barra",
+        "menubar.slots": "Ranuras",
+        "menubar.subtitle": "Elige el diseño y las estadísticas en la barra superior.",
+        "menubar.title": "Icono de barra de menú",
+        "menubar.whisper": "Whisper mode",
+        "menubar.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "menubar.whisper.sensitivity": "Sensitivity",
+        "menubar.whisper.toggle": "Whisper when calm",
+        "monitor.benchTitle": "Benchmark",
+        "monitor.benchmark": "Mostrar benchmark",
+        "monitor.bitcoin": "Bitcoin",
+        "monitor.multi": "Multi",
+        "monitor.network": "Mostrar red",
+        "monitor.oneCore": "1 núcleo",
+        "monitor.panels": "Paneles visibles",
+        "monitor.solo": "Modo solo (un panel abierto)",
+        "monitor.stress": "Mostrar prueba de estrés",
+        "monitor.stressTitle": "Estrés",
+        "monitor.subtitle": "Controla qué paneles y herramientas aparecen.",
+        "monitor.title": "Secciones del monitor",
+        "monitor.tools": "Herramientas",
+        "monitor.weather": "Mostrar clima en Red",
+        "openMainWindow": "Abrir ventana principal",
+        "panel.battery": "Batería y energía",
+        "panel.cleaner": "Limpiador",
+        "panel.cpu": "CPU",
+        "panel.disk": "Disco",
+        "panel.gpu": "GPU",
+        "panel.memory": "Memoria",
+        "panel.network": "Red",
+        "panel.sensors": "Sensores",
+        "panel.settings": "Ajustes",
+        "processes.col.cpu": "CPU",
+        "processes.col.ram": "RAM",
+        "processes.copyPID": "Copiar PID",
+        "processes.devOnly": "Solo desarrollador.",
+        "processes.none": "Muestreando…",
+        "processes.quit": "Salir",
+        "processes.reveal": "Mostrar",
+        "processes.sigkill": "SIGKILL",
+        "processes.sigterm": "SIGTERM",
+        "processes.topCpu": "Procesos principales (CPU)",
+        "processes.topRam": "Procesos principales (RAM)",
+        "processes.whyHot": "¿Por qué calienta?",
+        "row.benchmark": "Benchmark",
+        "row.bitcoin": "Bitcoin",
+        "row.clock": "Reloj",
+        "row.compressed": "Comprimida",
+        "row.download": "Descarga",
+        "row.ip": "IP",
+        "row.loadAvg": "Carga media",
+        "row.loading": "Cargando…",
+        "row.location": "Ubicación",
+        "row.lowPower": "Modo bajo consumo",
+        "row.noSensors": "No se encontraron sensores de temperatura o ventilador",
+        "row.on": "Activado",
+        "row.power": "Potencia",
+        "row.pressure": "Presión",
+        "row.read": "Lectura",
         "row.sensorsTip": "Las claves SMC varían según el chip — la temp. de CPU sigue arriba",
-        "btn.start": "Iniciar", "btn.stop": "Detener", "btn.run": "Ejecutar", "btn.running": "Ejecutando…",
-        "openMainWindow": "Abrir ventana principal", "live": "En vivo", "cores": "Núcleos",
-        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Memoria", "panel.disk": "Disco",
-        "panel.network": "Red", "panel.battery": "Batería y energía", "panel.sensors": "Sensores",
-        "panel.settings": "Ajustes", "panel.cleaner": "Limpiador",
-        "processes.topCpu": "Procesos principales (CPU)", "processes.topRam": "Procesos principales (RAM)",
-        "processes.none": "Muestreando…", "processes.col.cpu": "CPU", "processes.col.ram": "RAM",
+        "row.status": "Estado",
+        "row.stress": "Prueba de estrés",
+        "row.swap": "Swap usado",
+        "row.temperature": "Temperatura",
+        "row.tip": "Consejo",
+        "row.upload": "Subida",
+        "row.uptime": "Tiempo activo",
+        "row.usage": "Uso",
+        "row.weather": "Clima",
+        "row.wifi": "Wi-Fi",
+        "row.wired": "Residente",
+        "row.write": "Escritura",
+        "section.battery": "Batería y energía",
+        "section.cpu": "CPU",
+        "section.disk": "Disco",
+        "section.gpu": "GPU",
+        "section.memory": "Memoria",
+        "section.network": "Red",
+        "section.sensors": "Sensores",
+        "section.tools": "Estrés y benchmark",
+        "section.tools.summary": "Estrés y benchmark",
+        "settings.alerts": "Alertas",
+        "settings.appearance": "Apariencia",
+        "settings.developer": "Desarrollador",
+        "settings.general": "General",
+        "settings.menubar": "Barra de menú",
+        "settings.monitor": "Monitor",
+        "settings.subtitle": "Diseño del monitor, barra de menú, alertas y opciones de inicio.",
+        "settings.title": "Ajustes",
+        "slot.battery": "Batería",
+        "slot.btc": "Bitcoin",
+        "slot.cpu": "CPU",
+        "slot.network": "Red",
+        "slot.power": "Potencia",
+        "slot.ram": "RAM",
+        "slot.temp": "Temp",
+        "slot.weather": "Thermal weather",
+        "tab.advisor": "Asesor",
+        "tab.chat": "Chat",
+        "tab.cleaner": "Limpiador",
+        "tab.lab": "Lab",
+        "tab.monitor": "Monitor",
+        "tab.settings": "Ajustes",
+        "tips.gotIt": "Entendido",
+        "tips.quick": "Inicio rápido.",
+        "tips.title": "Bienvenido a rNitro",
+        "ui.legacy": "Clásico",
+        "ui.modern": "Moderno (estilo iStats)",
     ]
 
     private static let deStrings: [String: String] = [
-        "tab.monitor": "Monitor", "tab.advisor": "Berater", "tab.chat": "Chat", "tab.cleaner": "Reiniger", "tab.lab": "Labor", "tab.settings": "Einstellungen",
-        "chat.title": "KI-Chat", "chat.subtitle": "Mit deinem Anbieter chatten oder API-Schlüssel verwalten.",
-        "chat.subtab.chat": "Chat", "chat.subtab.api": "API",
-        "settings.title": "Einstellungen", "settings.subtitle": "Monitor-Layout, Menüleiste, Warnungen und Startoptionen.",
-        "settings.appearance": "Darstellung", "settings.menubar": "Menüleiste",
-        "settings.monitor": "Monitor", "settings.alerts": "Warnungen", "settings.general": "Allgemein",
-        "appearance.title": "Anzeige", "appearance.subtitle": "Schriftgröße, Sprache und Monitor-Stil.",
-        "appearance.fontSize": "Schriftgröße", "appearance.fontFamily": "UI-Schrift", "appearance.fontFamily.hint": "50+ Google Fonts (OFL) offline gebündelt.", "appearance.language": "Sprache",
-        "font.small": "Klein", "font.medium": "Mittel", "font.large": "Groß", "font.xlarge": "Sehr groß",
-        "appearance.monitorUI": "Monitor-Oberfläche", "appearance.monitorUI.hint": "Modern nutzt iStats-ähnliche Abschnitte. Legacy ist das kompakte Layout.",
-        "ui.modern": "Modern (iStats-Stil)", "ui.legacy": "Legacy",
-        "menubar.title": "Menüleisten-Symbol", "menubar.subtitle": "Layout und Statistiken in der Menüleiste wählen.",
-        "menubar.layout": "Menüleisten-Layout", "layout.compact": "Kompakt", "layout.inline": "Inline", "layout.minimal": "Minimal",
-        "slot.cpu": "CPU", "slot.temp": "Temp", "slot.ram": "RAM", "slot.power": "Leistung",
-        "slot.network": "Netzwerk", "slot.battery": "Akku", "slot.btc": "Bitcoin",
-        "monitor.title": "Monitor-Bereiche", "monitor.subtitle": "Steuert, welche Panels und Tools angezeigt werden.",
-        "monitor.stress": "Stresstest anzeigen", "monitor.benchmark": "Benchmark anzeigen", "monitor.network": "Netzwerk anzeigen",
-        "monitor.solo": "Solo-Modus (ein Panel offen)", "monitor.weather": "Wetter im Netzwerk-Bereich",
-        "monitor.panels": "Sichtbare Panels", "monitor.tools": "Werkzeuge",
-        "alerts.title": "Warnungen", "alerts.subtitle": "Systemberater-Schwellen und Benachrichtigungsbanner.",
-        "alerts.advisorTitle": "Systemberater-Warnungen", "alerts.advisorSubtitle": "Warnschwellen und Benachrichtigungen für den Berater-Tab.",
+        "accent.blue": "Blau",
+        "accent.cyan": "Cyan",
+        "accent.green": "Grün",
+        "accent.orange": "Orange",
+        "accent.pink": "Pink",
+        "accent.purple": "Lila",
+        "accent.red": "Rot",
+        "advisor.liveSpecs": "Live-Specs · Einstellungen → Warnungen",
+        "advisor.suggestion": "Vorschlag",
+        "advisor.title": "Systemberater",
+        "alerts.advisorSubtitle": "Warnschwellen und Benachrichtigungen für den Berater-Tab.",
+        "alerts.advisorTitle": "Systemberater-Warnungen",
+        "alerts.banners": "macOS-Banner bei kritischen Temperaturen",
+        "alerts.batteryLow": "Akku niedrig %",
+        "alerts.colorHint": "Wann CPU/Temp grün/orange/rot.",
+        "alerts.colorThresholds": "Farb-Schwellen",
+        "alerts.cpuGreen": "CPU grün unter %",
+        "alerts.cpuOrange": "CPU orange unter %",
+        "alerts.cpuPct": "CPU %",
+        "alerts.cpuRed": "CPU rot ab %",
+        "alerts.gpuPct": "GPU %",
+        "alerts.proactive": "Proaktive Chat-Warnungen",
+        "alerts.ramPct": "RAM %",
+        "alerts.resetColors": "Farben zurücksetzen",
+        "alerts.subtitle": "Systemberater-Schwellen und Benachrichtigungsbanner.",
+        "alerts.tempCrit": "Temp kritisch °C",
+        "alerts.tempGreen": "Temp grün unter °C",
+        "alerts.tempOrange": "Temp orange unter °C",
+        "alerts.tempRed": "Temp rot ab °C",
+        "alerts.tempWarn": "Temp Warnung °C",
         "alerts.thresholds": "Warnschwellen",
-        "alerts.proactive": "Proaktive Chat-Warnungen", "alerts.banners": "macOS-Banner bei kritischen Temperaturen",
-        "general.title": "Allgemein", "general.launchAtLogin": "Beim Anmelden starten",
-        "general.launchAtLogin.req": "Beim Anmelden starten erfordert macOS 13 oder neuer.",
-        "general.idleEfficiency": "Leerlauf-Effizienz", "general.idleProfile": "Leerlauf-Profil",
-        "general.idleBalanced": "Ausgewogen", "general.idleAggressive": "Aggressiv (wenig RAM)",
+        "alerts.title": "Warnungen",
+        "appearance.accent": "Akzentfarbe",
+        "appearance.accent.preview": "Akzent-Vorschau",
+        "appearance.fontFamily": "UI-Schrift",
+        "appearance.fontFamily.hint": "50+ Google Fonts (OFL) offline gebündelt.",
+        "appearance.fontSize": "Schriftgröße",
+        "appearance.language": "Sprache",
+        "appearance.monitorUI": "Monitor-Oberfläche",
+        "appearance.monitorUI.hint": "Modern nutzt iStats-ähnliche Abschnitte. Legacy ist das kompakte Layout.",
+        "appearance.pangram": "The quick brown fox — 0123456789",
+        "appearance.reset": "Darstellung zurücksetzen",
+        "appearance.sections": "Monitor-Bereiche",
+        "appearance.showFans": "Lüfter/Sensoren",
+        "appearance.showPerCore": "Balken pro Kern",
+        "appearance.showProcesses": "Top-Prozesse",
+        "appearance.subtitle": "Design, UI-Schrift, Größe, Sprache und Layout.",
+        "appearance.theme": "Design",
+        "appearance.theme.dark": "Dunkel",
+        "appearance.theme.hint": "System folgt macOS. Hell/Dunkel erzwingen die UI.",
+        "appearance.theme.light": "Hell",
+        "appearance.theme.system": "System",
+        "appearance.title": "Anzeige",
+        "btn.run": "Ausführen",
+        "btn.running": "Läuft…",
+        "btn.start": "Start",
+        "btn.stop": "Stopp",
+        "chat.apiKey": "API-Schlüssel (optional)",
+        "chat.compose": "Schreiben",
+        "chat.getKey": "Schlüssel: %@",
+        "chat.needsSetup": "%@ einrichten.",
+        "chat.openAPI": "API-Setup",
+        "chat.openAPI.hint": "API-Untertab.",
+        "chat.openAPI.main": "Chat → API.",
+        "chat.privacy": "Schlüssel bleiben auf diesem Mac.",
+        "chat.providers": "KI-Anbieter",
+        "chat.subtab.api": "API",
+        "chat.subtab.chat": "Chat",
+        "chat.subtitle": "Mit deinem Anbieter chatten oder API-Schlüssel verwalten.",
+        "chat.title": "KI-Chat",
+        "cleaner.leftovers": "Reste",
+        "cleaner.none": "Keine Reste",
+        "cleaner.removeSelected": "Auswahl entfernen",
+        "cleaner.scanning": "Scanne…",
+        "cleaner.scanningLeft": "Suche Reste…",
+        "cleaner.trash": "In Papierkorb",
+        "common.cancel": "Abbrechen",
+        "common.clear": "Leeren",
+        "common.close": "Schließen",
+        "common.copy": "Kopieren",
+        "common.enable": "Aktivieren",
+        "common.quit": "Beenden",
+        "common.refresh": "Aktualisieren",
+        "common.removeKey": "Schlüssel entfernen",
+        "common.reset": "Zurücksetzen",
+        "common.saveKey": "Schlüssel speichern",
+        "common.send": "Senden",
+        "cores": "Kerne",
+        "cpu.power60": "CPU-Leistung (~60 s)",
+        "density.comfortable": "Komfortabel",
+        "density.compact": "Kompakt",
+        "density.spacious": "Geräumig",
+        "detective.whyHot": "Why hot?",
+        "dev.copied.env": "Manifest kopiert",
+        "dev.copied.fonts": "Katalog kopiert",
+        "dev.copied.json": "JSON kopiert",
+        "dev.copied.sample": "Stats kopiert",
+        "dev.copied.sensor": "Kopiert",
+        "dev.copied.ui": "UI kopiert",
+        "dev.copyJSON": "JSON kopieren",
+        "dev.copySensor": "Sensor-Dump",
+        "dev.copyUIConfig": "UI-JSON kopieren",
+        "dev.envManifest": "Umgebungs-Manifest",
+        "dev.fontMap": "Schrift-Katalog",
+        "dev.highSample": "Hohe Abtastrate (~0,75 s)",
+        "dev.import": "UI-Config importieren",
+        "dev.import.fail": "Import fehlgeschlagen",
+        "dev.import.ok": "Importiert",
+        "dev.importHint": "JSON einfügen.",
+        "dev.openLogs": "Logs öffnen",
+        "dev.pingCDN": "CDN anpingen",
+        "dev.pinging": "Pinge…",
+        "dev.rawSensors": "Roh-Sensoren",
+        "dev.revealApp": "Im Finder zeigen",
+        "dev.revealed": "Im Finder",
+        "dev.sampleStats": "Sample-Stats",
+        "dev.shuffleAccent": "Akzent 4 s mischen",
+        "dev.shuffled": "Akzent gemischt",
+        "dev.subtitle": "Debugging & Sampling. Unter Allgemein abschalten.",
+        "dev.surprise": "Überraschungs-Werkzeuge",
+        "dev.surprise.hint": "Diagnose & Spielereien.",
+        "dev.title": "Entwickler",
+        "dev.uiConfig": "UI-Konfiguration",
+        "dev.verbose": "Logging ~/Library/Logs/rNitro",
+        "duel.expand": "LAN-Duell.",
+        "duel.host": "Hosten",
+        "duel.join": "Beitreten",
+        "duel.local": "Nur lokales Netz.",
+        "duel.room": "Raum",
+        "duel.title": "Stress-Duell (LAN)",
+        "duel.you": "Du",
+        "font.category.all": "Alle",
+        "font.category.display": "Display",
+        "font.category.favorites": "★",
+        "font.category.mono": "Mono",
+        "font.category.sans": "Sans",
+        "font.category.script": "Skript",
+        "font.category.serif": "Serif",
+        "font.large": "Groß",
+        "font.medium": "Mittel",
+        "font.small": "Klein",
+        "font.xlarge": "Sehr groß",
+        "general.checkUpdates": "Nach Updates suchen",
+        "general.compileFarm": "Compile-farm mode",
+        "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
+        "general.developerMode": "Entwicklermodus",
+        "general.developerMode.hint": "Entwickler-Tab freischalten.",
+        "general.idleAggressive": "Aggressiv (wenig RAM)",
+        "general.idleBalanced": "Ausgewogen",
+        "general.idleEfficiency": "Leerlauf-Effizienz",
         "general.idleHint": "Ausgewogen hält die Menüleiste reaktionsschnell. Aggressiv nutzt langsamere Abfragen und keine Verläufe bis das Panel offen ist.",
-        "general.version": "Version", "general.installLocation": "Installationsort", "general.checkUpdates": "Nach Updates suchen",
-        "section.battery": "Akku & Leistung", "section.cpu": "CPU", "section.gpu": "GPU", "section.memory": "Speicher",
-        "section.disk": "Festplatte", "section.network": "Netzwerk", "section.sensors": "Sensoren",
-        "section.tools": "Stress & Benchmark", "section.tools.summary": "Stress & Benchmark",
-        "row.usage": "Auslastung", "row.loadAvg": "Load avg", "row.uptime": "Laufzeit", "row.clock": "Takt",
-        "row.temperature": "Temperatur", "row.power": "Leistung", "row.pressure": "Druck",
-        "row.wired": "Fest", "row.compressed": "Komprimiert", "row.swap": "Swap belegt",
-        "row.read": "Lesen", "row.write": "Schreiben", "row.ip": "IP", "row.wifi": "WLAN",
-        "row.weather": "Wetter", "row.location": "Ort", "row.loading": "Lädt…",
-        "row.download": "Download", "row.upload": "Upload", "row.lowPower": "Stromsparmodus", "row.on": "An",
-        "row.stress": "Stresstest", "row.benchmark": "Benchmark", "row.bitcoin": "Bitcoin",
-        "row.status": "Status", "row.tip": "Tipp", "row.noSensors": "Keine Temperatur- oder Lüftersensoren gefunden",
+        "general.idleProfile": "Leerlauf-Profil",
+        "general.installLocation": "Installationsort",
+        "general.launchAtLogin": "Beim Anmelden starten",
+        "general.launchAtLogin.req": "Beim Anmelden starten erfordert macOS 13 oder neuer.",
+        "general.launchCLI": "CLI starten",
+        "general.title": "Allgemein",
+        "general.version": "Version",
+        "lab.alibi": "Process alibi",
+        "lab.alibi.copy": "Copy alibi",
+        "lab.alibi.hint": "Copy a timestamped Markdown snapshot for tickets / Reddit / IT.",
+        "lab.budget": "SOC budget",
+        "lab.budget.goal": "Daily goal (Wh)",
+        "lab.budget.hint": "Daily energy goal (estimated Wh from package power). Local only; resets at midnight.",
+        "lab.chaos": "Chaos blip",
+        "lab.chaos.hint": "⚠️ Short self-stress (0.5–2s) to demo sensors. Off by default. Do not spam.",
+        "lab.cloak": "Meeting cloak",
+        "lab.cloak.hint": "When Zoom/Teams/Webex is running, hush the menubar (local process names only).",
+        "lab.confess": "Cooling confession",
+        "lab.confess.dismiss": "Dismiss",
+        "lab.confess.hint": "After a Heatwave/Storm cools to Clear/Breezy, a 3-panel recap appears.",
+        "lab.copied": "Copied",
+        "lab.cosplay": "Throttle cosplay",
+        "lab.cosplay.enable": "Menüleisten-Flair",
+        "lab.cosplay.hint": "Menubar flair when hot/busy. Pure theater — does not throttle your Mac.",
+        "lab.detective": "Why is my Mac hot?",
+        "lab.detective.copy": "Copy report",
+        "lab.detective.refresh": "Refresh report",
+        "lab.duel": "Stress duel (LAN)",
+        "lab.duel.show": "Show stress duel",
+        "lab.farm": "Compile-farm",
+        "lab.farm.hint": "Detect swiftc / clang / xcodebuild, boost sampling while building, then cool down.",
+        "lab.forecast": "Thermal forecast",
+        "lab.forecast.hint": "Naive slope from recent temps — not weather science. Experimental only.",
+        "lab.ghost": "Ghost-load radar",
+        "lab.ghost.hint": "Approx CPU-minutes last hour — quiet processes that still burn power.",
+        "lab.haiku": "Heat haiku",
+        "lab.haiku.hint": "Three-line nonsense from temp, load, weather, and top process.",
+        "lab.horizon": "Horizont (Min)",
+        "lab.idleSpicy": "Leerlauf — bei Hitze",
+        "lab.jump": "Jump to",
+        "lab.ledger": "Build ledger",
+        "lab.ledger.clear": "Clear ledger",
+        "lab.meeting.hush": "Meeting-Stille",
+        "lab.noBuilds": "Keine Builds.",
+        "lab.noConfess": "Keine Abkühl-Story.",
+        "lab.open": "Open Lab",
+        "lab.overnight": "Overnight watch",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.peer": "Polite peer",
+        "lab.peer.active": "Peer active — sampling eased",
+        "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
+        "lab.peer.idle": "No peer profilers detected",
+        "lab.preset.build": "Build day",
+        "lab.preset.full": "Full stats",
+        "lab.preset.quiet": "Quiet day",
+        "lab.presets": "Presets",
+        "lab.receipt": "Power receipt",
+        "lab.receipt.copy": "Copy receipt",
+        "lab.receipt.hint": "Estimated energy this session from package power (not a wall meter).",
+        "lab.receipt.reset": "Reset session",
+        "lab.roulette": "Core roulette",
+        "lab.roulette.hint": "Pick the busiest (or a random) core. No stakes.",
+        "lab.roulette.spin": "Kern auslosen",
+        "lab.sampling": "Abtasten…",
+        "lab.scrub": "Time-scrub",
+        "lab.scrub.hint": "Last ~90s of CPU, temperature, and package power. Drag to scrub.",
+        "lab.scrub.needMore": "Mehr Historie…",
+        "lab.scrub.now": "Jump to now",
+        "lab.sidebar.section": "Experimental Features",
+        "lab.snapshot": "AirDrop snapshot card",
+        "lab.snapshot.copied": "Card saved",
+        "lab.snapshot.export": "Export & share",
+        "lab.snapshot.hint": "One-shot local snapshot (.rnitrocard). Share via AirDrop or Files — no cloud, no fleet server.",
+        "lab.subtitle": "Experimental tools (beta, local only) — weather, detective, ghost-load, power, whisper, meetings, builds, duel.",
+        "lab.title": "Lab",
+        "lab.toc.alibi": "Alibi",
+        "lab.toc.budget": "Budget",
+        "lab.toc.chaos": "Chaos",
+        "lab.toc.cloak": "Cloak",
+        "lab.toc.confess": "Confess",
+        "lab.toc.cosplay": "Cosplay",
+        "lab.toc.detective": "Detective",
+        "lab.toc.duel": "Duel",
+        "lab.toc.farm": "Farm",
+        "lab.toc.forecast": "Forecast",
+        "lab.toc.ghost": "Ghost",
+        "lab.toc.haiku": "Haiku",
+        "lab.toc.overnight": "Overnight",
+        "lab.toc.peer": "Peer",
+        "lab.toc.receipt": "Receipt",
+        "lab.toc.roulette": "Roulette",
+        "lab.toc.scrub": "Scrub",
+        "lab.toc.snapshot": "Share",
+        "lab.toc.weather": "Weather",
+        "lab.toc.whisper": "Whisper",
+        "lab.toc.widget": "Widget",
+        "lab.weather": "Thermal weather",
+        "lab.weather.hint": "Maps load + temp into Clear → Storm. Optional menubar slot.",
+        "lab.weather.menubar": "Show weather in menubar",
+        "lab.whisper": "Whisper menubar",
+        "lab.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "lab.whisper.sensitivity": "Sensitivity",
+        "lab.widget": "Desktop widget",
+        "lab.widget.hide": "Hide widget",
+        "lab.widget.hint": "Floating mini panel with thermal weather + temperature (beta stand-in for WidgetKit).",
+        "lab.widget.show": "Show widget",
+        "layout.compact": "Kompakt",
+        "layout.inline": "Inline",
+        "layout.minimal": "Minimal",
+        "live": "Live",
+        "menubar.density": "Dichte",
+        "menubar.layout": "Menüleisten-Layout",
+        "menubar.leftClick": "Linksklick",
+        "menubar.openMain": "Hauptfenster öffnen",
+        "menubar.reset": "Menüleiste zurücksetzen",
+        "menubar.slots": "Slots",
+        "menubar.subtitle": "Layout und Statistiken in der Menüleiste wählen.",
+        "menubar.title": "Menüleisten-Symbol",
+        "menubar.whisper": "Whisper mode",
+        "menubar.whisper.hint": "Hide stats until CPU, heat, battery, or builds get interesting.",
+        "menubar.whisper.sensitivity": "Sensitivity",
+        "menubar.whisper.toggle": "Whisper when calm",
+        "monitor.benchTitle": "Benchmark",
+        "monitor.benchmark": "Benchmark anzeigen",
+        "monitor.bitcoin": "Bitcoin",
+        "monitor.multi": "Multi",
+        "monitor.network": "Netzwerk anzeigen",
+        "monitor.oneCore": "1-Kern",
+        "monitor.panels": "Sichtbare Panels",
+        "monitor.solo": "Solo-Modus (ein Panel offen)",
+        "monitor.stress": "Stresstest anzeigen",
+        "monitor.stressTitle": "Stress",
+        "monitor.subtitle": "Steuert, welche Panels und Tools angezeigt werden.",
+        "monitor.title": "Monitor-Bereiche",
+        "monitor.tools": "Werkzeuge",
+        "monitor.weather": "Wetter im Netzwerk-Bereich",
+        "openMainWindow": "Hauptfenster öffnen",
+        "panel.battery": "Akku & Leistung",
+        "panel.cleaner": "Reiniger",
+        "panel.cpu": "CPU",
+        "panel.disk": "Festplatte",
+        "panel.gpu": "GPU",
+        "panel.memory": "Speicher",
+        "panel.network": "Netzwerk",
+        "panel.sensors": "Sensoren",
+        "panel.settings": "Einstellungen",
+        "processes.col.cpu": "CPU",
+        "processes.col.ram": "RAM",
+        "processes.copyPID": "PID kopieren",
+        "processes.devOnly": "Nur Entwicklermodus.",
+        "processes.none": "Erfasse…",
+        "processes.quit": "Beenden",
+        "processes.reveal": "Zeigen",
+        "processes.sigkill": "SIGKILL",
+        "processes.sigterm": "SIGTERM",
+        "processes.topCpu": "Top-Prozesse (CPU)",
+        "processes.topRam": "Top-Prozesse (RAM)",
+        "processes.whyHot": "Warum heiß?",
+        "row.benchmark": "Benchmark",
+        "row.bitcoin": "Bitcoin",
+        "row.clock": "Takt",
+        "row.compressed": "Komprimiert",
+        "row.download": "Download",
+        "row.ip": "IP",
+        "row.loadAvg": "Load avg",
+        "row.loading": "Lädt…",
+        "row.location": "Ort",
+        "row.lowPower": "Stromsparmodus",
+        "row.noSensors": "Keine Temperatur- oder Lüftersensoren gefunden",
+        "row.on": "An",
+        "row.power": "Leistung",
+        "row.pressure": "Druck",
+        "row.read": "Lesen",
         "row.sensorsTip": "SMC-Schlüssel variieren je nach Chip — CPU-Temp. oben angezeigt",
-        "btn.start": "Start", "btn.stop": "Stopp", "btn.run": "Ausführen", "btn.running": "Läuft…",
-        "openMainWindow": "Hauptfenster öffnen", "live": "Live", "cores": "Kerne",
-        "panel.cpu": "CPU", "panel.gpu": "GPU", "panel.memory": "Speicher", "panel.disk": "Festplatte",
-        "panel.network": "Netzwerk", "panel.battery": "Akku & Leistung", "panel.sensors": "Sensoren",
-        "panel.settings": "Einstellungen", "panel.cleaner": "Reiniger",
-        "processes.topCpu": "Top-Prozesse (CPU)", "processes.topRam": "Top-Prozesse (RAM)",
-        "processes.none": "Erfasse…", "processes.col.cpu": "CPU", "processes.col.ram": "RAM",
+        "row.status": "Status",
+        "row.stress": "Stresstest",
+        "row.swap": "Swap belegt",
+        "row.temperature": "Temperatur",
+        "row.tip": "Tipp",
+        "row.upload": "Upload",
+        "row.uptime": "Laufzeit",
+        "row.usage": "Auslastung",
+        "row.weather": "Wetter",
+        "row.wifi": "WLAN",
+        "row.wired": "Fest",
+        "row.write": "Schreiben",
+        "section.battery": "Akku & Leistung",
+        "section.cpu": "CPU",
+        "section.disk": "Festplatte",
+        "section.gpu": "GPU",
+        "section.memory": "Speicher",
+        "section.network": "Netzwerk",
+        "section.sensors": "Sensoren",
+        "section.tools": "Stress & Benchmark",
+        "section.tools.summary": "Stress & Benchmark",
+        "settings.alerts": "Warnungen",
+        "settings.appearance": "Darstellung",
+        "settings.developer": "Entwickler",
+        "settings.general": "Allgemein",
+        "settings.menubar": "Menüleiste",
+        "settings.monitor": "Monitor",
+        "settings.subtitle": "Monitor-Layout, Menüleiste, Warnungen und Startoptionen.",
+        "settings.title": "Einstellungen",
+        "slot.battery": "Akku",
+        "slot.btc": "Bitcoin",
+        "slot.cpu": "CPU",
+        "slot.network": "Netzwerk",
+        "slot.power": "Leistung",
+        "slot.ram": "RAM",
+        "slot.temp": "Temp",
+        "slot.weather": "Thermal weather",
+        "tab.advisor": "Berater",
+        "tab.chat": "Chat",
+        "tab.cleaner": "Reiniger",
+        "tab.lab": "Labor",
+        "tab.monitor": "Monitor",
+        "tab.settings": "Einstellungen",
+        "tips.gotIt": "Verstanden",
+        "tips.quick": "Schnellstart.",
+        "tips.title": "Willkommen bei rNitro",
+        "ui.legacy": "Legacy",
+        "ui.modern": "Modern (iStats-Stil)",
     ]
 }
 
@@ -12631,7 +14227,7 @@ struct ContentView: View {
                     rootContent
                 }
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(display.appearanceMode.preferredColorScheme)
             .sheet(isPresented: $showFirstLaunchTips) {
                 FirstLaunchTipsSheet(isPresented: $showFirstLaunchTips)
             }
@@ -12998,6 +14594,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DisplayPreferencesStore.shared.appearanceMode.applyToApp()
         NSApp.setActivationPolicy(.accessory)
         installMainMenu() // enables ⌘Q Quit (accessory apps have no menu otherwise)
         installQuitKeyMonitor()
@@ -13408,8 +15005,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.1-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.1-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.3-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.3-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

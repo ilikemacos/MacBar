@@ -218,7 +218,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="c1b8b9a6852bbb00e878507bf558ffa75cc6c97e04df7d6d7e1bd44beb5510c0"
+EXPECTED_HASH="75190beac75df150d1e8c6815ef1ff76ede938b4d5696cd309a5ce10104a350e"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -3316,9 +3316,28 @@ class WeatherService: ObservableObject {
 }
 
 extension Color {
-    static let bg      = Color(red:0.05,green:0.05,blue:0.08)
-    static let card    = Color(red:0.10,green:0.10,blue:0.14)
-    static let border  = Color(red:0.20,green:0.20,blue:0.28)
+    /// Dynamic light/dark brand surface colors (follow preferredColorScheme).
+    private static func adaptive(light: NSColor, dark: NSColor) -> Color {
+        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
+            let darkMatch = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return darkMatch ? dark : light
+        }))
+    }
+    private static func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> NSColor {
+        NSColor(calibratedRed: r, green: g, blue: b, alpha: 1)
+    }
+    static let bg = adaptive(
+        light: rgb(0.96, 0.96, 0.98),
+        dark: rgb(0.05, 0.05, 0.08)
+    )
+    static let card = adaptive(
+        light: rgb(1.0, 1.0, 1.0),
+        dark: rgb(0.10, 0.10, 0.14)
+    )
+    static let border = adaptive(
+        light: rgb(0.82, 0.84, 0.90),
+        dark: rgb(0.20, 0.20, 0.28)
+    )
     /// Dynamic accent from UI customization (default cyan).
     static var accent: Color { UICustomizationStore.shared.accentColor }
     static let nGreen  = Color(red:0.1, green:1.0, blue:0.5)
@@ -3489,6 +3508,91 @@ final class DeveloperModeStore: ObservableObject {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(str, forType: .string)
         }
+    }
+
+    /// Surprise toolkit — path/font/CDN diagnostics for power users.
+    func copyEnvironmentManifest() {
+        let fontsDir = Bundle.main.resourceURL?.appendingPathComponent("Fonts")
+        var fontFiles: [String] = []
+        if let fontsDir, let items = try? FileManager.default.contentsOfDirectory(atPath: fontsDir.path) {
+            fontFiles = items.filter { $0.hasSuffix(".ttf") || $0.hasSuffix(".otf") }.sorted()
+        }
+        let lines = [
+            "rNitro environment manifest",
+            "version: \(CURRENT_VERSION)",
+            "channel: \(RNITRO_BUILD_CHANNEL)",
+            "bundle: \(Bundle.main.bundlePath)",
+            "exec: \(Bundle.main.executablePath ?? "—")",
+            "resources: \(Bundle.main.resourcePath ?? "—")",
+            "fontsBundled: \(fontFiles.count)",
+            "fontSample: \(fontFiles.prefix(8).joined(separator: ", "))",
+            "logs: ~/Library/Logs/rNitro",
+            "appearance: \(DisplayPreferencesStore.shared.appearanceMode.rawValue)",
+            "uiFont: \(DisplayPreferencesStore.shared.uiFontName)",
+            "updateURL: \(UPDATE_CHECK_URL.absoluteString)",
+            "pid: \(ProcessInfo.processInfo.processIdentifier)",
+            "host: \(ProcessInfo.processInfo.hostName)",
+            "os: \(ProcessInfo.processInfo.operatingSystemVersionString)"
+        ]
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+        log("environment manifest copied")
+    }
+
+    func copyRegisteredFonts() {
+        let names = UIFontCatalog.all.map { "\($0.id) → \($0.family) [\($0.category.rawValue)]" }
+        let body = (["rNitro UI font catalog (\(names.count))"] + names).joined(separator: "\n")
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(body, forType: .string)
+    }
+
+    func pingUpdateCDN(completion: @escaping (String) -> Void) {
+        let url = UPDATE_CHECK_URL
+        let t0 = CFAbsoluteTimeGetCurrent()
+        var req = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 12)
+        req.httpMethod = "GET"
+        URLSession.shared.dataTask(with: req) { data, resp, err in
+            let ms = Int((CFAbsoluteTimeGetCurrent() - t0) * 1000)
+            DispatchQueue.main.async {
+                if let err {
+                    completion("CDN ping failed: \(err.localizedDescription) (\(ms)ms)")
+                    return
+                }
+                let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+                var extra = ""
+                if let data, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let latest = obj["latest"] as? String ?? "?"
+                    let beta = obj["beta"] as? String ?? "?"
+                    let exp = obj["experimental"] as? String ?? "?"
+                    extra = " latest=\(latest) beta=\(beta) exp=\(exp)"
+                }
+                completion("CDN HTTP \(code) in \(ms)ms\(extra)")
+            }
+        }.resume()
+    }
+
+    func revealBundleInFinder() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    }
+
+    func shuffleAccentTemporarily() {
+        let presets = AccentPreset.allCases
+        guard let pick = presets.randomElement() else { return }
+        let ui = UICustomizationStore.shared
+        let previous = ui.accentPreset
+        ui.accentPreset = pick
+        log("accent shuffled to \(pick.rawValue)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            ui.accentPreset = previous
+            self.log("accent restored to \(previous.rawValue)")
+        }
+    }
+
+    func copySampleLoopStats() {
+        let cpu = CPUMonitor.shared
+        let line = "sampleLoop  cpu=\(String(format: "%.1f", cpu.totalUsage))%  temp=\(String(format: "%.1f", cpu.temperature))°C  power=\(String(format: "%.2f", cpu.packagePowerWatts))W  highRate=\(forceHighSampleRate)  idleProfile=\(UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "—")"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(line, forType: .string)
     }
 }
 
@@ -5664,6 +5768,74 @@ struct ChatAPISection: View {
     }
 }
 
+
+struct FontFamilyPickerView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var display = DisplayPreferencesStore.shared
+    @State private var search = ""
+    @State private var category: UIFontCategory = .all
+
+    private var filtered: [UIFontCatalog.Choice] {
+        UIFontCatalog.filtered(search: search, category: category, favorites: display.favoriteFontIDs)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField(display.tr("appearance.fontSearch"), text: $search)
+                .textFieldStyle(.roundedBorder)
+                .font(rNitroFont(.caption, metrics: metrics))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(UIFontCategory.allCases) { cat in
+                        let on = category == cat
+                        Button {
+                            category = cat
+                        } label: {
+                            Text(cat.label)
+                                .font(rNitroFont(.micro, metrics: metrics, weight: on ? .semibold : .regular))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            Picker(display.tr("appearance.fontFamily"), selection: Binding(
+                get: { display.fontFamilyID },
+                set: { display.setFontFamily($0) }
+            )) {
+                ForEach(filtered) { font in
+                    Text((display.isFavoriteFont(font.id) ? "★ " : "") + font.label)
+                        .font(.custom(font.family, size: 13))
+                        .tag(font.id)
+                }
+            }
+            .pickerStyle(.menu)
+            if let current = UIFontCatalog.all.first(where: { $0.id == display.fontFamilyID }) {
+                HStack(spacing: 8) {
+                    Text(current.label)
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
+                    Spacer(minLength: 0)
+                    Button {
+                        display.toggleFavoriteFont(current.id)
+                    } label: {
+                        Text(display.isFavoriteFont(current.id) ? display.tr("appearance.fontUnfavorite") : display.tr("appearance.fontFavorite"))
+                            .font(rNitroFont(.micro, metrics: metrics))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentColor)
+                }
+            }
+            if filtered.isEmpty {
+                Text(display.tr("appearance.fontEmpty"))
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
 struct SettingsAppearanceSection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
@@ -5676,6 +5848,19 @@ struct SettingsAppearanceSection: View {
                 Text(display.tr("appearance.title"))
                     .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("appearance.subtitle"))
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Text(display.tr("appearance.theme"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Picker(display.tr("appearance.theme"), selection: Binding(
+                    get: { display.appearanceMode },
+                    set: { display.setAppearanceMode($0) }
+                )) {
+                    ForEach(AppAppearanceMode.allCases) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(display.tr("appearance.theme.hint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("appearance.fontSize"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
@@ -5693,20 +5878,13 @@ struct SettingsAppearanceSection: View {
                     .padding(.top, 4)
                 Text(display.tr("appearance.fontFamily.hint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
-                Picker(display.tr("appearance.fontFamily"), selection: Binding(
-                    get: { display.fontFamilyID },
-                    set: { display.setFontFamily($0) }
-                )) {
-                    ForEach(UIFontCatalog.all) { font in
-                        Text(font.family)
-                            .font(.custom(font.family, size: 13))
-                            .tag(font.id)
-                    }
-                }
-                .pickerStyle(.menu)
+                FontFamilyPickerView()
                 Text("The quick brown fox — 0123456789")
                     .font(rNitroFont(.body, metrics: metrics))
                     .padding(.vertical, 2)
+                Text(display.tr("appearance.fontOFL"))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary.opacity(0.85))
                 Text("Accent color")
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
@@ -6159,6 +6337,35 @@ struct SettingsDeveloperSection: View {
                     copiedNote = "JSON snapshot copied"
                 })
                 MinimalButton(title: "Open log folder", action: { dev.openLogFolder() })
+                Divider().padding(.vertical, 4)
+                Text("Surprise toolkit")
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Text("Diagnostics & toys for people who open Dev Mode on purpose.")
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                MinimalButton(title: "Copy environment manifest", action: {
+                    dev.copyEnvironmentManifest()
+                    copiedNote = "Environment manifest copied"
+                })
+                MinimalButton(title: "Copy font catalog map", action: {
+                    dev.copyRegisteredFonts()
+                    copiedNote = "Font catalog copied"
+                })
+                MinimalButton(title: "Ping update CDN", action: {
+                    copiedNote = "Pinging…"
+                    dev.pingUpdateCDN { msg in copiedNote = msg }
+                })
+                MinimalButton(title: "Reveal app in Finder", action: {
+                    dev.revealBundleInFinder()
+                    copiedNote = "Revealed in Finder"
+                })
+                MinimalButton(title: "Shuffle accent 4s", action: {
+                    dev.shuffleAccentTemporarily()
+                    copiedNote = "Accent shuffled (restores in 4s)"
+                })
+                MinimalButton(title: "Copy sample-loop stats", action: {
+                    dev.copySampleLoopStats()
+                    copiedNote = "Sample-loop stats copied"
+                })
                 Divider().padding(.vertical, 4)
                 Text("UI config")
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
@@ -7495,6 +7702,8 @@ enum MonitorPreferences {
     static let idleProfileKey = "rnitro.idleProfile"
     static let fontSizeKey = "rnitro.fontSize"
     static let fontFamilyKey = "rnitro.fontFamily"
+    static let fontFavoritesKey = "rnitro.fontFavorites"
+    static let appearanceModeKey = "rnitro.appearanceMode"
     static let languageKey = "rnitro.language"
     // Beta experimental features (1·2·3·4·6)
     static let whisperModeKey = "rnitro.whisperMode"
@@ -7533,75 +7742,145 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
 
 // Google Fonts (OFL) bundled UI catalog — regular weight; pick in Appearance.
+enum UIFontCategory: String, CaseIterable, Identifiable {
+    case all = "all"
+    case favorites = "favorites"
+    case sans = "sans"
+    case serif = "serif"
+    case display = "display"
+    case script = "script"
+    case mono = "mono"
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .all: return "All"
+        case .favorites: return "★"
+        case .sans: return "Sans"
+        case .serif: return "Serif"
+        case .display: return "Display"
+        case .script: return "Script"
+        case .mono: return "Mono"
+        }
+    }
+}
+
 enum UIFontCatalog {
     struct Choice: Identifiable, Hashable {
         let id: String
+        /// PostScript/family name for Font.custom / registration
         let family: String
+        /// Short label shown in the picker
+        let label: String
+        let category: UIFontCategory
         var fileStem: String { id }
     }
     static let defaultID = "VarelaRound"
     static let all: [Choice] = [
-        Choice(id: "VarelaRound", family: "Varela Round"),
-        Choice(id: "EBGaramond", family: "EB Garamond"),
-        Choice(id: "Audiowide", family: "Audiowide"),
-        Choice(id: "Caveat", family: "Caveat"),
-        Choice(id: "Roboto", family: "Roboto"),
-        Choice(id: "OpenSans", family: "Open Sans"),
-        Choice(id: "Lato", family: "Lato"),
-        Choice(id: "Montserrat", family: "Montserrat"),
-        Choice(id: "Poppins", family: "Poppins"),
-        Choice(id: "Inter", family: "Inter"),
-        Choice(id: "Nunito", family: "Nunito"),
-        Choice(id: "NunitoSans", family: "Nunito Sans"),
-        Choice(id: "Raleway", family: "Raleway"),
-        Choice(id: "Oswald", family: "Oswald"),
-        Choice(id: "Merriweather", family: "Merriweather"),
-        Choice(id: "PlayfairDisplay", family: "Playfair Display"),
-        Choice(id: "SourceSans3", family: "Source Sans 3"),
-        Choice(id: "Ubuntu", family: "Ubuntu"),
-        Choice(id: "Rubik", family: "Rubik"),
-        Choice(id: "WorkSans", family: "Work Sans"),
-        Choice(id: "FiraSans", family: "Fira Sans"),
-        Choice(id: "NotoSans", family: "Noto Sans"),
-        Choice(id: "NotoSerif", family: "Noto Serif"),
-        Choice(id: "PTSans", family: "PT Sans"),
-        Choice(id: "PTSerif", family: "PT Serif"),
-        Choice(id: "LibreBaskerville", family: "Libre Baskerville"),
-        Choice(id: "CrimsonText", family: "Crimson Text"),
-        Choice(id: "CormorantGaramond", family: "Cormorant Garamond"),
-        Choice(id: "SpaceGrotesk", family: "Space Grotesk"),
-        Choice(id: "DMSans", family: "DM Sans"),
-        Choice(id: "Outfit", family: "Outfit Thin"),
-        Choice(id: "Manrope", family: "Manrope"),
-        Choice(id: "PlusJakartaSans", family: "Plus Jakarta Sans"),
-        Choice(id: "JosefinSans", family: "Josefin Sans"),
-        Choice(id: "Comfortaa", family: "Comfortaa"),
-        Choice(id: "Quicksand", family: "Quicksand Light"),
-        Choice(id: "Pacifico", family: "Pacifico"),
-        Choice(id: "DancingScript", family: "Dancing Script"),
-        Choice(id: "GreatVibes", family: "Great Vibes"),
-        Choice(id: "Satisfy", family: "Satisfy"),
-        Choice(id: "PermanentMarker", family: "Permanent Marker"),
-        Choice(id: "Bangers", family: "Bangers"),
-        Choice(id: "Lobster", family: "Lobster"),
-        Choice(id: "Righteous", family: "Righteous"),
-        Choice(id: "Orbitron", family: "Orbitron"),
-        Choice(id: "PressStart2P", family: "Press Start 2P"),
-        Choice(id: "SpaceMono", family: "Space Mono"),
-        Choice(id: "Inconsolata", family: "Inconsolata"),
-        Choice(id: "JetBrainsMono", family: "JetBrains Mono"),
-        Choice(id: "IBMPlexSans", family: "IBM Plex Sans"),
-        Choice(id: "IBMPlexMono", family: "IBM Plex Mono"),
-        Choice(id: "BebasNeue", family: "Bebas Neue"),
-        Choice(id: "Anton", family: "Anton"),
-        Choice(id: "ArchivoBlack", family: "Archivo Black"),
-        Choice(id: "Barlow", family: "Barlow"),
-        Choice(id: "Exo2", family: "Exo 2"),
+        Choice(id: "VarelaRound", family: "Varela Round", label: "Varela Round", category: .sans),
+        Choice(id: "EBGaramond", family: "EB Garamond", label: "EB Garamond", category: .serif),
+        Choice(id: "Audiowide", family: "Audiowide", label: "Audiowide", category: .display),
+        Choice(id: "Caveat", family: "Caveat", label: "Caveat", category: .script),
+        Choice(id: "Roboto", family: "Roboto", label: "Roboto", category: .sans),
+        Choice(id: "OpenSans", family: "Open Sans", label: "Open Sans", category: .sans),
+        Choice(id: "Lato", family: "Lato", label: "Lato", category: .sans),
+        Choice(id: "Montserrat", family: "Montserrat", label: "Montserrat", category: .sans),
+        Choice(id: "Poppins", family: "Poppins", label: "Poppins", category: .sans),
+        Choice(id: "Inter", family: "Inter", label: "Inter", category: .sans),
+        Choice(id: "Nunito", family: "Nunito", label: "Nunito", category: .sans),
+        Choice(id: "NunitoSans", family: "Nunito Sans", label: "Nunito Sans", category: .sans),
+        Choice(id: "Raleway", family: "Raleway", label: "Raleway", category: .sans),
+        Choice(id: "Oswald", family: "Oswald", label: "Oswald", category: .display),
+        Choice(id: "Merriweather", family: "Merriweather", label: "Merriweather", category: .serif),
+        Choice(id: "PlayfairDisplay", family: "Playfair Display", label: "Playfair Display", category: .serif),
+        Choice(id: "SourceSans3", family: "Source Sans 3", label: "Source Sans 3", category: .sans),
+        Choice(id: "Ubuntu", family: "Ubuntu", label: "Ubuntu", category: .sans),
+        Choice(id: "Rubik", family: "Rubik", label: "Rubik", category: .sans),
+        Choice(id: "WorkSans", family: "Work Sans", label: "Work Sans", category: .sans),
+        Choice(id: "FiraSans", family: "Fira Sans", label: "Fira Sans", category: .sans),
+        Choice(id: "NotoSans", family: "Noto Sans", label: "Noto Sans", category: .sans),
+        Choice(id: "NotoSerif", family: "Noto Serif", label: "Noto Serif", category: .serif),
+        Choice(id: "PTSans", family: "PT Sans", label: "PT Sans", category: .sans),
+        Choice(id: "PTSerif", family: "PT Serif", label: "PT Serif", category: .serif),
+        Choice(id: "LibreBaskerville", family: "Libre Baskerville", label: "Libre Baskerville", category: .serif),
+        Choice(id: "CrimsonText", family: "Crimson Text", label: "Crimson Text", category: .serif),
+        Choice(id: "CormorantGaramond", family: "Cormorant Garamond", label: "Cormorant Garamond", category: .serif),
+        Choice(id: "SpaceGrotesk", family: "Space Grotesk", label: "Space Grotesk", category: .sans),
+        Choice(id: "DMSans", family: "DM Sans", label: "DM Sans", category: .sans),
+        Choice(id: "Outfit", family: "Outfit Thin", label: "Outfit", category: .sans),
+        Choice(id: "Manrope", family: "Manrope", label: "Manrope", category: .sans),
+        Choice(id: "PlusJakartaSans", family: "Plus Jakarta Sans", label: "Plus Jakarta Sans", category: .sans),
+        Choice(id: "JosefinSans", family: "Josefin Sans", label: "Josefin Sans", category: .sans),
+        Choice(id: "Comfortaa", family: "Comfortaa", label: "Comfortaa", category: .sans),
+        Choice(id: "Quicksand", family: "Quicksand Light", label: "Quicksand", category: .sans),
+        Choice(id: "Pacifico", family: "Pacifico", label: "Pacifico", category: .script),
+        Choice(id: "DancingScript", family: "Dancing Script", label: "Dancing Script", category: .script),
+        Choice(id: "GreatVibes", family: "Great Vibes", label: "Great Vibes", category: .script),
+        Choice(id: "Satisfy", family: "Satisfy", label: "Satisfy", category: .script),
+        Choice(id: "PermanentMarker", family: "Permanent Marker", label: "Permanent Marker", category: .script),
+        Choice(id: "Bangers", family: "Bangers", label: "Bangers", category: .display),
+        Choice(id: "Lobster", family: "Lobster", label: "Lobster", category: .script),
+        Choice(id: "Righteous", family: "Righteous", label: "Righteous", category: .display),
+        Choice(id: "Orbitron", family: "Orbitron", label: "Orbitron", category: .display),
+        Choice(id: "PressStart2P", family: "Press Start 2P", label: "Press Start 2P", category: .display),
+        Choice(id: "SpaceMono", family: "Space Mono", label: "Space Mono", category: .mono),
+        Choice(id: "Inconsolata", family: "Inconsolata", label: "Inconsolata", category: .mono),
+        Choice(id: "JetBrainsMono", family: "JetBrains Mono", label: "JetBrains Mono", category: .mono),
+        Choice(id: "IBMPlexSans", family: "IBM Plex Sans", label: "IBM Plex Sans", category: .sans),
+        Choice(id: "IBMPlexMono", family: "IBM Plex Mono", label: "IBM Plex Mono", category: .mono),
+        Choice(id: "BebasNeue", family: "Bebas Neue", label: "Bebas Neue", category: .display),
+        Choice(id: "Anton", family: "Anton", label: "Anton", category: .display),
+        Choice(id: "ArchivoBlack", family: "Archivo Black", label: "Archivo Black", category: .display),
+        Choice(id: "Barlow", family: "Barlow", label: "Barlow", category: .sans),
+        Choice(id: "Exo2", family: "Exo 2", label: "Exo 2", category: .sans),
     ]
     static func choice(id: String) -> Choice {
         all.first(where: { $0.id == id }) ?? all[0]
     }
+    static func filtered(search: String, category: UIFontCategory, favorites: [String]) -> [Choice] {
+        let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return all.filter { c in
+            let catOK: Bool
+            switch category {
+            case .all: catOK = true
+            case .favorites: catOK = favorites.contains(c.id)
+            default: catOK = c.category == category
+            }
+            guard catOK else { return false }
+            if q.isEmpty { return true }
+            return c.label.lowercased().contains(q) || c.family.lowercased().contains(q) || c.id.lowercased().contains(q)
+        }
+    }
 }
+
+enum AppAppearanceMode: String, CaseIterable, Identifiable {
+    case system, dark, light
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .system: return "System"
+        case .dark: return "Dark"
+        case .light: return "Light"
+        }
+    }
+    var preferredColorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .dark: return .dark
+        case .light: return .light
+        }
+    }
+    func applyToApp() {
+        switch self {
+        case .system:
+            NSApp.appearance = nil
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        }
+    }
+}
+
 enum FontSizePreset: String, CaseIterable, Identifiable {
     case small, medium, large, xlarge
     var id: String { rawValue }
@@ -7622,6 +7901,8 @@ final class DisplayPreferencesStore: ObservableObject {
     @Published var language: AppLanguage
     @Published var fontSize: FontSizePreset
     @Published var fontFamilyID: String
+    @Published var favoriteFontIDs: [String]
+    @Published var appearanceMode: AppAppearanceMode
 
     private init() {
         let langRaw = UserDefaults.standard.string(forKey: MonitorPreferences.languageKey) ?? AppLanguage.english.rawValue
@@ -7630,6 +7911,16 @@ final class DisplayPreferencesStore: ObservableObject {
         fontSize = FontSizePreset(rawValue: sizeRaw) ?? .medium
         let famRaw = UserDefaults.standard.string(forKey: MonitorPreferences.fontFamilyKey) ?? UIFontCatalog.defaultID
         fontFamilyID = UIFontCatalog.all.contains(where: { $0.id == famRaw }) ? famRaw : UIFontCatalog.defaultID
+        favoriteFontIDs = UserDefaults.standard.stringArray(forKey: MonitorPreferences.fontFavoritesKey) ?? []
+        let appRaw = UserDefaults.standard.string(forKey: MonitorPreferences.appearanceModeKey) ?? AppAppearanceMode.system.rawValue
+        appearanceMode = AppAppearanceMode(rawValue: appRaw) ?? .system
+        appearanceMode.applyToApp()
+    }
+
+    func setAppearanceMode(_ mode: AppAppearanceMode) {
+        appearanceMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: MonitorPreferences.appearanceModeKey)
+        mode.applyToApp()
     }
 
     var uiFontName: String {
@@ -7650,6 +7941,22 @@ final class DisplayPreferencesStore: ObservableObject {
         let resolved = UIFontCatalog.all.contains(where: { $0.id == id }) ? id : UIFontCatalog.defaultID
         fontFamilyID = resolved
         UserDefaults.standard.set(resolved, forKey: MonitorPreferences.fontFamilyKey)
+    }
+
+    func isFavoriteFont(_ id: String) -> Bool {
+        favoriteFontIDs.contains(id)
+    }
+
+    func toggleFavoriteFont(_ id: String) {
+        if let idx = favoriteFontIDs.firstIndex(of: id) {
+            favoriteFontIDs.remove(at: idx)
+        } else {
+            favoriteFontIDs.append(id)
+            if favoriteFontIDs.count > 8 {
+                favoriteFontIDs = Array(favoriteFontIDs.suffix(8))
+            }
+        }
+        UserDefaults.standard.set(favoriteFontIDs, forKey: MonitorPreferences.fontFavoritesKey)
     }
 
     func tr(_ key: String) -> String {
@@ -7748,8 +8055,9 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.subtitle": "Monitor layout, menubar, alerts, and startup options.",
         "settings.appearance": "Appearance", "settings.menubar": "Menubar",
         "settings.monitor": "Monitor", "settings.alerts": "Alerts", "settings.general": "General",
-        "appearance.title": "Display", "appearance.subtitle": "UI font, size, language, and monitor layout style.",
-        "appearance.fontSize": "Font size", "appearance.fontFamily": "UI font", "appearance.fontFamily.hint": "50+ Google Fonts (OFL) bundled offline. Preview updates immediately.", "appearance.language": "Language",
+        "appearance.title": "Display", "appearance.subtitle": "Theme, UI font, size, language, and monitor layout.",
+        "appearance.theme": "Theme", "appearance.theme.hint": "System follows macOS. Light & Dark force the app chrome.",
+        "appearance.fontSize": "Font size", "appearance.fontFamily": "UI font", "appearance.fontFamily.hint": "Search, filter by style, and star favorites. 50+ Google Fonts (OFL) offline.", "appearance.fontSearch": "Search fonts", "appearance.fontFavorite": "★ Favorite", "appearance.fontUnfavorite": "☆ Unfavorite", "appearance.fontEmpty": "No fonts match.", "appearance.fontOFL": "UI fonts: Google Fonts · SIL Open Font License", "appearance.language": "Language",
         "font.small": "Small", "font.medium": "Medium", "font.large": "Large", "font.xlarge": "Extra Large",
         "appearance.monitorUI": "Monitor UI", "appearance.monitorUI.hint": "Modern uses iStats-style accordion sections. Legacy is the compact classic layout.",
         "ui.modern": "Modern (iStats-style)", "ui.legacy": "Legacy",
@@ -7806,7 +8114,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.appearance": "外觀", "settings.menubar": "選單列",
         "settings.monitor": "監控", "settings.alerts": "提醒", "settings.general": "一般",
         "appearance.title": "顯示", "appearance.subtitle": "字體大小、語言與監控介面樣式。",
-        "appearance.fontSize": "字體大小", "appearance.fontFamily": "介面字型", "appearance.fontFamily.hint": "內建 50+ Google Fonts（OFL）。", "appearance.language": "語言",
+        "appearance.fontSize": "字體大小", "appearance.fontFamily": "介面字型", "appearance.fontFamily.hint": "搜尋、分類、收藏。內建 50+ Google Fonts（OFL）。", "appearance.fontSearch": "搜尋字型", "appearance.fontFavorite": "★ 收藏", "appearance.fontUnfavorite": "☆ 取消收藏", "appearance.fontEmpty": "沒有符合的字型。", "appearance.fontOFL": "介面字型：Google Fonts · SIL OFL", "appearance.language": "語言",
         "font.small": "小", "font.medium": "中", "font.large": "大", "font.xlarge": "特大",
         "appearance.monitorUI": "監控介面", "appearance.monitorUI.hint": "現代模式使用 iStats 風格摺疊分區；經典模式為緊湊版面。",
         "ui.modern": "現代 (iStats 風格)", "ui.legacy": "經典",
@@ -7857,7 +8165,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.appearance": "Apariencia", "settings.menubar": "Barra de menú",
         "settings.monitor": "Monitor", "settings.alerts": "Alertas", "settings.general": "General",
         "appearance.title": "Pantalla", "appearance.subtitle": "Tamaño de fuente, idioma y estilo del monitor.",
-        "appearance.fontSize": "Tamaño de fuente", "appearance.fontFamily": "Fuente de la UI", "appearance.fontFamily.hint": "Más de 50 Google Fonts (OFL) incluidas.", "appearance.language": "Idioma",
+        "appearance.fontSize": "Tamaño de fuente", "appearance.fontFamily": "Fuente de la UI", "appearance.fontFamily.hint": "Busca, filtra y marca favoritas. 50+ Google Fonts (OFL).", "appearance.fontSearch": "Buscar fuentes", "appearance.fontFavorite": "★ Favorita", "appearance.fontUnfavorite": "☆ Quitar", "appearance.fontEmpty": "Sin coincidencias.", "appearance.fontOFL": "Fuentes UI: Google Fonts · SIL OFL", "appearance.language": "Idioma",
         "font.small": "Pequeño", "font.medium": "Mediano", "font.large": "Grande", "font.xlarge": "Extra grande",
         "appearance.monitorUI": "Interfaz del monitor", "appearance.monitorUI.hint": "Moderno usa secciones plegables estilo iStats. Clásico es el diseño compacto.",
         "ui.modern": "Moderno (estilo iStats)", "ui.legacy": "Clásico",
@@ -7908,7 +8216,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "settings.appearance": "Darstellung", "settings.menubar": "Menüleiste",
         "settings.monitor": "Monitor", "settings.alerts": "Warnungen", "settings.general": "Allgemein",
         "appearance.title": "Anzeige", "appearance.subtitle": "Schriftgröße, Sprache und Monitor-Stil.",
-        "appearance.fontSize": "Schriftgröße", "appearance.fontFamily": "UI-Schrift", "appearance.fontFamily.hint": "50+ Google Fonts (OFL) offline gebündelt.", "appearance.language": "Sprache",
+        "appearance.fontSize": "Schriftgröße", "appearance.fontFamily": "UI-Schrift", "appearance.fontFamily.hint": "Suchen, filtern, Favoriten. 50+ Google Fonts (OFL).", "appearance.fontSearch": "Schrift suchen", "appearance.fontFavorite": "★ Favorit", "appearance.fontUnfavorite": "☆ Entfernen", "appearance.fontEmpty": "Keine Treffer.", "appearance.fontOFL": "UI-Schriften: Google Fonts · SIL OFL", "appearance.language": "Sprache",
         "font.small": "Klein", "font.medium": "Mittel", "font.large": "Groß", "font.xlarge": "Sehr groß",
         "appearance.monitorUI": "Monitor-Oberfläche", "appearance.monitorUI.hint": "Modern nutzt iStats-ähnliche Abschnitte. Legacy ist das kompakte Layout.",
         "ui.modern": "Modern (iStats-Stil)", "ui.legacy": "Legacy",
@@ -12635,7 +12943,7 @@ struct ContentView: View {
                     rootContent
                 }
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(display.appearanceMode.preferredColorScheme)
             .sheet(isPresented: $showFirstLaunchTips) {
                 FirstLaunchTipsSheet(isPresented: $showFirstLaunchTips)
             }
@@ -13002,6 +13310,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DisplayPreferencesStore.shared.appearanceMode.applyToApp()
         NSApp.setActivationPolicy(.accessory)
         installMainMenu() // enables ⌘Q Quit (accessory apps have no menu otherwise)
         installQuitKeyMonitor()
