@@ -10,8 +10,8 @@ SITE = v.SITE
 # When you ship a new channel version, move the outgoing id into this list and drop the older row.
 ARCHIVE_SPECS: list[dict[str, str]] = [
     {"id": "v1.2.8-Final", "channel": "stable"},
-    {"id": "v1.2.11", "channel": "beta"},
-    {"id": "v1.3.2-Experimental", "channel": "experimental"},
+    {"id": "v1.2.12", "channel": "beta"},
+    {"id": "v1.3.3-Experimental", "channel": "experimental"},
 ]
 
 
