@@ -2,6 +2,29 @@
   "whats_new": [
     {
       "channel": "experimental",
+      "title": "v1.3.8 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "More sensors",
+          "text": " \u2014 full SMC temp key enumeration + expanded M-series keys; die-preferring blend."
+        },
+        {
+          "strong": "Smarter temps",
+          "text": " \u2014 load-aware upper-sensor fusion; faster track-up under load."
+        },
+        {
+          "strong": "SoC power",
+          "text": " \u2014 IOReport also picks DRAM/related energy; richer GPU util keys."
+        },
+        {
+          "strong": "Still light",
+          "text": " \u2014 one-time key discovery + short caches; idle sampling unchanged."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
       "title": "v1.3.7 Experimental",
       "accent": "purple",
       "items": [

@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="3a7d778ea12b3366dc2e1b743582696271987d6408c0123d9fbd52c4159d7f3a"
+EXPECTED_HASH="3c630f941d5c8d12362b11d325cef73fb6f3272515f291a7c0f2ead260c3aaf6"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -1403,6 +1403,7 @@ fileprivate final class SMCReader {
     }
     private var resolvedTempKeys: [String: CachedKey]?
     private var cachedReadings: [Double] = []
+    private var cachedKeyedReadings: [(key: String, value: Double)] = []
     private var lastReadingsTime = Date.distantPast
     private let cacheLock = NSLock()
 
@@ -1507,6 +1508,34 @@ fileprivate final class SMCReader {
         return decodeTemperature(bytes: readOutput.bytes, dataType: infoOutput.keyInfo.dataType)
     }
 
+    /// Weight die/package keys higher than ambient/skin for accurate "CPU temp".
+    static func isDieAdjacentTempKey(_ key: String) -> Bool {
+        let k = key
+        // Performance / efficiency clusters, package, GPU die, ANE-adjacent
+        if k.hasPrefix("Tp") || k.hasPrefix("Te") || k.hasPrefix("Tg") { return true }
+        if k.hasPrefix("TC") || k.hasPrefix("TG") || k.hasPrefix("Tm") { return true }
+        if k == "TCPU" || k == "TCGC" || k == "TACC" { return true }
+        // Explicit ambient / weather-ish — deprioritize for package gauge
+        if k.hasPrefix("TA") || k.hasPrefix("Ta") || k.hasPrefix("TW") || k.hasPrefix("TH") { return false }
+        if k.hasPrefix("Ts") || k.hasPrefix("TS") { return false } // skin
+        // Default: treat as useful if it's a T* temperature key
+        return k.hasPrefix("T")
+    }
+
+    private func fourCharFromUInt32(_ code: UInt32) -> String {
+        let b0 = UInt8((code >> 24) & 0xff)
+        let b1 = UInt8((code >> 16) & 0xff)
+        let b2 = UInt8((code >> 8) & 0xff)
+        let b3 = UInt8(code & 0xff)
+        let chars = [b0, b1, b2, b3].map { c -> Character in
+            if c >= 32 && c < 127 { return Character(UnicodeScalar(c)) }
+            return "?"
+        }
+        return String(chars)
+    }
+
+    /// Discover temperature keys by enumerating the SMC key table (once), then
+    /// merge known candidates. Enumeration is cheap after cache; keeps idle light.
     private func ensureTempKeyCache() {
         cacheLock.lock()
         if resolvedTempKeys != nil {
@@ -1518,13 +1547,54 @@ fileprivate final class SMCReader {
         open()
         var resolved: [String: CachedKey] = [:]
         if isOpen {
+            // 1) Full key enumeration (kSMCGetKeyCount / kSMCGetKeyFromIndex)
+            var countInput = SMCParamStruct()
+            countInput.data8 = 12 // kSMCGetKeyCount
+            if let countOut = call(&countInput), countOut.result == 0 {
+                let keyCount = Int(countOut.data32)
+                // Cap scan so a pathological SMC never stalls launch (typical: 200–400 keys).
+                let limit = min(keyCount, 512)
+                for i in 0..<limit {
+                    var idxInput = SMCParamStruct()
+                    idxInput.data8 = 8 // kSMCGetKeyFromIndex
+                    idxInput.data32 = UInt32(i)
+                    guard let idxOut = call(&idxInput), idxOut.result == 0 else { continue }
+                    let key = fourCharFromUInt32(idxOut.key)
+                    guard key.first == "T" || key.first == "t" else { continue }
+                    let dtype = idxOut.keyInfo.dataType
+                    // Only fixed-point / float temp types (skip raw ui16 counters).
+                    let isTempType = dtype == fourCharCode("sp78") || dtype == fourCharCode("flt ")
+                        || dtype == fourCharCode("sp87") || dtype == fourCharCode("fp1f")
+                    guard isTempType, idxOut.keyInfo.dataSize > 0 else { continue }
+                    let cached = CachedKey(dataSize: idxOut.keyInfo.dataSize, dataType: dtype)
+                    if let temp = readCachedTemperature(key: key, info: cached), temp >= 12, temp <= 115 {
+                        resolved[key] = cached
+                    } else if dtype == fourCharCode("sp78") || dtype == fourCharCode("flt ") {
+                        // Keep typed temp keys even if first read is flaky (cold boot)
+                        if let t2 = readTemperature(key: key), t2 >= 12, t2 <= 115 {
+                            resolved[key] = CachedKey(
+                                dataSize: {
+                                    var infoInput = SMCParamStruct()
+                                    infoInput.key = fourCharCode(key)
+                                    infoInput.data8 = 9
+                                    return call(&infoInput)?.keyInfo.dataSize ?? 2
+                                }(),
+                                dataType: dtype
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 2) Known candidates (covers machines where index walk fails partially)
             for key in Self.candidateKeys {
+                if resolved[key] != nil { continue }
                 var infoInput = SMCParamStruct()
                 infoInput.key = fourCharCode(key)
                 infoInput.data8 = 9
                 guard let infoOutput = call(&infoInput), infoOutput.result == 0, infoOutput.keyInfo.dataSize > 0 else { continue }
                 let cached = CachedKey(dataSize: infoOutput.keyInfo.dataSize, dataType: infoOutput.keyInfo.dataType)
-                guard let temp = readCachedTemperature(key: key, info: cached), temp >= 20, temp <= 115 else { continue }
+                guard let temp = readCachedTemperature(key: key, info: cached), temp >= 12, temp <= 115 else { continue }
                 resolved[key] = cached
             }
         }
@@ -1535,38 +1605,66 @@ fileprivate final class SMCReader {
     }
 
     // Known SMC temperature-sensor keys spanning Apple Silicon generations
-    // (M1 through M3-class Efficiency/Performance clusters, plus the
-    // classic Intel-era keys as a harmless no-op fallback). Keys that don't
-    // exist on a given machine simply fail to resolve and are skipped.
+    // (M1–M4 clusters, GPU, SSD-adjacent, plus classic Intel keys as no-ops).
     private static let candidateKeys = [
+        // Performance / efficiency package (common)
         "Tp09","Tp0T","Tp01","Tp05","Tp0D","Tp0H","Tp0L","Tp0P","Tp0X","Tp0b",
         "Tp0V","Tp0W","Tp0Y","Tp0z","Tp10","Tp0a","Tp0e","Tp0f","Tp0g","Tp0j",
         "Tp0k","Tp0m","Tp0n","Tp0q","Tp0r","Tp0s","Tp0u","Tp0v","Tp0w","Tp0x",
-        "Te05","Te0L","Te0P","Te0S","Te0T","Te0t","Te0H","Te00",
-        "Tf04","Tf09","Tf0A","Tf0B",
-        "Tp1h","Tp1t","Tp1p","Tp1l","Tp1f","Tp1C","Tp1c","Tp1D",
-        "TC0P","TC0H","TC0D","TC0E","TC0F","TC0C","TC0c",
-        "TC1C","TC2C","TC3C","TC4C","TC5C","TC6C","TC7C","TC8C",
-        "TCPU","TCGC","TACC","TH0x","TH1x","Tp00"
+        "Tp00","Tp02","Tp03","Tp04","Tp06","Tp07","Tp08","Tp0A","Tp0B","Tp0C",
+        "Tp0E","Tp0F","Tp0G","Tp0I","Tp0J","Tp0K","Tp0M","Tp0N","Tp0O","Tp0Q",
+        "Tp0R","Tp0S","Tp0U","Tp0Z",
+        // Efficiency / e-cluster
+        "Te05","Te0L","Te0P","Te0S","Te0T","Te0t","Te0H","Te00","Te01","Te02",
+        "Te03","Te04","Te06","Te07","Te08","Te09","Te0A","Te0B","Te0C","Te0D",
+        "Te0E","Te0F","Te0G","Te0I","Te0J","Te0K","Te0M","Te0N",
+        // Fan / airflow adjacent
+        "Tf04","Tf09","Tf0A","Tf0B","Tf0C","Tf0D","Tf0E","Tf0F",
+        // Second die / Ultra
+        "Tp1h","Tp1t","Tp1p","Tp1l","Tp1f","Tp1C","Tp1c","Tp1D","Tp1a","Tp1b",
+        "Tp1e","Tp1g","Tp1j","Tp1k","Tp1m","Tp1n",
+        // Classic Intel / package
+        "TC0P","TC0H","TC0D","TC0E","TC0F","TC0C","TC0c","TC0G","TC0J","TC0F",
+        "TC1C","TC2C","TC3C","TC4C","TC5C","TC6C","TC7C","TC8C","TC9C","TCAC",
+        "TCPU","TCGC","TACC","TG0P","TG0D","TG1D","TG0H","TG1H",
+        // Ambient / skin (still read; deprioritized in resolveTemperature)
+        "TH0x","TH1x","TA0P","TA1P","TA0p","TW0P","Ts0P","Ts0S","Ts1S",
+        // NAND / other SoC
+        "TH0a","TH0b","TH0c","TH0F","TH0o","TM0P","TM0S","Tm0P","Tm1P"
     ]
 
-    // Averages every candidate key that resolves to a plausible CPU
-    // temperature (5–115°C). Returns nil if none resolve, so the caller
-    // can fall back to the thermalState-based estimate.
+    // Peak of die-adjacent sensors when available (more representative than average).
     func averageCPUTemperature() -> Double? {
         let readings = smcReadings()
         guard !readings.isEmpty else { return nil }
         return readings.max()
     }
 
-    func smcReadings() -> [Double] {
+    /// Weighted readings: die-adjacent sensors first, ambient last (for blending).
+    func smcReadings(preferDie: Bool = true) -> [Double] {
+        let entries = temperatureEntriesCached()
+        if entries.isEmpty { return [] }
+        if preferDie {
+            let die = entries.filter { Self.isDieAdjacentTempKey($0.key) }.map(\.value)
+            if die.count >= 2 { return die }
+            if !die.isEmpty {
+                // Pad with a couple non-die if we only got one die key
+                let other = entries.filter { !Self.isDieAdjacentTempKey($0.key) }.map(\.value)
+                return die + other.prefix(3)
+            }
+        }
+        return entries.map(\.value)
+    }
+
+    private func temperatureEntriesCached() -> [(key: String, value: Double)] {
         let ttl = MonitorActivity.smcCacheTTL
         cacheLock.lock()
         let age = Date().timeIntervalSince(lastReadingsTime)
-        if age < ttl, !cachedReadings.isEmpty {
-            let hit = cachedReadings
+        if age < ttl, !cachedReadings.isEmpty, let keys = resolvedTempKeys, !keys.isEmpty {
+            // Re-read only values (keys already resolved) — still use cache of values
+            let hit = cachedKeyedReadings
             cacheLock.unlock()
-            return hit
+            if !hit.isEmpty { return hit }
         }
         cacheLock.unlock()
 
@@ -1575,11 +1673,13 @@ fileprivate final class SMCReader {
         let keys = resolvedTempKeys ?? [:]
         cacheLock.unlock()
         guard !keys.isEmpty else { return [] }
-        let fresh = keys.compactMap { key, info in
-            readCachedTemperature(key: key, info: info)
-        }.filter { $0 >= 15 && $0 <= 115 }
+        let fresh: [(key: String, value: Double)] = keys.compactMap { key, info in
+            guard let v = readCachedTemperature(key: key, info: info), v >= 12, v <= 115 else { return nil }
+            return (key, v)
+        }
         cacheLock.lock()
-        cachedReadings = fresh
+        cachedReadings = fresh.map(\.value)
+        cachedKeyedReadings = fresh
         lastReadingsTime = Date()
         cacheLock.unlock()
         return fresh
@@ -1611,14 +1711,15 @@ fileprivate final class SMCReader {
     }
 
     func temperatureEntries() -> [(key: String, value: Double, unit: String)] {
+        temperatureEntriesCached().map { ($0.key, $0.value, "°C") }
+    }
+
+    /// Count of resolved temperature keys (for UI / diagnostics).
+    var resolvedKeyCount: Int {
         ensureTempKeyCache()
         cacheLock.lock()
-        let keys = resolvedTempKeys ?? [:]
-        cacheLock.unlock()
-        return keys.compactMap { key, info in
-            guard let v = readCachedTemperature(key: key, info: info), v >= 20, v <= 115 else { return nil }
-            return (key, v, "°C")
-        }
+        defer { cacheLock.unlock() }
+        return resolvedTempKeys?.count ?? 0
     }
 }
 
@@ -1638,13 +1739,13 @@ private func IOHIDEventGetFloatValue(_ event: UnsafeRawPointer, _ field: Int64) 
 
 fileprivate final class IOHIDTempReader {
     static let shared = IOHIDTempReader()
-    private let eventType: Int64 = 15
+    private let eventType: Int64 = 15 // temperature
     private var lastReadings: [Double] = []
     private var lastSampleTime = Date.distantPast
-    private let cacheTTL: TimeInterval = 1.5
     private let lock = NSLock()
 
     func readings() -> [Double] {
+        let cacheTTL = MonitorActivity.smcCacheTTL
         lock.lock()
         let age = Date().timeIntervalSince(lastSampleTime)
         if age < cacheTTL {
@@ -1666,22 +1767,27 @@ fileprivate final class IOHIDTempReader {
         guard let client = IOHIDEventSystemClientCreate(kCFAllocatorDefault) else { return [] }
         defer { Unmanaged<CFTypeRef>.fromOpaque(client).release() }
 
-        let match = [
-            "PrimaryUsagePage": 0xff00,
-            "PrimaryUsage": 0x0005
-        ] as CFDictionary
-        guard IOHIDEventSystemClientSetMatching(client, match) == 0,
-              let services = IOHIDEventSystemClientCopyServices(client)?.takeRetainedValue() else { return [] }
-
-        let count = CFArrayGetCount(services)
+        // Apple Silicon MTR / thermal zones (PrimaryUsage 5) + broader page match.
+        let matchSets: [[String: Int]] = [
+            ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 0x0005],
+            ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 0x0001],
+        ]
         var temps: [Double] = []
         let field = eventType << 16
-        for i in 0..<count {
-            guard let ptr = CFArrayGetValueAtIndex(services, i) else { continue }
-            guard let event = IOHIDServiceClientCopyEvent(ptr, eventType, 0, 0) else { continue }
-            let t = IOHIDEventGetFloatValue(event, field)
-            Unmanaged<CFTypeRef>.fromOpaque(event).release()
-            if t >= 15, t <= 115 { temps.append(t) }
+        for matchDict in matchSets {
+            let match = matchDict as CFDictionary
+            guard IOHIDEventSystemClientSetMatching(client, match) == 0,
+                  let services = IOHIDEventSystemClientCopyServices(client)?.takeRetainedValue() else { continue }
+            let count = CFArrayGetCount(services)
+            // Cap services to stay light if a machine exposes dozens of nodes.
+            let limit = min(count, 48)
+            for i in 0..<limit {
+                guard let ptr = CFArrayGetValueAtIndex(services, i) else { continue }
+                guard let event = IOHIDServiceClientCopyEvent(ptr, eventType, 0, 0) else { continue }
+                let t = IOHIDEventGetFloatValue(event, field)
+                Unmanaged<CFTypeRef>.fromOpaque(event).release()
+                if t >= 12, t <= 115 { temps.append(t) }
+            }
         }
         return temps
     }
@@ -1716,14 +1822,17 @@ struct SocPowerSample {
     var cpuWatts: Double = 0
     var gpuWatts: Double = 0
     var aneWatts: Double = 0
-    var hasData: Bool { cpuWatts > 0 || gpuWatts > 0 || aneWatts > 0 }
-    var totalWatts: Double { cpuWatts + gpuWatts + aneWatts }
+    var dramWatts: Double = 0
+    var otherWatts: Double = 0
+    var hasData: Bool { cpuWatts > 0 || gpuWatts > 0 || aneWatts > 0 || dramWatts > 0 }
+    /// Package-style total used for SoC display (CPU+GPU+ANE+DRAM).
+    var totalWatts: Double { cpuWatts + gpuWatts + aneWatts + dramWatts + otherWatts }
 }
 
 fileprivate final class IOReportPowerReader {
     static let shared = IOReportPowerReader()
 
-    private enum ChannelKind { case cpu, gpu, ane }
+    private enum ChannelKind { case cpu, gpu, ane, dram, other }
 
     private struct ChannelMeta { let kind: ChannelKind; let unit: String }
 
@@ -1773,10 +1882,17 @@ fileprivate final class IOReportPowerReader {
     }
 
     private func channelKind(group: String, channel: String) -> ChannelKind? {
-        guard group == "Energy Model" else { return nil }
-        if channel.hasSuffix("CPU Energy") { return .cpu }
-        if channel == "GPU Energy" { return .gpu }
-        if channel.hasPrefix("ANE") { return .ane }
+        // Energy Model is primary; also accept a few related groups on newer macOS.
+        let g = group
+        let c = channel
+        let energyish = g == "Energy Model" || g.contains("Energy") || g == "PMP"
+        guard energyish else { return nil }
+        if c.hasSuffix("CPU Energy") || c == "CPU Energy" || c.contains("CPU Complex Energy") { return .cpu }
+        if c == "GPU Energy" || c.hasSuffix("GPU Energy") || c.contains("GPU Complex") { return .gpu }
+        if c.hasPrefix("ANE") || c.contains("ANE Energy") || c.contains("Neural") { return .ane }
+        // DRAM / ISP help SoC total without drowning the CPU package number
+        if c.contains("DRAM") || c.contains("Memory") { return .dram }
+        if c.contains("ISP") || c.contains("Display") && c.contains("Energy") { return .other }
         return nil
     }
 
@@ -1857,6 +1973,8 @@ fileprivate final class IOReportPowerReader {
                 case .cpu: out.cpuWatts += w
                 case .gpu: out.gpuWatts += w
                 case .ane: out.aneWatts += w
+                case .dram: out.dramWatts += w
+                case .other: out.otherWatts += w
                 }
             }
             if out.hasData { result = out }
@@ -2048,10 +2166,11 @@ class CPUMonitor: ObservableObject {
 
     private static func plausibleSensorTemps(_ readings: [Double]) -> [Double] {
         // M-series die can exceed 100°C under sustained load; keep 115 as sanity ceiling.
-        readings.filter { $0 >= 15 && $0 <= 115 }
+        readings.filter { $0 >= 12 && $0 <= 115 }
     }
 
-    // Prefer sensor cluster; only discard clearly stuck high keys under near-idle load.
+    /// Robust package/die temperature from multi-sensor samples.
+    /// Uses trimmed mean of upper half under load; median at idle — more sensors = stabler.
     static func resolveTemperature(state: ProcessInfo.ThermalState, usage: Double, smcReadings: [Double]) -> (temp: Double, source: String) {
         let estimate = thermalDisplayValue(state, usage: usage)
         let plausible = plausibleSensorTemps(smcReadings)
@@ -2060,22 +2179,46 @@ class CPUMonitor: ObservableObject {
         }
 
         let sorted = plausible.sorted()
-        let sensor = sorted[sorted.count / 2] // median — resists one garbage key
-        let p90 = sorted[min(sorted.count - 1, (sorted.count * 9) / 10)]
+        let n = sorted.count
+        let median = sorted[n / 2]
+        let p75 = sorted[min(n - 1, (n * 3) / 4)]
+        let p90 = sorted[min(n - 1, (n * 9) / 10)]
+        // Trimmed mean of upper half (die sensors often sit high in the distribution)
+        let upper = Array(sorted[(n / 2)..<n])
+        let upperMean = upper.reduce(0, +) / Double(upper.count)
 
-        // Only ignore absurd stuck highs when the Mac is truly idle.
-        if sensor >= 100 && usage < 12 && state == .nominal {
-            return (estimate, "Load estimate (sensor \(Int(sensor.rounded()))°C ignored — idle)")
+        // Ignore absurd stuck highs when the Mac is truly idle.
+        if median >= 100 && usage < 12 && state == .nominal {
+            return (estimate, "Load estimate (sensor \(Int(median.rounded()))°C ignored — idle)")
         }
-        // Prefer upper-quartile under real load so we don't mute hot die sensors.
-        if usage >= 40 || state == .serious || state == .critical {
-            let hot = max(sensor, p90)
-            return (hot, "Sensor hot cluster (\(plausible.count) sensors)")
+
+        let heavy = usage >= 45 || state == .serious || state == .critical
+        let moderate = usage >= 22 || state == .fair
+
+        let sensor: Double
+        let tag: String
+        if heavy {
+            // Track hot path: blend p90 with upper-half mean
+            sensor = 0.55 * p90 + 0.45 * upperMean
+            tag = "Hot cluster (\(n) sensors)"
+        } else if moderate {
+            sensor = 0.5 * p75 + 0.3 * upperMean + 0.2 * median
+            tag = "Upper sensors (\(n))"
+        } else {
+            // Idle: median resists noisy keys; slight pull toward upper mean
+            sensor = 0.7 * median + 0.3 * upperMean
+            tag = "Sensor blend (\(n))"
         }
-        if sensor < 55 && usage > 40 {
-            return (max(sensor, estimate), "Blended (\(plausible.count) sensors + load)")
+
+        // If sensors lag a hard load spike, lift slightly toward thermal estimate.
+        if heavy && sensor + 8 < estimate {
+            let blended = 0.65 * sensor + 0.35 * estimate
+            return (min(110, blended), "\(tag) + thermal blend")
         }
-        return (sensor, "Sensor median (\(plausible.count) sensors)")
+        if sensor < 50 && usage > 50 {
+            return (max(sensor, estimate), "Blended (\(n) sensors + load)")
+        }
+        return (min(110, max(15, sensor)), tag)
     }
 
     static func thermalLabel(_ state: ProcessInfo.ThermalState) -> String {
@@ -2449,9 +2592,12 @@ class CPUMonitor: ObservableObject {
     }
 
     private func sampleDerived() -> DerivedSample {
-        let sensors: [Double] = MonitorActivity.includeSmcSample
-            ? SMCReader.shared.smcReadings() + IOHIDTempReader.shared.readings()
-            : []
+        var sensors: [Double] = []
+        if MonitorActivity.includeSmcSample {
+            // Die-preferring SMC + IOHID MTR temps (many sensors, single cached pass).
+            sensors.append(contentsOf: SMCReader.shared.smcReadings(preferDie: true))
+            sensors.append(contentsOf: IOHIDTempReader.shared.readings())
+        }
         return DerivedSample(
             lpm: Self.readLowPowerModeEnabled(),
             state: ProcessInfo.processInfo.thermalState,
@@ -2463,7 +2609,8 @@ class CPUMonitor: ObservableObject {
     private func applyDerived(_ sample: DerivedSample) {
         let usage = totalUsage
         let resolved = CPUMonitor.resolveTemperature(state: sample.state, usage: usage, smcReadings: sample.sensorReadings)
-        let tempAlpha = 0.3
+        // Faster track-up under load, slower track-down — feels accurate without jitter.
+        let tempAlpha = usage >= 40 ? 0.42 : 0.28
         let nextTemp: Double
         if hasSmoothedSamples {
             nextTemp = smoothedTemperature * (1 - tempAlpha) + resolved.temp * tempAlpha
@@ -2484,11 +2631,15 @@ class CPUMonitor: ObservableObject {
         temperature = smoothedTemperature
         boostClock = boost
         if let socSample = sample.socSample {
+            // Package = CPU complex energy; SoC adds GPU/ANE/DRAM when available.
             packagePowerWatts = min(socSample.cpuWatts, ceiling)
             gpuPowerWatts = min(socSample.gpuWatts, 120)
             anePowerWatts = min(socSample.aneWatts, 60)
-            socPowerWatts = min(socSample.totalWatts, ceiling + 80)
-            packagePowerSource = "Apple IOReport (measured)"
+            socPowerWatts = min(socSample.totalWatts, ceiling + 100)
+            let extras = (socSample.gpuWatts > 0 ? 1 : 0) + (socSample.aneWatts > 0 ? 1 : 0) + (socSample.dramWatts > 0 ? 1 : 0)
+            packagePowerSource = extras > 0
+                ? "IOReport CPU+SoC (\(extras + 1) domains)"
+                : "Apple IOReport (CPU measured)"
         } else {
             packagePowerWatts = min(estimate, ceiling)
             gpuPowerWatts = 0
@@ -4206,9 +4357,16 @@ enum MonitorActivity {
     static var includePowerSample: Bool {
         popoverOpen || enabledSlots.contains(.power)
     }
-    static var smcCacheTTL: TimeInterval { popoverOpen ? 1.0 : 3.0 }
+    /// Sensor cache: short when UI open; slightly longer when idle (still fresh enough).
+    static var smcCacheTTL: TimeInterval { popoverOpen ? 0.85 : 2.2 }
     static var includeSmcSample: Bool {
-        popoverOpen || enabledSlots.contains(.temp) || enabledSlots.contains(.weather) || CompileFarmDetector.shared.shouldForceSampling
+        // Always sample temps lightly when power slot is on (package heat correlates).
+        popoverOpen
+            || enabledSlots.contains(.temp)
+            || enabledSlots.contains(.weather)
+            || enabledSlots.contains(.power)
+            || CompileFarmDetector.shared.shouldForceSampling
+            || DeveloperModeStore.shared.showRawSensors
     }
     /// Always sample RAM — Monitor UI needs it even when menubar has no RAM slot.
     static var samplesMemory: Bool { true }
@@ -4316,20 +4474,34 @@ class GPUMonitor: ObservableObject {
         var iter: io_iterator_t = 0
         guard IOServiceGetMatchingServices(0, IOServiceMatching("IOAccelerator"), &iter) == KERN_SUCCESS else { return 0 }
         defer { IOObjectRelease(iter) }
+        var best: Double = 0
         var service = IOIteratorNext(iter)
+        // Prefer highest utilization across accelerators (integrated + discrete if any).
+        let utilKeys = [
+            "Device Utilization %",
+            "GPU Device Utilization %",
+            "Renderer Utilization %",
+            "Tiler Utilization %",
+            "Hardware Device Utilization %",
+            "In use system memory", // not util — skip via type check
+        ]
         while service != 0 {
             defer { IOObjectRelease(service) }
-            if let stats = IORegistryEntryCreateCFProperty(service, "PerformanceStatistics" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() {
-                if let dict = stats as? [String: Any], let util = dict["Device Utilization %"] as? NSNumber {
-                    return util.doubleValue
+            if let stats = IORegistryEntryCreateCFProperty(service, "PerformanceStatistics" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue() as? [String: Any] {
+                var samples: [Double] = []
+                for key in utilKeys where key.contains("Utilization") {
+                    if let n = stats[key] as? NSNumber {
+                        let v = n.doubleValue
+                        if v >= 0, v <= 100 { samples.append(v) }
+                    }
                 }
-                if let dict = stats as? NSDictionary, let util = dict["Device Utilization %"] as? NSNumber {
-                    return util.doubleValue
+                if let maxU = samples.max() {
+                    best = max(best, maxU)
                 }
             }
             service = IOIteratorNext(iter)
         }
-        return 0
+        return best
     }
 }
 
