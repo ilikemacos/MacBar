@@ -6,7 +6,7 @@
       "id": "experimental",
       "label": "Experimental",
       "accent": "purple",
-      "current": "v1.3.16-Experimental",
+      "current": "v1.3.17-Experimental",
       "next": [
         {
           "version": "v1.3.16-Experimental",
@@ -34,7 +34,7 @@
       "id": "beta",
       "label": "Beta",
       "accent": "orange",
-      "current": "v1.2.13",
+      "current": "v1.2.14",
       "next": [
         {
           "version": "v1.2.14 Beta",
