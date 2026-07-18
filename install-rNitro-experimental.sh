@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="97a9a2586fbecbc44cadde835e79e06f73aba0d0fa00fb24bc88850c5554cb17"
+EXPECTED_HASH="f69e3315e3288ef967dc89aea306425960028e6a3759846fa186a66d9e0be649"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -377,7 +377,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.15-Experimental"
+let CURRENT_VERSION = "v1.3.16-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -10111,6 +10111,9 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.toc.confess": "Confess",
         "lab.toc.cosplay": "Cosplay",
         "lab.toc.detective": "Detective",
+        "lab.toc.speedtest": "Speed test",
+        "lab.speedtest": "Network speed test",
+        "lab.speedtest.hint": "Measures ping, download, and upload via Cloudflare’s public speed endpoints. No account. Experimental only.",
         "lab.toc.duel": "Duel",
         "lab.toc.farm": "Farm",
         "lab.toc.forecast": "Forecast",
@@ -10494,6 +10497,9 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.toc.confess": "Confess",
         "lab.toc.cosplay": "Cosplay",
         "lab.toc.detective": "Detective",
+        "lab.toc.speedtest": "Speed test",
+        "lab.speedtest": "Network speed test",
+        "lab.speedtest.hint": "Measures ping, download, and upload via Cloudflare’s public speed endpoints. No account. Experimental only.",
         "lab.toc.duel": "Duel",
         "lab.toc.farm": "Farm",
         "lab.toc.forecast": "Forecast",
@@ -10877,6 +10883,9 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.toc.confess": "Confess",
         "lab.toc.cosplay": "Cosplay",
         "lab.toc.detective": "Detective",
+        "lab.toc.speedtest": "Speed test",
+        "lab.speedtest": "Network speed test",
+        "lab.speedtest.hint": "Measures ping, download, and upload via Cloudflare’s public speed endpoints. No account. Experimental only.",
         "lab.toc.duel": "Duel",
         "lab.toc.farm": "Farm",
         "lab.toc.forecast": "Forecast",
@@ -11260,6 +11269,9 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.toc.confess": "Confess",
         "lab.toc.cosplay": "Cosplay",
         "lab.toc.detective": "Detective",
+        "lab.toc.speedtest": "Speed test",
+        "lab.speedtest": "Network speed test",
+        "lab.speedtest.hint": "Measures ping, download, and upload via Cloudflare’s public speed endpoints. No account. Experimental only.",
         "lab.toc.duel": "Duel",
         "lab.toc.farm": "Farm",
         "lab.toc.forecast": "Forecast",
@@ -12553,6 +12565,81 @@ final class StressDuelService: ObservableObject {
     private static func makeCode() -> String {
         let chars = Array("ABCDEFGHJKLMNPQRSTUVWXYZ23456789")
         return String((0..<6).map { _ in chars.randomElement()! })
+    }
+}
+
+
+struct SpeedTestPanel: View {
+    @Environment(\.uiMetrics) private var metrics
+    @ObservedObject private var speed = SpeedTestService.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                MinimalButton(
+                    title: speed.isRunning ? "Cancel" : "Start speed test",
+                    tint: speed.isRunning ? .nRed : .nPurple,
+                    action: {
+                        if speed.isRunning { speed.cancel() } else { speed.start() }
+                    }
+                )
+                Text(speed.statusText)
+                    .font(rNitroFont(.caption, metrics: metrics))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            if speed.isRunning || speed.progress > 0 {
+                ProgressView(value: min(1, max(0, speed.progress)))
+                    .progressViewStyle(.linear)
+            }
+            HStack(spacing: 12) {
+                metric(title: "Ping", value: speed.pingMs.map { String(format: "%.0f ms", $0) } ?? "—", color: .accent)
+                metric(title: "Jitter", value: speed.jitterMs.map { String(format: "%.0f ms", $0) } ?? "—", color: .secondary)
+                metric(title: "↓ Down", value: speed.downloadMbps.map { String(format: "%.1f Mbps", $0) } ?? "—", color: .nGreen)
+                metric(title: "↑ Up", value: speed.uploadMbps.map { String(format: "%.1f Mbps", $0) } ?? "—", color: .nOrange)
+            }
+            if let err = speed.lastError, speed.phase == .failed {
+                Text(err)
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.nRed)
+            }
+            Text("Via \(speed.serverLabel) · results stay on this Mac")
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary.opacity(0.85))
+            if !speed.history.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Recent")
+                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    ForEach(speed.history.prefix(4)) { row in
+                        Text(String(format: "%@  %.0f ms · ↓%.1f · ↑%.1f Mbps",
+                                    Self.fmtTime(row.date), row.pingMs, row.downloadMbps, row.uploadMbps))
+                            .font(rNitroFont(.micro, metrics: metrics))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func metric(title: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private static func fmtTime(_ d: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: d)
     }
 }
 
@@ -15364,6 +15451,301 @@ final class LabStatusWriter: ObservableObject {
     }
 }
 
+
+// ── Lab Speed Test (Experimental) — Cloudflare public endpoints, local-only UI ─
+final class SpeedTestService: ObservableObject {
+    static let shared = SpeedTestService()
+
+    enum Phase: String {
+        case idle, ping, download, upload, done, failed, cancelled
+    }
+
+    @Published private(set) var phase: Phase = .idle
+    @Published private(set) var statusText = "Ready"
+    @Published private(set) var progress: Double = 0
+    @Published private(set) var pingMs: Double?
+    @Published private(set) var jitterMs: Double?
+    @Published private(set) var downloadMbps: Double?
+    @Published private(set) var uploadMbps: Double?
+    @Published private(set) var serverLabel = "Cloudflare"
+    @Published private(set) var lastError: String?
+    @Published private(set) var history: [SpeedTestResult] = []
+
+    struct SpeedTestResult: Identifiable, Equatable {
+        let id = UUID()
+        let date: Date
+        let pingMs: Double
+        let downloadMbps: Double
+        let uploadMbps: Double
+    }
+
+    private var task: URLSessionTask?
+    private var session: URLSession?
+    private var cancelFlag = false
+    private let queue = DispatchQueue(label: "rnitro.speedtest", qos: .userInitiated)
+
+    var isRunning: Bool {
+        switch phase {
+        case .ping, .download, .upload: return true
+        default: return false
+        }
+    }
+
+    func start() {
+        guard !isRunning else { return }
+        cancelFlag = false
+        lastError = nil
+        pingMs = nil
+        jitterMs = nil
+        downloadMbps = nil
+        uploadMbps = nil
+        progress = 0
+        statusText = "Starting…"
+        phase = .ping
+        queue.async { [weak self] in self?.runPipeline() }
+    }
+
+    func cancel() {
+        cancelFlag = true
+        task?.cancel()
+        session?.invalidateAndCancel()
+        DispatchQueue.main.async {
+            self.phase = .cancelled
+            self.statusText = "Cancelled"
+            self.progress = 0
+        }
+    }
+
+    private func runPipeline() {
+        let cfg = URLSessionConfiguration.ephemeral
+        cfg.timeoutIntervalForRequest = 30
+        cfg.timeoutIntervalForResource = 120
+        cfg.waitsForConnectivity = true
+        cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
+        let session = URLSession(configuration: cfg)
+        self.session = session
+        defer {
+            session.finishTasksAndInvalidate()
+            self.session = nil
+            self.task = nil
+        }
+
+        do {
+            try runPing(session: session)
+            if cancelFlag { return }
+            try runDownload(session: session)
+            if cancelFlag { return }
+            try runUpload(session: session)
+            if cancelFlag { return }
+            DispatchQueue.main.async {
+                self.phase = .done
+                self.progress = 1
+                self.statusText = "Done"
+                if let p = self.pingMs, let d = self.downloadMbps, let u = self.uploadMbps {
+                    let row = SpeedTestResult(date: Date(), pingMs: p, downloadMbps: d, uploadMbps: u)
+                    self.history.insert(row, at: 0)
+                    if self.history.count > 8 { self.history = Array(self.history.prefix(8)) }
+                }
+            }
+        } catch {
+            if cancelFlag {
+                DispatchQueue.main.async {
+                    self.phase = .cancelled
+                    self.statusText = "Cancelled"
+                }
+                return
+            }
+            DispatchQueue.main.async {
+                self.phase = .failed
+                self.lastError = error.localizedDescription
+                self.statusText = "Failed"
+            }
+        }
+    }
+
+    private func setMain(_ block: @escaping () -> Void) {
+        DispatchQueue.main.async(execute: block)
+    }
+
+    private func runPing(session: URLSession) throws {
+        setMain {
+            self.phase = .ping
+            self.statusText = "Measuring latency…"
+            self.progress = 0.05
+        }
+        // Small downloads for RTT (Cloudflare speed edge).
+        let url = URL(string: "https://speed.cloudflare.com/__down?bytes=1000")!
+        var samples: [Double] = []
+        for i in 0..<6 {
+            if cancelFlag { throw CancellationError() }
+            var req = URLRequest(url: url)
+            req.httpMethod = "GET"
+            req.cachePolicy = .reloadIgnoringLocalCacheData
+            req.setValue("rNitro/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
+            let t0 = CFAbsoluteTimeGetCurrent()
+            let sem = DispatchSemaphore(value: 0)
+            var ok = false
+            let t = session.dataTask(with: req) { _, resp, err in
+                defer { sem.signal() }
+                if err != nil { return }
+                if let http = resp as? HTTPURLResponse, (200...399).contains(http.statusCode) {
+                    ok = true
+                }
+            }
+            task = t
+            t.resume()
+            _ = sem.wait(timeout: .now() + 15)
+            if cancelFlag { throw CancellationError() }
+            if ok {
+                let ms = (CFAbsoluteTimeGetCurrent() - t0) * 1000.0
+                // skip first as warm-up
+                if i > 0 { samples.append(ms) }
+            }
+            setMain { self.progress = 0.05 + Double(i + 1) / 6.0 * 0.15 }
+        }
+        guard !samples.isEmpty else { throw SpeedTestError.network("Latency probe failed") }
+        let avg = samples.reduce(0, +) / Double(samples.count)
+        let mean = avg
+        let variance = samples.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(samples.count)
+        let jit = variance.squareRoot()
+        setMain {
+            self.pingMs = avg
+            self.jitterMs = jit
+            self.progress = 0.22
+            self.statusText = String(format: "Ping %.0f ms", avg)
+        }
+    }
+
+    private func runDownload(session: URLSession) throws {
+        setMain {
+            self.phase = .download
+            self.statusText = "Download test…"
+            self.progress = 0.25
+        }
+        // ~12 MB — balance of accuracy vs time on typical links.
+        let bytes = 12_000_000
+        let url = URL(string: "https://speed.cloudflare.com/__down?bytes=\(bytes)")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.setValue("rNitro/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
+
+        let sem = DispatchSemaphore(value: 0)
+        var resultError: Error?
+        var received: Int64 = 0
+        let t0 = CFAbsoluteTimeGetCurrent()
+        var lastProgressAt = t0
+
+        let t = session.dataTask(with: req) { data, resp, err in
+            defer { sem.signal() }
+            if let err = err { resultError = err; return }
+            guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                resultError = SpeedTestError.network("Download HTTP error")
+                return
+            }
+            received = Int64(data?.count ?? 0)
+        }
+        // Use URLSession delegate-free path; progress approximated by phase time.
+        task = t
+        t.resume()
+
+        // Poll until done for progress UI
+        while sem.wait(timeout: .now() + 0.2) == .timedOut {
+            if cancelFlag {
+                t.cancel()
+                throw CancellationError()
+            }
+            let elapsed = CFAbsoluteTimeGetCurrent() - t0
+            // Soft progress up to 0.7 based on expected ~seconds
+            let p = min(0.68, 0.25 + elapsed / 40.0)
+            if CFAbsoluteTimeGetCurrent() - lastProgressAt > 0.15 {
+                lastProgressAt = CFAbsoluteTimeGetCurrent()
+                setMain {
+                    self.progress = p
+                    self.statusText = String(format: "Downloading… %.0fs", elapsed)
+                }
+            }
+        }
+        if cancelFlag { throw CancellationError() }
+        if let resultError { throw resultError }
+        let dt = max(0.05, CFAbsoluteTimeGetCurrent() - t0)
+        let bits = Double(received) * 8.0
+        let mbps = bits / dt / 1_000_000.0
+        guard received > 100_000 else { throw SpeedTestError.network("Download too small") }
+        setMain {
+            self.downloadMbps = mbps
+            self.progress = 0.72
+            self.statusText = String(format: "↓ %.1f Mbps", mbps)
+        }
+    }
+
+    private func runUpload(session: URLSession) throws {
+        setMain {
+            self.phase = .upload
+            self.statusText = "Upload test…"
+            self.progress = 0.75
+        }
+        let bytes = 4_000_000
+        let url = URL(string: "https://speed.cloudflare.com/__up")!
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
+        req.setValue("rNitro/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
+        // Deterministic payload without huge stack alloc
+        let chunk = Data(repeating: 0x5A, count: 64 * 1024)
+        var body = Data()
+        body.reserveCapacity(bytes)
+        while body.count < bytes {
+            let need = min(chunk.count, bytes - body.count)
+            body.append(chunk.prefix(need))
+        }
+        req.httpBody = body
+
+        let sem = DispatchSemaphore(value: 0)
+        var resultError: Error?
+        let t0 = CFAbsoluteTimeGetCurrent()
+        let t = session.dataTask(with: req) { _, resp, err in
+            defer { sem.signal() }
+            if let err = err { resultError = err; return }
+            if let http = resp as? HTTPURLResponse, !(200...399).contains(http.statusCode) {
+                resultError = SpeedTestError.network("Upload HTTP \(http.statusCode)")
+            }
+        }
+        task = t
+        t.resume()
+        while sem.wait(timeout: .now() + 0.2) == .timedOut {
+            if cancelFlag {
+                t.cancel()
+                throw CancellationError()
+            }
+            let elapsed = CFAbsoluteTimeGetCurrent() - t0
+            setMain {
+                self.progress = min(0.95, 0.75 + elapsed / 30.0)
+                self.statusText = String(format: "Uploading… %.0fs", elapsed)
+            }
+        }
+        if cancelFlag { throw CancellationError() }
+        if let resultError { throw resultError }
+        let dt = max(0.05, CFAbsoluteTimeGetCurrent() - t0)
+        let mbps = Double(bytes) * 8.0 / dt / 1_000_000.0
+        setMain {
+            self.uploadMbps = mbps
+            self.progress = 0.98
+            self.statusText = String(format: "↑ %.1f Mbps", mbps)
+        }
+    }
+
+    enum SpeedTestError: LocalizedError {
+        case network(String)
+        var errorDescription: String? {
+            switch self {
+            case .network(let s): return s
+            }
+        }
+    }
+}
+
 struct LabTabView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var display = DisplayPreferencesStore.shared
@@ -15408,6 +15790,7 @@ struct LabTabView: View {
     private var toyToc: [(String, String)] {
         guard RNITRO_FEATURE_EXPERIMENTAL_UI else { return [] }
         return [
+            ("speedtest", "lab.toc.speedtest"),
             ("ghost", "lab.toc.ghost"),
             ("budget", "lab.toc.budget"),
             ("snapshot", "lab.toc.snapshot"),
@@ -15440,6 +15823,7 @@ struct LabTabView: View {
                     scrubCard.id("scrub")
                     detectiveCard.id("detective")
                     if RNITRO_FEATURE_EXPERIMENTAL_UI {
+                        speedTestCard.id("speedtest")
                         ghostCard.id("ghost")
                     }
                     receiptCard.id("receipt")
@@ -15735,6 +16119,27 @@ struct LabTabView: View {
                 .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
+        }
+    }
+
+    private var speedTestCard: some View {
+        labCard {
+            HStack {
+                Text(display.tr("lab.speedtest"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Spacer()
+                Text("EXP")
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.nPurple))
+            }
+            Text(display.tr("lab.speedtest.hint"))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            SpeedTestPanel()
         }
     }
 
@@ -17141,8 +17546,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.15-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.15-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.16-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.16-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
