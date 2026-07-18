@@ -87,3 +87,5 @@ These Terms and Conditions constitute the entire agreement between you and the d
 ---
 
 By downloading, installing, compiling from the official source code, accessing, or using rNitro, you confirm that you have read, understood, and agree to be bound by these Terms and Conditions.
+
+Battery readings: rNitro aims to show the same charge percentage as the macOS menu bar (CurrentCapacity/pmset). Remaining time is an estimate and can change with system load. Chemical gauge SoC may differ slightly from the menu bar.

@@ -74,6 +74,15 @@
         "text": "Apple Silicon is first-class. Intel builds exist as best-effort; some sensors differ. Check the Intel download section on the site for the last Intel installers."
       }
     },
+
+    {
+      "@type": "Question",
+      "name": "Why might battery percentage or remaining time differ slightly from other tools?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "rNitro shows the same charge percentage as the macOS menu bar (CurrentCapacity / pmset). Remaining time is an estimate from the system and recent drain rate — it can move with load. A separate chemical gauge SoC can trail the menu bar by a few points; that is normal gas-gauge behavior, not a menu-bar mismatch."
+      }
+    },
     {
       "@type": "Question",
       "name": "Is rNitro a free iStat Menus alternative?",
@@ -227,5 +236,10 @@
 
     <p class="muted">Chopsticks HQ · <a href="https://chopstickshq.com/">chopstickshq.com</a> · Canonical product site: <a href="https://chopstickshq.com/rnitro/">/rnitro/</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
   </div>
+
+    <details>
+      <summary>Why might battery % or remaining time look different from other tools?</summary>
+      <p>rNitro shows the <strong>same charge percentage as the macOS menu bar</strong> (CurrentCapacity / pmset). Remaining time is an <strong>estimate</strong> from the system and recent drain — it changes with CPU load. A separate chemical gauge can trail the menu bar by a few points; that is normal. Use <strong>Copy battery diagnostics</strong> in the Battery section to compare pmset / IOPS / IOKit sources.</p>
+    </details>
 </body>
 </html>
