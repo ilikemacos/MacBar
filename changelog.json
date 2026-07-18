@@ -2,6 +2,89 @@
   "whats_new": [
     {
       "channel": "experimental",
+      "title": "v1.3.15 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "OS battery strip",
+          "text": " \u2014 always shows menu % \u00b7 remaining \u00b7 source (IOPS/pmset)."
+        },
+        {
+          "strong": "Compare with macOS",
+          "text": " \u2014 one-shot IOPS + pmset + system_profiler parity check with copyable report."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.14 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Battery = local OS sources",
+          "text": " \u2014 charge % and remaining time from IOPS + pmset (same APIs as menu bar / btop). IOKit only supplies amps, mAh, health. Live pack-draw ETA is secondary, not a replacement."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.13 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Discharge time accuracy",
+          "text": " \u2014 remaining time now blends live pack amps/watts and observed %/hr drain; never prefers optimistic longer pmset/IOKit times under load."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.12 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Dual SoC + compare",
+          "text": " \u2014 menu-bar % with chemical gauge; pmset/IOPS/IOKit compare rows; copy diagnostics."
+        },
+        {
+          "strong": "IOPS + drain graph",
+          "text": " \u2014 public power-sources API for %/ETA; 1h pack-power history."
+        },
+        {
+          "strong": "Top energy proxy + Fathom",
+          "text": " \u2014 top CPU apps as free energy proxy; Fathom link for attribution."
+        },
+        {
+          "strong": "Adaptive sample + low-battery auto",
+          "text": " \u2014 faster when discharging/low; notify/dim/mute stress at 20%/10%."
+        },
+        {
+          "strong": "Update SHA labels",
+          "text": " \u2014 installed binary vs published ZIP SHA in Settings."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.11 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Battery matches menu bar",
+          "text": " \u2014 charge % is strict CurrentCapacity/pmset (no raw-mAh blend); chemical StateOfCharge never overrides UI."
+        },
+        {
+          "strong": "Health & power",
+          "text": " \u2014 Maximum Capacity from System Settings when available; signed 64-bit amps; PowerTelemetry pack watts."
+        },
+        {
+          "strong": "AC detection",
+          "text": " \u2014 ExternalChargeCapable no longer counts as plugged in."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
       "title": "v1.3.10 Experimental",
       "accent": "purple",
       "items": [

@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="863624a530c182b8ef049b93f0f3382a79d6035febf733753a19589c056c6aa8"
+EXPECTED_HASH="97a9a2586fbecbc44cadde835e79e06f73aba0d0fa00fb24bc88850c5554cb17"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -273,6 +273,7 @@ import SwiftUI
 import CoreText
 
 import IOKit
+import IOKit.ps
 import Combine
 import Security
 import CryptoKit
@@ -376,7 +377,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.10-Experimental"
+let CURRENT_VERSION = "v1.3.15-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -395,7 +396,7 @@ struct VersionInfo: Decodable {
     let windows: String?
 }
 
-private struct VersionManifest: Decodable {
+struct VersionManifest: Decodable {
     let latest: String
     let beta: String?
     let experimental: String?
@@ -470,12 +471,29 @@ final class UpdateStatusStore: ObservableObject {
 
     @Published var whatsNewText: String = ""
     @Published var showWhatsNewBanner: Bool = false
+    @Published var installedBinarySha: String = "…"
+    @Published var remoteZipSha: String = ""
+    @Published var remoteZipShaShort: String = "—"
+
+    func refreshIntegrityLabels() {
+        if let url = Bundle.main.executableURL,
+           let hex = UpdateChecker.fileSha256Hex(url) {
+            installedBinarySha = String(hex.prefix(16)) + "…"
+        } else {
+            installedBinarySha = "—"
+        }
+        let cached = UserDefaults.standard.string(forKey: "rnitro.update.remoteZipSha") ?? ""
+        remoteZipSha = cached
+        remoteZipShaShort = cached.count >= 16 ? String(cached.prefix(16)) + "…" : (cached.isEmpty ? "—" : cached)
+    }
 
     func markChecked() {
         let now = Date()
         lastCheckAt = now
         UserDefaults.standard.set(now.timeIntervalSince1970, forKey: lastCheckKey)
         refreshLabel()
+        refreshIntegrityLabels()
+        UpdateChecker.refreshPublishedZipHashAsync()
     }
 
     func refreshLabel() {
@@ -551,6 +569,27 @@ final class UpdateStatusStore: ObservableObject {
 }
 
 enum UpdateChecker {
+    static func fileSha256Hex(_ file: URL) -> String? {
+        // Shared with Settings integrity labels (installed binary SHA).
+        return UpdateInstaller.sha256HexPublic(of: file)
+    }
+
+    static func refreshPublishedZipHashAsync() {
+        DispatchQueue.global(qos: .utility).async {
+            guard let manifest = UpdateInstaller.fetchManifestPublic(), let hashes = manifest.hashes else { return }
+            let hex: String?
+            switch RNITRO_BUILD_CHANNEL {
+            case "stable": hex = hashes.stable_zip
+            case "experimental": hex = hashes.experimental_zip
+            default: hex = hashes.beta_zip
+            }
+            guard let raw = hex?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                  raw.count == 64 else { return }
+            UserDefaults.standard.set(raw, forKey: "rnitro.update.remoteZipSha")
+            DispatchQueue.main.async { UpdateStatusStore.shared.refreshIntegrityLabels() }
+        }
+    }
+
     // Parses v6.0.1b, v2, Beta-v3.27w-23a → [6,0,1] etc. for numeric compare.
     static func versionNumbers(_ v: String) -> [Int] {
         var s = v.trimmingCharacters(in: .whitespaces)
@@ -947,6 +986,8 @@ enum UpdateInstaller {
         return false
     }
 
+    static func sha256HexPublic(of file: URL) -> String? { sha256Hex(of: file) }
+
     private static func sha256Hex(of file: URL) -> String? {
         guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
         defer { try? handle.close() }
@@ -983,6 +1024,8 @@ enum UpdateInstaller {
             return "Update package failed integrity check (SHA-256 mismatch). Refusing to install. Re-download from chopstickshq.com/rnitro."
         }
         log("ZIP SHA-256 OK (\(actual.prefix(16))…)")
+        UserDefaults.standard.set(actual, forKey: "rnitro.update.remoteZipSha")
+        DispatchQueue.main.async { UpdateStatusStore.shared.refreshIntegrityLabels() }
         return nil
     }
 
@@ -1049,6 +1092,8 @@ enum UpdateInstaller {
             URL(string: "https://chopstickshq.com/rnitro/\(encoded)")!,
         ]
     }
+
+    static func fetchManifestPublic() -> VersionManifest? { fetchManifest() }
 
     private static func fetchManifest() -> VersionManifest? {
         let sem = DispatchSemaphore(value: 0)
@@ -2853,6 +2898,81 @@ class CPUMonitor: ObservableObject {
     }
 }
 
+// ── Low-battery automation (optional notify + UI dim + quiet stress tools) ─
+final class LowBatteryAutomation: ObservableObject {
+    static let shared = LowBatteryAutomation()
+    private let enabledKey = "rnitro.battery.lowAutomation"
+    private let notifyKey = "rnitro.battery.lowNotify"
+    private let dimKey = "rnitro.battery.lowDim"
+    private let muteStressKey = "rnitro.battery.lowMuteStress"
+    private let lastNotify10Key = "rnitro.battery.lastNotify10"
+    private let lastNotify20Key = "rnitro.battery.lastNotify20"
+
+    @Published private(set) var isLowPowerDim = false
+    @Published private(set) var muteStressTools = false
+
+    var isEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: enabledKey) == nil { return true }
+            return UserDefaults.standard.bool(forKey: enabledKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: enabledKey) }
+    }
+    var notifyEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: notifyKey) == nil { return true }
+            return UserDefaults.standard.bool(forKey: notifyKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: notifyKey) }
+    }
+    var dimEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: dimKey) == nil { return true }
+            return UserDefaults.standard.bool(forKey: dimKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: dimKey) }
+    }
+    var muteStressEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: muteStressKey) == nil { return true }
+            return UserDefaults.standard.bool(forKey: muteStressKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: muteStressKey) }
+    }
+
+    func evaluate(battery bat: BatteryMonitor) {
+        guard isEnabled, bat.isPresent, !bat.isOnAC, !bat.isCharging else {
+            DispatchQueue.main.async {
+                if self.isLowPowerDim { self.isLowPowerDim = false }
+                if self.muteStressTools { self.muteStressTools = false }
+            }
+            return
+        }
+        let level = bat.levelPercent
+        let dim = dimEnabled && level <= 20
+        let mute = muteStressEnabled && level <= 20
+        DispatchQueue.main.async {
+            self.isLowPowerDim = dim
+            self.muteStressTools = mute
+        }
+        guard notifyEnabled else { return }
+        let now = Date().timeIntervalSince1970
+        if level <= 10 {
+            let last = UserDefaults.standard.double(forKey: lastNotify10Key)
+            if now - last > 1800 {
+                UserDefaults.standard.set(now, forKey: lastNotify10Key)
+                AdvisorNotificationCenter.postBatteryLow(level: level, critical: true)
+            }
+        } else if level <= 20 {
+            let last = UserDefaults.standard.double(forKey: lastNotify20Key)
+            if now - last > 3600 {
+                UserDefaults.standard.set(now, forKey: lastNotify20Key)
+                AdvisorNotificationCenter.postBatteryLow(level: level, critical: false)
+            }
+        }
+    }
+}
+
 // ── Battery monitor (IOKit registry primary; pmset/ioreg subprocess fallbacks) ─
 class BatteryMonitor: ObservableObject {
     static let shared = BatteryMonitor()
@@ -2867,11 +2987,32 @@ class BatteryMonitor: ObservableObject {
     @Published var powerSource = "Unknown"
     @Published var timeToFullMinutes: Int?
     @Published var timeRemainingMinutes: Int?
+    /// Secondary ETA from live pack draw (does not replace OS remaining).
+    @Published var liveEstimateMinutes: Int?
+    @Published var remainingSource = "—"
+    @Published var parityReport: ParityReport?
+    @Published var parityRunning = false
     @Published var cycleCount: Int?
     @Published var temperatureCelsius: Double?
     @Published var healthPercent: Int?
     @Published var history12h: [Double] = []
+    /// Pack draw/charge watts samples over ~1 hour (for drain graph).
+    @Published var powerHistory1h: [Double] = []
     @Published var powerStateSince = Date()
+    /// Chemical / gas-gauge SoC (often trails menu bar by a few points).
+    @Published var chemicalSoC: Int?
+    @Published var rawMahLevelPercent: Int?
+    @Published var rawCurrentMah: Int?
+    @Published var rawMaxMah: Int?
+    @Published var designMah: Int?
+    @Published var amperageMa: Int?
+    @Published var voltageMv: Int?
+    @Published var packWattsSigned: Double = 0
+    /// Diagnostics for compare mode / copy.
+    @Published var diagPmsetPercent: Int?
+    @Published var diagIOPSPercent: Int?
+    @Published var diagIOKitCurrentCapacity: Int?
+    @Published var diagSourceLabel = "IOKit + pmset"
 
     var remainingTimeText: String? {
         guard isPresent, !isOnAC, !isCharging,
@@ -2907,16 +3048,182 @@ class BatteryMonitor: ObservableObject {
         return "Discharging"
     }
 
+    /// Menu bar % plus optional chemical gauge when it differs.
+    var levelDisplayPrimary: String {
+        guard isPresent else { return "—" }
+        return "\(levelPercent)%"
+    }
+
+    var chemicalGaugeSubtitle: String? {
+        guard isPresent, let chem = chemicalSoC, abs(chem - levelPercent) >= 1 else { return nil }
+        return "gauge \(chem)%"
+    }
+
+    var diagnosticsText: String {
+        var lines: [String] = []
+        lines.append("rNitro battery diagnostics — \(CURRENT_VERSION)")
+        lines.append("Menu / UI %: \(levelPercent)")
+        if let p = diagPmsetPercent { lines.append("pmset %: \(p)") }
+        if let p = diagIOPSPercent { lines.append("IOPS %: \(p)") }
+        if let c = diagIOKitCurrentCapacity { lines.append("IOKit CurrentCapacity: \(c)") }
+        if let chem = chemicalSoC { lines.append("Chemical StateOfCharge: \(chem)%") }
+        if let r = rawMahLevelPercent { lines.append("Raw mAh ratio: \(r)%") }
+        if let cur = rawCurrentMah, let maxC = rawMaxMah {
+            lines.append("mAh: \(cur) / \(maxC)")
+        }
+        if let d = designMah { lines.append("Design mAh: \(d)") }
+        if let h = healthPercent { lines.append("Maximum Capacity (health): \(h)%") }
+        if let c = cycleCount { lines.append("Cycles: \(c)") }
+        lines.append("Charging: \(isCharging)  OnAC: \(isOnAC)  Source: \(powerSource)")
+        lines.append("Rate: \(chargeRateText)  Pack W: \(String(format: "%.2f", packWattsSigned))")
+        if let ma = amperageMa { lines.append("Amperage: \(ma) mA") }
+        if let mv = voltageMv { lines.append("Voltage: \(mv) mV") }
+        if let rem = timeRemainingMinutes { lines.append("Time remaining (min): \(rem)  source=\(remainingSource)") }
+        if let full = timeToFullMinutes { lines.append("Time to full (min): \(full)") }
+        if let live = liveEstimateMinutes { lines.append("Live pack-draw estimate (min): \(live)") }
+        if hasSmoothedDrain {
+            lines.append(String(format: "Observed drain: %.1f %%/hr", smoothedDrainPctPerHour))
+        }
+        lines.append("Paths: \(diagSourceLabel)")
+        lines.append("Note: Charge % and remaining time use local IOPS + pmset (same as menu bar / btop). IOKit is for amps/mAh/health only.")
+        return lines.joined(separator: "\n")
+    }
+
+    func copyDiagnosticsToPasteboard() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(diagnosticsText, forType: .string)
+    }
+
+    /// One-line strip matching primary UI / menu bar contract.
+    var osStripText: String {
+        guard isPresent else { return "no battery" }
+        var parts = ["menu \(levelPercent)%"]
+        if let left = remainingTimeText {
+            parts.append("\(left) left")
+        } else if isCharging, let eta = timeToFullMinutes, eta > 0, eta < 65535 {
+            if eta >= 60 {
+                parts.append(String(format: "%dh %dm to full", eta / 60, eta % 60))
+            } else {
+                parts.append("\(eta) min to full")
+            }
+        } else if isOnAC {
+            parts.append(isFullyCharged ? "full" : "on AC")
+        }
+        let src = remainingSource == "—" ? "IOPS/pmset" : remainingSource
+        parts.append("source \(src)")
+        return parts.joined(separator: " · ")
+    }
+
+    struct ParityReport: Equatable {
+        var iopsPercent: Int?
+        var iopsRemainingMin: Int?
+        var pmsetPercent: Int?
+        var pmsetRemainingMin: Int?
+        var profilerSoC: Int?
+        var profilerHealth: Int?
+        var rnitroPercent: Int
+        var rnitroRemainingMin: Int?
+        var rnitroSource: String
+        var percentOK: Bool
+        var remainingOK: Bool
+        var summary: String
+        var detailText: String
+    }
+
+    func runParitySelfTest() {
+        guard !parityRunning else { return }
+        parityRunning = true
+        let uiPct = levelPercent
+        let uiRem = timeRemainingMinutes
+        let uiSrc = remainingSource
+        DispatchQueue.global(qos: .userInitiated).async {
+            let iops = Self.readIOPS()
+            let pm = Self.readPmset()
+            let prof = Self.readSystemProfilerBatteryFields()
+            let iopsPct = iops?.levelPercent
+            let iopsRem = iops?.timeRemainingMinutes
+            let pmPct = pm?.levelPercent
+            let pmRem = pm?.timeRemainingMinutes
+            let profSoc = prof.soc
+            let profHealth = prof.health
+
+            var pcts: [Int] = [uiPct]
+            if let v = iopsPct, v > 0 { pcts.append(v) }
+            if let v = pmPct, v > 0 { pcts.append(v) }
+            if let v = profSoc, v > 0 { pcts.append(v) }
+            let minP = pcts.min() ?? uiPct
+            let maxP = pcts.max() ?? uiPct
+            let percentOK = (maxP - minP) <= 1
+
+            var rems: [Int] = []
+            if let v = uiRem, v > 0, v < 65535 { rems.append(v) }
+            if let v = iopsRem, v > 0, v < 65535 { rems.append(v) }
+            if let v = pmRem, v > 0, v < 65535 { rems.append(v) }
+            let remainingOK: Bool = {
+                guard rems.count >= 2 else { return true }
+                return (rems.max()! - rems.min()!) <= 5
+            }()
+
+            var lines: [String] = []
+            lines.append("rNitro battery parity — \(CURRENT_VERSION)")
+            lines.append("rNitro UI: \(uiPct)%  rem=\(uiRem.map(String.init) ?? "—")  source=\(uiSrc)")
+            lines.append("IOPS: \(iopsPct.map { "\($0)%" } ?? "—")  rem=\(iopsRem.map(String.init) ?? "—") min")
+            lines.append("pmset: \(pmPct.map { "\($0)%" } ?? "—")  rem=\(pmRem.map(String.init) ?? "—") min")
+            lines.append("system_profiler SoC: \(profSoc.map { "\($0)%" } ?? "—")  health=\(profHealth.map { "\($0)%" } ?? "—")")
+            lines.append(percentOK ? "PASS charge % (within 1 pt)" : "WARN charge % differ by >1 pt")
+            lines.append(remainingOK ? "PASS remaining (within 5 min)" : "WARN remaining differ by >5 min")
+            let summary: String = {
+                if percentOK && remainingOK { return "Matches local macOS sources" }
+                if !percentOK && !remainingOK { return "Mismatch: % and remaining" }
+                if !percentOK { return "Mismatch: charge %" }
+                return "Mismatch: remaining time"
+            }()
+            let report = ParityReport(
+                iopsPercent: iopsPct,
+                iopsRemainingMin: iopsRem,
+                pmsetPercent: pmPct,
+                pmsetRemainingMin: pmRem,
+                profilerSoC: profSoc,
+                profilerHealth: profHealth,
+                rnitroPercent: uiPct,
+                rnitroRemainingMin: uiRem,
+                rnitroSource: uiSrc,
+                percentOK: percentOK,
+                remainingOK: remainingOK,
+                summary: summary,
+                detailText: lines.joined(separator: "\n")
+            )
+            DispatchQueue.main.async {
+                self.parityReport = report
+                self.parityRunning = false
+            }
+        }
+    }
+
+    func copyParityReportToPasteboard() {
+        guard let r = parityReport else { return }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(r.detailText, forType: .string)
+    }
+
     private var timerSource: DispatchSourceTimer?
     private let workQueue = DispatchQueue(label: "rnitro.battery", qos: .utility)
     private var prevLevel: Int?
     private var prevSampleTime: Date?
     private var historyPoints: [(Date, Int)] = []
     private var lastHistorySample: Date?
+    private var powerWattPoints: [(Date, Double)] = []
     private var lastModeKey = ""
     /// Smoothed pack power (W) — positive while charging, magnitude while discharging.
     private var smoothedPackWatts: Double = 0
     private var hasSmoothedPackWatts = false
+    /// Smoothed discharge rate (% of full pack per hour) from observed level drops.
+    private var smoothedDrainPctPerHour: Double = 0
+    private var hasSmoothedDrain = false
+    /// Dense samples for short-horizon drain (last ~20 min).
+    private var recentLevelSamples: [(Date, Int)] = []
 
     private struct Snapshot {
         var isPresent = false
@@ -2931,6 +3238,8 @@ class BatteryMonitor: ObservableObject {
         var powerSource = "Unknown"
         var timeToFullMinutes: Int?
         var timeRemainingMinutes: Int?
+        var liveEstimateMinutes: Int?
+        var remainingSource = ""
         var cycleCount: Int?
         var temperatureCelsius: Double?
         var healthPercent: Int?
@@ -2939,6 +3248,12 @@ class BatteryMonitor: ObservableObject {
         var designMah: Int?
         var voltageMv: Int?
         var amperageMa: Int? // signed: + charge, − discharge
+        var chemicalSoC: Int?
+        var rawMahLevelPercent: Int?
+        var diagPmsetPercent: Int?
+        var diagIOPSPercent: Int?
+        var diagIOKitCurrentCapacity: Int?
+        var diagSourceLabel = "IOKit"
     }
 
     init() {}
@@ -2966,7 +3281,14 @@ class BatteryMonitor: ObservableObject {
     private func poll() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
-            var snap = Self.collectSnapshot(prevLevel: self.prevLevel, prevSampleTime: self.prevSampleTime)
+            let prevL = self.prevLevel
+            let prevT = self.prevSampleTime
+            let drainHint = self.hasSmoothedDrain ? self.smoothedDrainPctPerHour : nil
+            var snap = Self.collectSnapshot(
+                prevLevel: prevL,
+                prevSampleTime: prevT,
+                recentDrainPctPerHour: drainHint
+            )
             // Smooth pack watts on the worker so UI doesn't flicker every poll.
             let rawW = abs(snap.packWattsSigned) > 0.05 ? snap.packWattsSigned : (snap.isCharging ? snap.chargeWatts : -snap.chargeWatts)
             if abs(rawW) > 0.05 {
@@ -2979,10 +3301,61 @@ class BatteryMonitor: ObservableObject {
                 let smoothed = self.smoothedPackWatts
                 snap.packWattsSigned = smoothed
                 snap.chargeWatts = abs(smoothed)
+                // Live estimate only (does not change OS remaining time).
+                if !snap.isCharging, !snap.isOnAC {
+                    snap.liveEstimateMinutes = Self.computeLiveDischargeMinutes(
+                        snap,
+                        prevLevel: prevL,
+                        prevSampleTime: prevT,
+                        recentDrainPctPerHour: self.hasSmoothedDrain ? self.smoothedDrainPctPerHour : nil
+                    )
+                }
             }
             if snap.isPresent {
+                let now = Date()
+                // Update observed % drain while discharging.
+                if !snap.isCharging, !snap.isOnAC {
+                    self.recentLevelSamples.append((now, snap.levelPercent))
+                    let cutoff = now.addingTimeInterval(-20 * 60)
+                    self.recentLevelSamples.removeAll { $0.0 < cutoff }
+                    if let oldest = self.recentLevelSamples.first, self.recentLevelSamples.count >= 2 {
+                        let dtH = now.timeIntervalSince(oldest.0) / 3600.0
+                        let dp = Double(oldest.1 - snap.levelPercent)
+                        if dtH >= 0.04, dp > 0 { // ≥ ~2.5 min and real drop
+                            let rate = dp / dtH
+                            if rate > 0.2, rate < 80 {
+                                if self.hasSmoothedDrain {
+                                    self.smoothedDrainPctPerHour = self.smoothedDrainPctPerHour * 0.6 + rate * 0.4
+                                } else {
+                                    self.smoothedDrainPctPerHour = rate
+                                    self.hasSmoothedDrain = true
+                                }
+                            }
+                        }
+                    }
+                    if let prev = prevL, let t0 = prevT {
+                        let dtH = now.timeIntervalSince(t0) / 3600.0
+                        let dp = Double(prev - snap.levelPercent)
+                        if dtH >= 0.008, dp > 0 { // short interval after a % tick
+                            let rate = dp / dtH
+                            if rate > 0.5, rate < 100 {
+                                if self.hasSmoothedDrain {
+                                    self.smoothedDrainPctPerHour = self.smoothedDrainPctPerHour * 0.75 + rate * 0.25
+                                } else {
+                                    self.smoothedDrainPctPerHour = rate
+                                    self.hasSmoothedDrain = true
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Reset drain model when charging / on AC so we don't carry idle rates.
+                    self.hasSmoothedDrain = false
+                    self.smoothedDrainPctPerHour = 0
+                    self.recentLevelSamples.removeAll()
+                }
                 self.prevLevel = snap.levelPercent
-                self.prevSampleTime = Date()
+                self.prevSampleTime = now
             }
             DispatchQueue.main.async {
                 self.applySnapshot(snap)
@@ -3024,29 +3397,99 @@ class BatteryMonitor: ObservableObject {
         powerSource = snap.powerSource
         timeToFullMinutes = snap.timeToFullMinutes
         timeRemainingMinutes = snap.timeRemainingMinutes
+        liveEstimateMinutes = snap.liveEstimateMinutes
+        remainingSource = snap.remainingSource.isEmpty ? "—" : snap.remainingSource
         cycleCount = snap.cycleCount
         temperatureCelsius = snap.temperatureCelsius
         healthPercent = snap.healthPercent
+        chemicalSoC = snap.chemicalSoC
+        rawMahLevelPercent = snap.rawMahLevelPercent
+        rawCurrentMah = snap.rawCurrentMah
+        rawMaxMah = snap.rawMaxMah
+        designMah = snap.designMah
+        amperageMa = snap.amperageMa
+        voltageMv = snap.voltageMv
+        packWattsSigned = snap.packWattsSigned
+        diagPmsetPercent = snap.diagPmsetPercent
+        diagIOPSPercent = snap.diagIOPSPercent
+        diagIOKitCurrentCapacity = snap.diagIOKitCurrentCapacity
+        diagSourceLabel = snap.diagSourceLabel
+        // Drain / charge watt history (~1 hour, denser while discharging).
+        if snap.isPresent {
+            let now = Date()
+            let w = snap.packWattsSigned
+            if abs(w) > 0.05 || !powerWattPoints.isEmpty {
+                powerWattPoints.append((now, w))
+            }
+            let cutoff = now.addingTimeInterval(-3600)
+            powerWattPoints.removeAll { $0.0 < cutoff }
+            // Downsample for UI sparkline (max ~120 points).
+            if powerWattPoints.count > 120 {
+                let step = max(1, powerWattPoints.count / 90)
+                powerWattPoints = powerWattPoints.enumerated().compactMap { i, p in i % step == 0 || i == powerWattPoints.count - 1 ? p : nil }
+            }
+            powerHistory1h = powerWattPoints.map { abs($0.1) }
+        } else {
+            powerHistory1h = []
+            powerWattPoints.removeAll()
+        }
+        LowBatteryAutomation.shared.evaluate(battery: self)
+        MonitorActivity.refreshBatteryIntervalIfNeeded()
     }
 
-    private static func collectSnapshot(prevLevel: Int?, prevSampleTime: Date?) -> Snapshot {
-        // IOKit first (accurate mAh / amps), then pmset for menu-bar % + ETA,
-        // then ioreg for any remaining gaps. Always merge all three when present.
-        var snap = readIOKitBattery() ?? Snapshot()
-        if let pm = readPmset() { mergePmset(pm, into: &snap) }
+    private static func collectSnapshot(
+        prevLevel: Int?,
+        prevSampleTime: Date?,
+        recentDrainPctPerHour: Double? = nil
+    ) -> Snapshot {
+        // Local-source order (matches btop / menu bar / System Settings):
+        //  1) IOPSCopyPowerSourcesInfo — public API Control Center uses
+        //  2) pmset -g batt — same figure as menu bar string
+        //  3) IOKit AppleSmartBattery — amps, mAh, health, temp only
+        //  4) ioreg fallback if needed
+        // Never invent a different charge % than IOPS/pmset.
+        var snap = readIOPS() ?? Snapshot()
+        if let pm = readPmset() { mergePmsetAsAuthority(pm, into: &snap) }
+        if let iokit = readIOKitBattery() { mergeIOKitTelemetryOnly(iokit, into: &snap) }
         if let hw = readIoreg() { mergeIoreg(hw, into: &snap) }
-        finalizeSnapshot(&snap, prevLevel: prevLevel, prevSampleTime: prevSampleTime)
+        finalizeSnapshot(
+            &snap,
+            prevLevel: prevLevel,
+            prevSampleTime: prevSampleTime,
+            recentDrainPctPerHour: recentDrainPctPerHour
+        )
         return snap
     }
 
-    private static func finalizeSnapshot(_ snap: inout Snapshot, prevLevel: Int?, prevSampleTime: Date?) {
+    private static func finalizeSnapshot(
+        _ snap: inout Snapshot,
+        prevLevel: Int?,
+        prevSampleTime: Date?,
+        recentDrainPctPerHour: Double? = nil
+    ) {
         guard snap.isPresent else {
             snap.chargeRateText = "No battery"
             snap.powerSource = "AC / Desktop"
             return
         }
-        // Fill missing ETAs from mAh + amperage (more accurate than stale TimeRemaining).
+        // Fill only *missing* OS ETAs from hardware; do not override IOPS/pmset remaining.
         estimateMissingETAs(&snap)
+        // Live pack-draw estimate is secondary (shown separately) — local OS sources stay authoritative.
+        if !snap.isCharging, !snap.isOnAC {
+            snap.liveEstimateMinutes = computeLiveDischargeMinutes(
+                snap,
+                prevLevel: prevLevel,
+                prevSampleTime: prevSampleTime,
+                recentDrainPctPerHour: recentDrainPctPerHour
+            )
+        } else {
+            snap.liveEstimateMinutes = nil
+        }
+        if snap.remainingSource.isEmpty {
+            if snap.timeRemainingMinutes != nil || snap.timeToFullMinutes != nil {
+                snap.remainingSource = "IOPS/pmset"
+            }
+        }
         // Level-delta discharge estimate when InstantAmperage is zero after wake.
         if !snap.isCharging, !snap.isOnAC, abs(snap.packWattsSigned) < 0.1,
            let prev = prevLevel, let prevT = prevSampleTime {
@@ -3104,9 +3547,8 @@ class BatteryMonitor: ObservableObject {
         }
     }
 
-    /// Estimate AvgTimeToFull / empty from remaining mAh and InstantAmperage.
+    /// Fill missing charge/empty ETAs from remaining mAh and InstantAmperage.
     private static func estimateMissingETAs(_ snap: inout Snapshot) {
-        guard let vMv = snap.voltageMv, vMv > 1000 else { return }
         let amp = snap.amperageMa ?? 0
         if snap.isCharging {
             if snap.timeToFullMinutes == nil || snap.timeToFullMinutes == 0 || (snap.timeToFullMinutes ?? 0) >= 65535 {
@@ -3130,35 +3572,219 @@ class BatteryMonitor: ObservableObject {
         }
     }
 
-    private static func mergePmset(_ pm: Snapshot, into snap: inout Snapshot) {
-        if pm.isPresent {
-            snap.isPresent = true
-            // pmset % is the menu-bar figure — keep as authoritative UI % when present.
-            if pm.levelPercent > 0 {
-                // If raw mAh ratio exists and disagrees wildly (>8 pts), blend toward pmset
-                // (menu bar) so we don't show a "wrong" vs System Settings number.
-                if let raw = rawLevelPercent(from: snap), abs(raw - pm.levelPercent) > 8 {
-                    snap.levelPercent = Int((Double(pm.levelPercent) * 0.75 + Double(raw) * 0.25).rounded())
-                } else {
-                    snap.levelPercent = pm.levelPercent
+    /// Live pack-draw ETA (minutes). Informational only — does not replace IOPS/pmset remaining.
+    private static func computeLiveDischargeMinutes(
+        _ snap: Snapshot,
+        prevLevel: Int?,
+        prevSampleTime: Date?,
+        recentDrainPctPerHour: Double?
+    ) -> Int? {
+        guard !snap.isCharging, !snap.isOnAC, snap.isPresent else { return nil }
+        var live: [Int] = []
+
+        if let amp = snap.amperageMa, amp < -40, let cur = snap.rawCurrentMah, cur > 0 {
+            let mins = Int((Double(cur) / Double(-amp) * 60.0).rounded())
+            if mins > 0, mins < 48 * 60 { live.append(mins) }
+        }
+
+        let drawW = max(abs(snap.packWattsSigned), snap.chargeWatts)
+        if drawW > 0.35, let cur = snap.rawCurrentMah, cur > 0 {
+            let v = Double(snap.voltageMv ?? 11_500) / 1000.0
+            if v > 5 {
+                let whLeft = Double(cur) / 1000.0 * v
+                let mins = Int((whLeft / drawW * 60.0).rounded())
+                if mins > 0, mins < 48 * 60 { live.append(mins) }
+            }
+        }
+
+        if let rate = recentDrainPctPerHour, rate > 0.4, snap.levelPercent > 0 {
+            let mins = Int((Double(snap.levelPercent) / rate * 60.0).rounded())
+            if mins > 0, mins < 48 * 60 { live.append(mins) }
+        }
+
+        if let prev = prevLevel, let t0 = prevSampleTime, snap.levelPercent < prev {
+            let dtH = Date().timeIntervalSince(t0) / 3600.0
+            let dp = Double(prev - snap.levelPercent)
+            if dtH >= 0.01, dp > 0 {
+                let rate = dp / dtH
+                if rate > 0.5, rate < 120 {
+                    let mins = Int((Double(snap.levelPercent) / rate * 60.0).rounded())
+                    if mins > 0, mins < 48 * 60 { live.append(mins) }
                 }
             }
-            snap.isCharging = pm.isCharging
-            snap.isOnAC = pm.isOnAC
-            snap.isFullyCharged = pm.isFullyCharged
-            // Prefer pmset remaining times when healthy (IOKit TimeRemaining is often stale).
-            if let eta = pm.timeToFullMinutes, eta > 0, eta < 65535 {
-                snap.timeToFullMinutes = eta
-            }
-            if let rem = pm.timeRemainingMinutes, rem > 0, rem < 65535 {
-                snap.timeRemainingMinutes = rem
-            }
+        }
+
+        return live.sorted().dropFirst((live.count - 1) / 2).first // median-ish
+    }
+
+    /// pmset is the menu-bar authority for % and "H:MM remaining" text.
+    private static func mergePmsetAsAuthority(_ pm: Snapshot, into snap: inout Snapshot) {
+        guard pm.isPresent else { return }
+        snap.isPresent = true
+        if pm.levelPercent > 0 {
+            snap.levelPercent = pm.levelPercent
+            snap.diagPmsetPercent = pm.levelPercent
+        }
+        snap.isCharging = pm.isCharging
+        snap.isOnAC = pm.isOnAC
+        snap.isFullyCharged = pm.isFullyCharged
+        // Prefer pmset remaining/full times — same clock as the menu bar.
+        if let eta = pm.timeToFullMinutes, eta > 0, eta < 65535 {
+            snap.timeToFullMinutes = eta
+            snap.remainingSource = "pmset"
+        }
+        if let rem = pm.timeRemainingMinutes, rem > 0, rem < 65535 {
+            snap.timeRemainingMinutes = rem
+            snap.remainingSource = "pmset"
+        }
+        if !snap.diagSourceLabel.contains("pmset") {
+            snap.diagSourceLabel = snap.diagSourceLabel.isEmpty || snap.diagSourceLabel == "IOKit"
+                ? "IOPS + pmset" : snap.diagSourceLabel + " + pmset"
         }
     }
 
-    private static func rawLevelPercent(from snap: Snapshot) -> Int? {
-        guard let cur = snap.rawCurrentMah, let maxC = snap.rawMaxMah, maxC > 0 else { return nil }
-        return min(100, max(0, Int((Double(cur) / Double(maxC) * 100.0).rounded())))
+    /// IOKit enriches amps/mAh/health — never overrides IOPS/pmset charge % or remaining time.
+    private static func mergeIOKitTelemetryOnly(_ hw: Snapshot, into snap: inout Snapshot) {
+        if snap.levelPercent <= 0, hw.levelPercent > 0 {
+            snap.levelPercent = hw.levelPercent
+        }
+        if !snap.isPresent { snap.isPresent = hw.isPresent }
+        // Status only if IOPS left them unset (rare).
+        if !snap.isOnAC, !snap.isCharging {
+            // keep discharge state from IOPS/pmset
+        }
+        if hw.amperageMa != nil { snap.amperageMa = hw.amperageMa }
+        if hw.voltageMv != nil { snap.voltageMv = hw.voltageMv }
+        if abs(hw.packWattsSigned) > 0.05 {
+            snap.packWattsSigned = hw.packWattsSigned
+            snap.chargeWatts = abs(hw.packWattsSigned)
+        } else if hw.chargeWatts > 0.05 {
+            snap.chargeWatts = hw.chargeWatts
+        }
+        if hw.rawCurrentMah != nil { snap.rawCurrentMah = hw.rawCurrentMah }
+        if hw.rawMaxMah != nil { snap.rawMaxMah = hw.rawMaxMah }
+        if hw.designMah != nil { snap.designMah = hw.designMah }
+        if hw.cycleCount != nil { snap.cycleCount = hw.cycleCount }
+        if hw.temperatureCelsius != nil { snap.temperatureCelsius = hw.temperatureCelsius }
+        if hw.healthPercent != nil { snap.healthPercent = hw.healthPercent }
+        if hw.chemicalSoC != nil { snap.chemicalSoC = hw.chemicalSoC }
+        if hw.rawMahLevelPercent != nil { snap.rawMahLevelPercent = hw.rawMahLevelPercent }
+        if hw.diagIOKitCurrentCapacity != nil { snap.diagIOKitCurrentCapacity = hw.diagIOKitCurrentCapacity }
+        // Only fill ETA if OS sources left it empty.
+        if snap.timeRemainingMinutes == nil, let rem = hw.timeRemainingMinutes, rem > 0, rem < 65535 {
+            snap.timeRemainingMinutes = rem
+            if snap.remainingSource.isEmpty { snap.remainingSource = "IOKit" }
+        }
+        if snap.timeToFullMinutes == nil, let eta = hw.timeToFullMinutes, eta > 0, eta < 65535 {
+            snap.timeToFullMinutes = eta
+            if snap.remainingSource.isEmpty { snap.remainingSource = "IOKit" }
+        }
+        if !snap.diagSourceLabel.contains("IOKit") {
+            snap.diagSourceLabel = (snap.diagSourceLabel.isEmpty ? "IOKit" : snap.diagSourceLabel + " + IOKit")
+        }
+    }
+
+    /// Public IOKit Power Sources API — same path btop uses (matches Control Center / menu bar).
+    private static func readIOPS() -> Snapshot? {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue() else { return nil }
+        guard let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef], !list.isEmpty else { return nil }
+        var snap = Snapshot()
+        for src in list {
+            guard let desc = IOPSGetPowerSourceDescription(info, src)?.takeUnretainedValue() as? [String: Any] else { continue }
+            let type = (desc[kIOPSTypeKey] as? String)
+                ?? (desc["Type"] as? String)
+                ?? ""
+            // Prefer internal battery; if type missing, accept first present battery.
+            let isInternal = type.isEmpty
+                || type == kIOPSInternalBatteryType
+                || type == "InternalBattery"
+                || (desc[kIOPSNameKey] as? String)?.contains("InternalBattery") == true
+                || (desc["Name"] as? String)?.contains("InternalBattery") == true
+            if !isInternal, list.count > 1 { continue }
+
+            let present: Bool = {
+                if let b = desc[kIOPSIsPresentKey] as? Bool { return b }
+                if let n = desc[kIOPSIsPresentKey] as? NSNumber { return n.boolValue }
+                if let b = desc["Is Present"] as? Bool { return b }
+                if let n = desc["Is Present"] as? NSNumber { return n.boolValue }
+                return true
+            }()
+            guard present else { continue }
+            snap.isPresent = true
+            snap.diagSourceLabel = "IOPS"
+
+            // Current Capacity is already 0…100 on modern macOS (menu bar %).
+            if let n = desc[kIOPSCurrentCapacityKey] as? NSNumber
+                ?? desc["Current Capacity"] as? NSNumber {
+                let cur = n.intValue
+                if let maxN = desc[kIOPSMaxCapacityKey] as? NSNumber ?? desc["Max Capacity"] as? NSNumber {
+                    let maxC = maxN.intValue
+                    if maxC > 100, cur >= 0 {
+                        snap.levelPercent = min(100, Int((Double(cur) / Double(maxC) * 100.0).rounded()))
+                    } else if cur >= 0, cur <= 100 {
+                        snap.levelPercent = cur
+                    }
+                } else if cur >= 0, cur <= 100 {
+                    snap.levelPercent = cur
+                }
+                snap.diagIOPSPercent = snap.levelPercent
+            }
+
+            let charging: Bool = {
+                if let b = desc[kIOPSIsChargingKey] as? Bool { return b }
+                if let n = desc[kIOPSIsChargingKey] as? NSNumber { return n.boolValue }
+                if let b = desc["Is Charging"] as? Bool { return b }
+                if let n = desc["Is Charging"] as? NSNumber { return n.boolValue }
+                return false
+            }()
+            snap.isCharging = charging
+
+            let state = (desc[kIOPSPowerSourceStateKey] as? String)
+                ?? (desc["Power Source State"] as? String)
+                ?? ""
+            if state == kIOPSACPowerValue || state == "AC Power" {
+                snap.isOnAC = true
+            } else if state == kIOPSBatteryPowerValue || state == "Battery Power" {
+                snap.isOnAC = false
+            }
+            if charging { snap.isOnAC = true }
+
+            // Time to Empty / Full — minutes (btop multiplies by 60 for seconds).
+            if let n = desc[kIOPSTimeToEmptyKey] as? NSNumber ?? desc["Time to Empty"] as? NSNumber {
+                let m = n.intValue
+                if m > 0, m < 65535 {
+                    snap.timeRemainingMinutes = m
+                    snap.remainingSource = "IOPS"
+                }
+            }
+            if let n = desc[kIOPSTimeToFullChargeKey] as? NSNumber ?? desc["Time to Full Charge"] as? NSNumber {
+                let m = n.intValue
+                if m > 0, m < 65535 {
+                    snap.timeToFullMinutes = m
+                    snap.remainingSource = "IOPS"
+                }
+            }
+
+            // IOPS "Current" is signed milliamps (already correct on Apple Silicon).
+            if let n = desc["Current"] as? NSNumber {
+                let ma = n.intValue
+                if abs(ma) > 0, abs(ma) < 200_000 {
+                    snap.amperageMa = ma
+                }
+            }
+
+            if let name = desc[kIOPSNameKey] as? String ?? desc["Name"] as? String {
+                snap.powerSource = name
+            } else {
+                snap.powerSource = snap.isOnAC ? "AC Power" : "Battery Power"
+            }
+
+            if snap.levelPercent >= 100, !snap.isCharging, snap.isOnAC {
+                snap.isFullyCharged = true
+            }
+            break
+        }
+        return snap.isPresent || snap.levelPercent > 0 ? snap : nil
     }
 
     private static func mergeIoreg(_ hw: IoregBattery, into snap: inout Snapshot) {
@@ -3208,11 +3834,20 @@ class BatteryMonitor: ObservableObject {
 
     private static func cfInt(_ value: CFTypeRef?) -> Int? {
         guard let value else { return nil }
-        if let n = value as? NSNumber { return n.intValue }
         if CFGetTypeID(value) == CFNumberGetTypeID() {
-            var v = Int32(0)
-            CFNumberGetValue((value as! CFNumber), .sInt32Type, &v)
-            return Int(v)
+            // Prefer 64-bit signed — InstantAmperage / BatteryPower use two's-complement.
+            var v64 = Int64(0)
+            if CFNumberGetValue((value as! CFNumber), .sInt64Type, &v64) {
+                return Int(v64)
+            }
+            var v32 = Int32(0)
+            if CFNumberGetValue((value as! CFNumber), .sInt32Type, &v32) {
+                return Int(v32)
+            }
+        }
+        if let n = value as? NSNumber {
+            // int64Value preserves negative milliamps; intValue can truncate wrongly.
+            return Int(n.int64Value)
         }
         if let s = value as? String, let v = Int(s.trimmingCharacters(in: .whitespaces)) { return v }
         return nil
@@ -3253,12 +3888,17 @@ class BatteryMonitor: ObservableObject {
         return cfInt(entry as? CFTypeRef)
     }
 
-    /// IOPM stores signed milliamps in an unsigned registry field (two's complement).
+    /// IOPM / AppleSmartBattery often stores signed mA as two's-complement in a wide integer.
     private static func ioRegistrySigned(_ raw: Int) -> Int {
-        Int(Int32(bitPattern: UInt32(truncatingIfNeeded: UInt64(bitPattern: Int64(raw)))))
+        // Already a plausible signed milliamp / milliwatt-scale value.
+        if raw > -500_000 && raw < 500_000 { return raw }
+        // Classic 32-bit two's complement encoding.
+        let as32 = Int(Int32(bitPattern: UInt32(truncatingIfNeeded: UInt64(bitPattern: Int64(raw)))))
+        if as32 > -500_000 && as32 < 500_000 { return as32 }
+        return raw
     }
 
-    /// Pack power from IOKit: InstantAmperage × voltage (signed). ChargingCurrent when charging.
+    /// Pack power from IOKit: prefer PowerTelemetry BatteryPower (mW), else InstantAmperage × V.
     private static func applyIOKitChargePower(_ service: io_service_t, to snap: inout Snapshot) {
         var voltageMv = ioPropertyInt(service, "AppleRawBatteryVoltage")
             ?? ioPropertyInt(service, "Voltage")
@@ -3268,12 +3908,11 @@ class BatteryMonitor: ObservableObject {
                 ?? ioDictInt(batteryData, "AppleRawBatteryVoltage")
                 ?? ioDictInt(batteryData, "CellVoltage")
         }
-        // CellVoltage can be an array — try first element via nested read if dict failed
+        // CellVoltage can be an array — sum multi-cell mV.
         if (voltageMv == nil || voltageMv == 0),
            let batteryData = ioProperty(service, "BatteryData") as? [String: Any],
            let cells = batteryData["CellVoltage"] as? [Any],
            let first = cells.first as? NSNumber {
-            // Millivolts per cell; sum if multi-cell
             var sum = 0
             for c in cells {
                 if let n = c as? NSNumber { sum += n.intValue }
@@ -3298,7 +3937,25 @@ class BatteryMonitor: ObservableObject {
         }
         if signedMa != 0 { snap.amperageMa = signedMa }
 
-        if voltage > 0, signedMa != 0 {
+        // PowerTelemetryData.BatteryPower is signed milliwatts and tracks system draw better.
+        var telemWatts: Double?
+        if let telem = ioProperty(service, "PowerTelemetryData"),
+           let bp = ioDictInt(telem, "BatteryPower") {
+            let signedMw = ioRegistrySigned(bp)
+            if abs(signedMw) > 50, abs(signedMw) < 200_000 {
+                telemWatts = Double(signedMw) / 1000.0
+            }
+        }
+
+        if let tw = telemWatts {
+            snap.packWattsSigned = tw
+            snap.chargeWatts = abs(tw)
+            // Back-fill amperage from telemetry when InstantAmperage was 0 after wake.
+            if signedMa == 0, voltage > 1000 {
+                let ma = Int((tw * 1000.0 * 1000.0 / Double(voltage)).rounded())
+                if abs(ma) > 5 { snap.amperageMa = ma }
+            }
+        } else if voltage > 0, signedMa != 0 {
             let watts = Double(abs(signedMa)) / 1000.0 * Double(voltage) / 1000.0
             snap.packWattsSigned = Double(signedMa) / 1000.0 * Double(voltage) / 1000.0
             snap.chargeWatts = watts
@@ -3346,14 +4003,32 @@ class BatteryMonitor: ObservableObject {
 
         let level = batteryLevelPercent(service, rawCur: rawCur, rawMax: rawMax)
         snap.levelPercent = min(100, max(0, level))
+        if let cur = ioPropertyInt(service, "CurrentCapacity"), cur >= 0, cur <= 100 {
+            snap.diagIOKitCurrentCapacity = cur
+        }
+        // Chemical gauge (nested StateOfCharge) — display only, never UI primary.
+        if let bd = ioProperty(service, "BatteryData") {
+            let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
+                ?? (bd as? NSDictionary)?["StateOfCharge"]
+            if let soc = (socValue as? NSNumber)?.intValue ?? cfInt(socValue as? CFTypeRef),
+               soc >= 0, soc <= 100 {
+                snap.chemicalSoC = soc
+            }
+        }
+        if snap.chemicalSoC == nil, let soc = ioPropertyInt(service, "StateOfCharge"), soc >= 0, soc <= 100 {
+            snap.chemicalSoC = soc
+        }
+        if let raw = rawCur, let maxC = rawMax, maxC > 0 {
+            snap.rawMahLevelPercent = min(100, max(0, Int((Double(raw) / Double(maxC) * 100.0).rounded())))
+        }
         snap.isPresent = installed == true || builtIn == true || snap.levelPercent > 0
             || design != nil
             || rawMax != nil
         guard snap.isPresent else { return nil }
 
+        // Only *connected* adapters count — ExternalChargeCapable is true even unplugged on many Macs.
         let external = ioPropertyBool(service, "ExternalConnected") == true
             || ioPropertyBool(service, "AppleRawExternalConnected") == true
-            || ioPropertyBool(service, "ExternalChargeCapable") == true
         snap.isOnAC = external
         if let charging = ioPropertyBool(service, "IsCharging") {
             snap.isCharging = charging
@@ -3403,63 +4078,92 @@ class BatteryMonitor: ObservableObject {
         return snap
     }
 
-    /// Charge %: prefer menu-bar CurrentCapacity when 0…100; cross-check raw mAh.
+    /// Charge % shown in menu bar / System Settings — never average with chemical SoC.
     private static func batteryLevelPercent(_ service: io_service_t, rawCur: Int?, rawMax: Int?) -> Int {
-        var menuBarPct: Int?
-        // 1) CurrentCapacity on modern macOS is already a percentage (matches menu bar).
+        // 1) CurrentCapacity on modern macOS is already the menu-bar percentage.
         if let cur = ioPropertyInt(service, "CurrentCapacity"), cur >= 0, cur <= 100 {
-            menuBarPct = cur
+            return cur
         }
-        // 2) BatteryData.StateOfCharge / AbsoluteCapacity
-        if menuBarPct == nil, let bd = ioProperty(service, "BatteryData") {
+        // 2) Legacy mAh CurrentCapacity / MaxCapacity (MaxCapacity >> 100)
+        if let cur = ioPropertyInt(service, "CurrentCapacity"),
+           let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 100, cur >= 0 {
+            return min(100, Int((Double(cur) / Double(maxCap) * 100.0).rounded()))
+        }
+        // 3) Raw mAh counters (physical estimate; can trail menu bar by a few points)
+        if let raw = rawCur, let maxCap = rawMax, maxCap > 0 {
+            return min(100, max(0, Int((Double(raw) / Double(maxCap) * 100.0).rounded())))
+        }
+        // 4) Nested / top-level StateOfCharge last — often chemical gauge (not menu bar).
+        if let bd = ioProperty(service, "BatteryData") {
             let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
                 ?? (bd as? NSDictionary)?["StateOfCharge"]
             if let soc = (socValue as? NSNumber)?.intValue ?? cfInt(socValue as? CFTypeRef),
                soc >= 0, soc <= 100 {
-                menuBarPct = soc
+                return soc
             }
         }
-        if menuBarPct == nil, let soc = ioPropertyInt(service, "StateOfCharge"), soc >= 0, soc <= 100 {
-            menuBarPct = soc
+        if let soc = ioPropertyInt(service, "StateOfCharge"), soc >= 0, soc <= 100 {
+            return soc
         }
-        // 3) Raw mAh counters (best physical estimate)
-        var rawPct: Int?
-        if let raw = rawCur,
-           let maxCap = rawMax, maxCap > 0 {
-            rawPct = min(100, max(0, Int((Double(raw) / Double(maxCap) * 100.0).rounded())))
-        }
-        // 4) Legacy mAh CurrentCapacity/MaxCapacity (MaxCapacity >> 100)
-        if rawPct == nil,
-           let cur = ioPropertyInt(service, "CurrentCapacity"),
-           let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 100, cur >= 0 {
-            rawPct = min(100, Int((Double(cur) / Double(maxCap) * 100.0).rounded()))
-        }
-
-        // Prefer menu bar when present; if raw is within 3 pts, average for stability.
-        if let m = menuBarPct, let r = rawPct {
-            if abs(m - r) <= 3 {
-                return Int((Double(m) + Double(r)) / 2.0 + 0.5)
-            }
-            return m
-        }
-        return menuBarPct ?? rawPct ?? 0
+        return 0
     }
+
+    // Cached System Settings “Maximum Capacity” (health changes slowly).
+    private static var cachedSystemHealth: (value: Int, at: Date)?
 
     /// Maximum Capacity % (System Settings “Battery Health”).
     private static func batteryHealthPercent(_ service: io_service_t, design: Int?, rawMax: Int?) -> Int? {
+        // Prefer System Settings figure when we can read it (cached ~1h).
+        if let cached = cachedSystemHealth, Date().timeIntervalSince(cached.at) < 3600 {
+            return cached.value
+        }
+        if let sys = readSystemProfilerMaxCapacity() {
+            cachedSystemHealth = (sys, Date())
+            return sys
+        }
         let designCap = design ?? ioPropertyInt(service, "DesignCapacity") ?? 0
         guard designCap > 0 else { return nil }
-        // Prefer raw mAh max / design (matches ~System Settings “Maximum Capacity”).
-        if let raw = rawMax ?? ioPropertyInt(service, "AppleRawMaxCapacity")
-            ?? ioPropertyInt(service, "NominalChargeCapacity"),
-           raw > 0 {
+        // Prefer AppleRawMaxCapacity / design. Avoid NominalChargeCapacity (often higher than Settings).
+        if let raw = rawMax ?? ioPropertyInt(service, "AppleRawMaxCapacity"), raw > 0 {
             return min(100, max(0, Int((Double(raw) / Double(designCap) * 100.0).rounded())))
+        }
+        if let nom = ioPropertyInt(service, "NominalChargeCapacity"), nom > 0 {
+            return min(100, max(0, Int((Double(nom) / Double(designCap) * 100.0).rounded())))
         }
         // Legacy: MaxCapacity was also mAh (never use when MaxCapacity ≤ 100 — that's %).
         if let maxCap = ioPropertyInt(service, "MaxCapacity"), maxCap > 100 {
             return min(100, Int((Double(maxCap) / Double(designCap) * 100.0).rounded()))
         }
         return nil
+    }
+
+    /// Parse `Maximum Capacity: N%` from system_profiler (matches System Settings Battery Health).
+    private static func readSystemProfilerMaxCapacity() -> Int? {
+        readSystemProfilerBatteryFields().health
+    }
+
+    /// State of Charge + Maximum Capacity from system_profiler SPPowerDataType.
+    private static func readSystemProfilerBatteryFields() -> (soc: Int?, health: Int?) {
+        guard let out = runTool("/usr/sbin/system_profiler", ["SPPowerDataType"]) else {
+            return (nil, nil)
+        }
+        var soc: Int?
+        var health: Int?
+        if let re = try? NSRegularExpression(pattern: #"State of Charge\s*\(%\):\s*(\d+)"#),
+           let m = re.firstMatch(in: out, range: NSRange(out.startIndex..., in: out)),
+           m.numberOfRanges > 1,
+           let r = Range(m.range(at: 1), in: out),
+           let v = Int(out[r]), v >= 0, v <= 100 {
+            soc = v
+        }
+        if let re = try? NSRegularExpression(pattern: #"Maximum Capacity:\s*(\d+)\s*%"#),
+           let m = re.firstMatch(in: out, range: NSRange(out.startIndex..., in: out)),
+           m.numberOfRanges > 1,
+           let r = Range(m.range(at: 1), in: out),
+           let v = Int(out[r]), v > 0, v <= 100 {
+            health = v
+        }
+        return (soc, health)
     }
 
     private static func readPmset() -> Snapshot? {
@@ -3528,8 +4232,11 @@ class BatteryMonitor: ObservableObject {
         guard let out = runTool("/usr/sbin/ioreg", ["-rn", "AppleSmartBattery", "-c", "AppleSmartBattery"]) else { return nil }
         var info = IoregBattery()
         info.batteryInstalled = out.contains("\"BatteryInstalled\" = Yes") || out.contains("\"built-in\" = Yes")
-        if let soc = matchInt(#"StateOfCharge"=\s*(\d+)"#, in: out) ?? matchInt(#"CurrentCapacity"=\s*(\d+)"#, in: out) {
-            info.levelPercent = min(100, soc)
+        // Prefer top-level CurrentCapacity (menu bar %). Never prefer nested StateOfCharge first.
+        if let cur = matchInt(#"\"CurrentCapacity\"\s*=\s*(\d+)"#, in: out), cur <= 100 {
+            info.levelPercent = cur
+        } else if let cur = matchInt(#"CurrentCapacity"=\s*(\d+)"#, in: out), cur <= 100 {
+            info.levelPercent = cur
         }
         info.isOnAC = out.contains("\"ExternalConnected\" = Yes") || out.contains("\"AppleRawExternalConnected\" = Yes")
         if out.contains("\"IsCharging\" = Yes") {
@@ -3558,21 +4265,22 @@ class BatteryMonitor: ObservableObject {
         if let raw = matchInt(#"Temperature"=\s*(\d+)"#, in: out) ?? matchInt(#"AppleRawBatteryTemperature"=\s*(\d+)"#, in: out) {
             info.temperatureCelsius = raw > 200 ? Double(raw) / 100.0 : Double(raw)
         }
-        // Health: AppleRawMaxCapacity / DesignCapacity (never MaxCapacity when it's 0–100 %).
+        // Health: AppleRawMaxCapacity / DesignCapacity only (NominalChargeCapacity inflates vs Settings).
         if let design = matchInt(#"DesignCapacity"\s*=\s*(\d+)"#, in: out), design > 0 {
-            if let rawMax = matchInt(#"AppleRawMaxCapacity"\s*=\s*(\d+)"#, in: out)
-                ?? matchInt(#"NominalChargeCapacity"\s*=\s*(\d+)"#, in: out), rawMax > 0 {
+            if let rawMax = matchInt(#"AppleRawMaxCapacity"\s*=\s*(\d+)"#, in: out), rawMax > 0 {
                 info.healthPercent = min(100, Int((Double(rawMax) / Double(design) * 100.0).rounded()))
             } else if let maxCap = matchInt(#"MaxCapacity"\s*=\s*(\d+)"#, in: out), maxCap > 100 {
                 info.healthPercent = min(100, Int((Double(maxCap) / Double(design) * 100.0).rounded()))
             }
         }
-        // Level: prefer CurrentCapacity when already 0…100 (menu-bar style).
-        if let cur = matchInt(#"CurrentCapacity"\s*=\s*(\d+)"#, in: out), cur <= 100 {
-            info.levelPercent = cur
-        } else if let raw = matchInt(#"AppleRawCurrentCapacity"\s*=\s*(\d+)"#, in: out),
-                  let rawMax = matchInt(#"AppleRawMaxCapacity"\s*=\s*(\d+)"#, in: out), rawMax > 0 {
-            info.levelPercent = min(100, Int((Double(raw) / Double(rawMax) * 100.0).rounded()))
+        // Level fallback if CurrentCapacity not already set.
+        if info.levelPercent <= 0 {
+            if let cur = matchInt(#"CurrentCapacity"\s*=\s*(\d+)"#, in: out), cur <= 100 {
+                info.levelPercent = cur
+            } else if let raw = matchInt(#"AppleRawCurrentCapacity"\s*=\s*(\d+)"#, in: out),
+                      let rawMax = matchInt(#"AppleRawMaxCapacity"\s*=\s*(\d+)"#, in: out), rawMax > 0 {
+                info.levelPercent = min(100, Int((Double(raw) / Double(rawMax) * 100.0).rounded()))
+            }
         }
         return info.levelPercent > 0 || info.isOnAC || info.adapterWatts > 0 || info.batteryInstalled ? info : nil
     }
@@ -3580,7 +4288,8 @@ class BatteryMonitor: ObservableObject {
     private static func applyIoregExtras(_ hw: IoregBattery, to snap: inout Snapshot) {
         if let c = hw.cycleCount { snap.cycleCount = c }
         if let t = hw.temperatureCelsius { snap.temperatureCelsius = t }
-        if let h = hw.healthPercent { snap.healthPercent = h }
+        // Don't let ioreg health overwrite a better System Settings / IOKit value.
+        if snap.healthPercent == nil, let h = hw.healthPercent { snap.healthPercent = h }
     }
 
     private static func matchInt(_ pattern: String, in text: String) -> Int? {
@@ -4676,8 +5385,18 @@ enum MonitorActivity {
     static var gpuInterval: TimeInterval { 3.0 }
     static var networkInterval: TimeInterval { popoverOpen ? 1.5 : 3.0 }
     static var batteryInterval: TimeInterval {
-        if popoverOpen { return 2.0 }
-        return idleProfile == .aggressive ? 10.0 : 5.0
+        // Adaptive: faster while discharging low / under load; slower on AC or idle.
+        let bat = BatteryMonitor.shared
+        let load = CPUMonitor.shared.totalUsage
+        if popoverOpen { return 1.5 }
+        if bat.isPresent, !bat.isOnAC, !bat.isCharging {
+            if bat.levelPercent < 25 || load >= 55 { return 1.5 }
+            if bat.levelPercent < 40 || load >= 35 { return 2.5 }
+            return idleProfile == .aggressive ? 6.0 : 3.5
+        }
+        if bat.isPresent, bat.isCharging { return 2.5 }
+        // On AC / desktop — keep light.
+        return idleProfile == .aggressive ? 12.0 : 8.0
     }
     static var memoryInterval: TimeInterval {
         if popoverOpen { return 2.0 }
@@ -4739,8 +5458,19 @@ enum MonitorActivity {
         }
     }
 
+    private static var lastBatteryIntervalApplied: TimeInterval = 0
+
+    static func refreshBatteryIntervalIfNeeded() {
+        let next = batteryInterval
+        if lastBatteryIntervalApplied == 0 || abs(next - lastBatteryIntervalApplied) > 0.45 {
+            lastBatteryIntervalApplied = next
+            BatteryMonitor.shared.applyActivityInterval()
+        }
+    }
+
     static func applyIdleProfileChange() {
         CPUMonitor.shared.setPollInterval(cpuInterval)
+        lastBatteryIntervalApplied = 0
         BatteryMonitor.shared.applyActivityInterval()
         NetworkMonitor.shared.applyActivityInterval()
     }
@@ -7236,6 +7966,7 @@ struct SettingsGeneralSection: View {
                     HStack(spacing: 10) {
                         MinimalButton(title: display.tr("general.checkUpdates"), action: {
                             updateStatus.refreshLabel()
+                            updateStatus.refreshIntegrityLabels()
                             UpdateChecker.checkManually()
                         })
                         if let url = URL(string: "https://chopstickshq.com/rnitro/") {
@@ -7247,6 +7978,14 @@ struct SettingsGeneralSection: View {
                             .foregroundColor(.accent)
                         }
                     }
+                    VStack(alignment: .leading, spacing: 4) {
+                        MonitorRow(label: display.tr("general.installedSha"), value: updateStatus.installedBinarySha)
+                        MonitorRow(label: display.tr("general.remoteZipSha"), value: updateStatus.remoteZipShaShort)
+                        Text("Installed SHA is the local binary; remote is the published App ZIP hash from version.json (verified on update).")
+                            .font(rNitroFont(.micro, metrics: metrics))
+                            .foregroundColor(.secondary.opacity(0.85))
+                    }
+                    .onAppear { updateStatus.refreshIntegrityLabels() }
                     if updateStatus.showWhatsNewBanner, !updateStatus.whatsNewText.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
@@ -7302,6 +8041,35 @@ struct SettingsGeneralSection: View {
                 .pickerStyle(.segmented)
                 Text(display.tr("general.idleHint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Text(display.tr("battery.lowAuto"))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                    .padding(.top, 8)
+                Text(display.tr("battery.lowAuto.hint"))
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Toggle(isOn: Binding(
+                    get: { LowBatteryAutomation.shared.isEnabled },
+                    set: { LowBatteryAutomation.shared.isEnabled = $0; LowBatteryAutomation.shared.evaluate(battery: BatteryMonitor.shared) }
+                )) {
+                    Text(display.tr("battery.lowAuto")).font(rNitroFont(.label, metrics: metrics))
+                }.toggleStyle(.switch)
+                Toggle(isOn: Binding(
+                    get: { LowBatteryAutomation.shared.notifyEnabled },
+                    set: { LowBatteryAutomation.shared.notifyEnabled = $0 }
+                )) {
+                    Text(display.tr("battery.lowNotify")).font(rNitroFont(.label, metrics: metrics))
+                }.toggleStyle(.switch)
+                Toggle(isOn: Binding(
+                    get: { LowBatteryAutomation.shared.dimEnabled },
+                    set: { LowBatteryAutomation.shared.dimEnabled = $0; LowBatteryAutomation.shared.evaluate(battery: BatteryMonitor.shared) }
+                )) {
+                    Text(display.tr("battery.lowDim")).font(rNitroFont(.label, metrics: metrics))
+                }.toggleStyle(.switch)
+                Toggle(isOn: Binding(
+                    get: { LowBatteryAutomation.shared.muteStressEnabled },
+                    set: { LowBatteryAutomation.shared.muteStressEnabled = $0; LowBatteryAutomation.shared.evaluate(battery: BatteryMonitor.shared) }
+                )) {
+                    Text(display.tr("battery.lowMute")).font(rNitroFont(.label, metrics: metrics))
+                }.toggleStyle(.switch)
                 if RNITRO_FEATURE_BETA_UI {
                     Toggle(isOn: Binding(
                         get: {
@@ -7677,6 +8445,14 @@ enum AdvisorNotificationCenter {
             stateLabel, temp
         )
         deliver(id: "rnitro.thermal.critical", title: "rNitro — Thermal Critical", body: body)
+    }
+
+    static func postBatteryLow(level: Int, critical: Bool) {
+        let title = critical ? "rNitro — Critical Battery" : "rNitro — Low Battery"
+        let body = critical
+            ? "Battery at \(level)%. Plug in soon — stress tools muted and UI dimmed if enabled."
+            : "Battery at \(level)%. Consider plugging in or enabling Low Power Mode."
+        deliver(id: critical ? "rnitro.battery.10" : "rnitro.battery.20", title: title, body: body)
     }
 
     private static func deliver(id: String, title: String, body: String) {
@@ -8395,7 +9171,12 @@ struct BatteryCpuPowerRow: View {
                 title: "BATTERY",
                 value: bat.isPresent ? "\(bat.levelPercent)" : "—",
                 unit: "%",
-                subtitle: bat.remainingTimeText.map { "left \($0)" },
+                subtitle: {
+                    if let left = bat.remainingTimeText {
+                        return "left \(left)"
+                    }
+                    return bat.chemicalGaugeSubtitle
+                }(),
                 color: bat.isCharging ? .nGreen : .accent,
                 action: onBatteryTap
             )
@@ -8578,25 +9359,60 @@ struct StatDetailPopup: View {
             ]
         case .battery:
             var rows: [(String, String)] = [
-                ("Level", battery.isPresent ? "\(battery.levelPercent)%" : "N/A"),
+                ("Level (menu bar)", battery.isPresent ? "\(battery.levelPercent)%" : "N/A"),
+            ]
+            if let chem = battery.chemicalSoC {
+                rows.append(("Chemical gauge", "\(chem)%"))
+            }
+            if let raw = battery.rawMahLevelPercent {
+                rows.append(("Raw mAh SoC", "\(raw)%"))
+            }
+            rows += [
                 ("Power Source", battery.powerSource),
                 ("AC Connected", battery.isOnAC ? "Yes" : "No"),
                 ("Charging", battery.isCharging ? "Yes" : "No"),
                 ("Charge Rate", battery.chargeRateText)
             ]
-            if battery.chargeWatts > 0 {
-                rows.append(("Adapter Power", String(format: "%.1f W", battery.chargeWatts)))
+            if abs(battery.packWattsSigned) > 0.05 {
+                rows.append(("Pack Power", String(format: "%+.2f W", battery.packWattsSigned)))
+            } else if battery.chargeWatts > 0 {
+                rows.append(("Pack Power", String(format: "%.1f W", battery.chargeWatts)))
+            }
+            if let ma = battery.amperageMa {
+                rows.append(("Amperage", "\(ma) mA"))
+            }
+            if let cur = battery.rawCurrentMah, let maxC = battery.rawMaxMah {
+                rows.append(("Capacity", "\(cur) / \(maxC) mAh"))
+            }
+            if let h = battery.healthPercent {
+                rows.append(("Maximum Capacity", "\(h)%"))
+            }
+            if let c = battery.cycleCount {
+                rows.append(("Cycle Count", "\(c)"))
             }
             if let eta = battery.timeToFullMinutes, eta > 0 {
                 rows.append(("Time to Full", "\(eta) min"))
             }
             if let rem = battery.remainingTimeText {
                 rows.append(("Time Remaining", rem))
+                rows.append(("Remaining source", battery.remainingSource))
             }
+            if let live = battery.liveEstimateMinutes, live > 0, live < 65535 {
+                let liveText: String = {
+                    if live >= 60 { return String(format: "%dh %dm (pack draw)", live / 60, live % 60) }
+                    return "\(live) min (pack draw)"
+                }()
+                rows.append(("At current draw", liveText))
+            }
+            // Compare mode
+            if let p = battery.diagPmsetPercent { rows.append(("pmset %", "\(p)")) }
+            if let p = battery.diagIOPSPercent { rows.append(("IOPS %", "\(p)")) }
+            if let c = battery.diagIOKitCurrentCapacity { rows.append(("IOKit CurrentCapacity", "\(c)")) }
             if monitor.isLowPowerModeEnabled {
                 rows.append(("Low Power Mode", "On — clocks/background work may be reduced"))
             }
-            rows.append(("Source", "IOKit + pmset/ioreg fallback (macOS)"))
+            rows.append(("Source", battery.diagSourceLabel))
+            rows.append(("Note", "UI % matches menu bar; chemical gauge can trail."))
             return rows
         case .cpuPower:
             let measured = monitor.packagePowerSource.contains("measured")
@@ -9178,6 +9994,22 @@ final class DisplayPreferencesStore: ObservableObject {
         "fathom.discover": "See battery drain attribution (Fathom)",
         "fathom.hint": "Fathom attributes which apps drain battery — opens the app if installed, otherwise the download page.",
         "fathom.open": "Open Fathom — battery drain attribution",
+        "battery.copyDiag": "Copy battery diagnostics",
+        "battery.copyDiag.hint": "Copies pmset / IOPS / IOKit / chemical SoC compare for support.",
+        "row.chemicalGauge": "Chemical gauge",
+        "row.batteryHealth": "Battery health",
+        "row.topEnergy": "Top CPU (energy proxy)",
+        "row.topEnergy.hint": "macOS has no public per-app energy API; CPU% is the best free proxy. Use Fathom for deeper drain attribution.",
+        "row.packDrain": "Pack power (1h)",
+        "battery.lowAuto": "Low-battery automation",
+        "battery.lowAuto.hint": "At 20%/10%: notify, dim monitor panel, mute stress tools (Settings).",
+        "battery.lowNotify": "Notify at 20% / 10%",
+        "battery.lowDim": "Dim panel when ≤20%",
+        "battery.lowMute": "Mute stress tools when ≤20%",
+        "general.installedSha": "Installed binary SHA",
+        "general.remoteZipSha": "Remote ZIP SHA",
+        "general.shaMatch": "ZIP hash",
+        "general.shaUnknown": "not published",
         "general.channel": "Channel",
         "general.checkUpdates": "Check for Updates",
         "general.compileFarm": "Compile-farm mode",
@@ -11787,6 +12619,13 @@ final class StressTester: ObservableObject {
 
     func start() {
         guard !isRunning else { return }
+        if LowBatteryAutomation.shared.muteStressTools {
+            AdvisorNotificationCenter.postBatteryLow(
+                level: BatteryMonitor.shared.levelPercent,
+                critical: BatteryMonitor.shared.levelPercent <= 10
+            )
+            return
+        }
         stop()
         isRunning = true
         stopFlag = false
@@ -12764,6 +13603,15 @@ struct MonitorBatterySectionView: View {
                 onBatteryTap: bat.isPresent ? onBatteryTap : nil,
                 onCpuPowerTap: onCpuPowerTap
             )
+            if bat.isPresent {
+                // OS strip — same contract as menu bar / IOPS / pmset
+                Text(bat.osStripText)
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 2)
+                    .help("Primary charge % and remaining time from local IOPS + pmset (menu bar).")
+            }
             if m.isLowPowerModeEnabled {
                 MonitorRow(
                     label: display.tr("row.lowPower"),
@@ -12772,6 +13620,132 @@ struct MonitorBatterySectionView: View {
                 )
             }
             if bat.isPresent {
+                MonitorRow(
+                    label: "Remaining source",
+                    value: bat.remainingSource,
+                    valueColor: .secondary
+                )
+                if let live = bat.liveEstimateMinutes, live > 0, live < 65535,
+                   let os = bat.timeRemainingMinutes, abs(live - os) >= 8 {
+                    let liveText = live >= 60
+                        ? String(format: "%dh %dm", live / 60, live % 60)
+                        : "\(live) min"
+                    MonitorRow(
+                        label: "At current draw",
+                        value: liveText,
+                        valueColor: .secondary
+                    )
+                }
+                if let chem = bat.chemicalSoC, abs(chem - bat.levelPercent) >= 1 {
+                    MonitorRow(
+                        label: display.tr("row.chemicalGauge"),
+                        value: "\(chem)%",
+                        valueColor: .secondary
+                    )
+                }
+                if bat.healthPercent != nil || bat.cycleCount != nil {
+                    MonitorRow(
+                        label: display.tr("row.batteryHealth"),
+                        value: {
+                            var parts: [String] = []
+                            if let h = bat.healthPercent { parts.append("\(h)% max") }
+                            if let c = bat.cycleCount { parts.append("\(c) cycles") }
+                            return parts.joined(separator: " · ")
+                        }()
+                    )
+                }
+                // Top CPU processes as energy proxy (macOS has no public per-app energy API).
+                let tops = ProcessMonitor.shared.topByCPU.prefix(5)
+                if !tops.isEmpty, !bat.isOnAC || bat.isCharging {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(display.tr("row.topEnergy"))
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        ForEach(Array(tops.enumerated()), id: \.offset) { _, p in
+                            HStack {
+                                Text(p.name)
+                                    .font(rNitroFont(.caption, metrics: metrics))
+                                    .lineLimit(1)
+                                Spacer(minLength: 6)
+                                Text(String(format: "%.0f%% CPU", p.cpuPercent))
+                                    .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
+                                    .foregroundColor(Color.usage(min(p.cpuPercent, 100)))
+                            }
+                        }
+                        Text(display.tr("row.topEnergy.hint"))
+                            .font(rNitroFont(.micro, metrics: metrics))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    }
+                    .padding(.vertical, 4)
+                }
+                HStack(spacing: 12) {
+                    Button {
+                        bat.runParitySelfTest()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: bat.parityRunning ? "hourglass" : "checkmark.shield")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(bat.parityRunning ? "Comparing…" : "Compare with macOS")
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        }
+                        .foregroundColor(.accent)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(bat.parityRunning)
+                    .help("One-shot IOPS + pmset + system_profiler vs rNitro UI.")
+                    Button {
+                        bat.copyDiagnosticsToPasteboard()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "doc.on.clipboard")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(display.tr("battery.copyDiag"))
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        }
+                        .foregroundColor(.accent)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.plain)
+                    .help(display.tr("battery.copyDiag.hint"))
+                    Spacer(minLength: 0)
+                }
+                if let rep = bat.parityReport {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Image(systemName: rep.percentOK && rep.remainingOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .foregroundColor(rep.percentOK && rep.remainingOK ? .nGreen : .nOrange)
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(rep.summary)
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                                .foregroundColor(rep.percentOK && rep.remainingOK ? .nGreen : .nOrange)
+                        }
+                        Text("IOPS \(rep.iopsPercent.map { "\($0)%" } ?? "—") · pmset \(rep.pmsetPercent.map { "\($0)%" } ?? "—") · profiler \(rep.profilerSoC.map { "\($0)%" } ?? "—") · rNitro \(rep.rnitroPercent)%")
+                            .font(rNitroFont(.micro, metrics: metrics))
+                            .foregroundColor(.secondary)
+                        let remLine = "rem IOPS \(rep.iopsRemainingMin.map(String.init) ?? "—") · pmset \(rep.pmsetRemainingMin.map(String.init) ?? "—") · rNitro \(rep.rnitroRemainingMin.map(String.init) ?? "—") min"
+                        Text(remLine)
+                            .font(rNitroFont(.micro, metrics: metrics))
+                            .foregroundColor(.secondary)
+                        if let h = rep.profilerHealth {
+                            Text("System Settings max capacity: \(h)%")
+                                .font(rNitroFont(.micro, metrics: metrics))
+                                .foregroundColor(.secondary)
+                        }
+                        Button {
+                            bat.copyParityReportToPasteboard()
+                        } label: {
+                            Text("Copy parity report")
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                                .foregroundColor(.accent)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.primary.opacity(0.04))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
                 Button {
                     FathomLink.openOrInstall()
                 } label: {
@@ -12792,6 +13766,20 @@ struct MonitorBatterySectionView: View {
                 }
                 .buttonStyle(.plain)
                 .help(display.tr("fathom.hint"))
+            }
+            // Pack drain / charge history (1h) when available; else SoC package power.
+            if !bat.powerHistory1h.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(display.tr("row.packDrain"))
+                        .font(rNitroFont(.caption, metrics: metrics))
+                        .foregroundColor(.secondary)
+                    PowerGraphView(
+                        history: bat.powerHistory1h,
+                        color: bat.isCharging ? .nGreen : .nOrange,
+                        maxWatts: max(bat.powerHistory1h.max() ?? 1, 4)
+                    )
+                    .frame(height: metrics.graphHeight)
+                }
             }
             PowerGraphView(
                 history: m.powerHistory,
@@ -13059,9 +14047,11 @@ struct MonitorToolsSectionView: View {
                 Text(display.tr("row.stress")).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                 Spacer()
                 MinimalButton(
-                    title: stress.isRunning ? display.tr("btn.stop") : display.tr("btn.start"),
+                    title: stress.isRunning ? display.tr("btn.stop") : (
+                        LowBatteryAutomation.shared.muteStressTools ? "Muted" : display.tr("btn.start")
+                    ),
                     tint: stress.isRunning ? .nRed : .nOrange,
-                    disabled: bench.isRunning,
+                    disabled: bench.isRunning || (!stress.isRunning && LowBatteryAutomation.shared.muteStressTools),
                     action: { stress.isRunning ? stress.stop() : stress.start() }
                 )
             }
@@ -15355,6 +16345,7 @@ struct ContentView: View {
     let tabs: [AppTab]
     var layout: ContentLayout = .window
     @ObservedObject private var advisor = SystemAdvisorModel.shared
+    @ObservedObject private var lowBattery = LowBatteryAutomation.shared
     @State private var statDetail: StatDetailKind? = nil
     @State private var tab: AppTab = .monitor
     @State private var showFirstLaunchTips = FirstLaunchTips.shouldShow
@@ -15371,6 +16362,7 @@ struct ContentView: View {
                     rootContent
                 }
             }
+            .opacity(lowBattery.isLowPowerDim ? 0.72 : 1.0)
             .preferredColorScheme(display.appearanceMode.preferredColorScheme)
             .sheet(isPresented: $showFirstLaunchTips) {
                 FirstLaunchTipsSheet(isPresented: $showFirstLaunchTips)
@@ -16149,8 +17141,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.10-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.10-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.15-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.15-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
