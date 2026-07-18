@@ -858,6 +858,78 @@
     word-break: break-all;
   }
 
+
+  /* ── Next releases (tabbed roadmap) ── */
+  .next-releases {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 16px 8px;
+  }
+  .next-rel-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 16px;
+  }
+  .next-rel-tab {
+    appearance: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .next-rel-tab:hover {
+    filter: brightness(1.08);
+  }
+  .next-rel-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 720px) {
+    .next-rel-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .next-rel-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .next-rel-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .next-rel-card-head strong {
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  .next-rel-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--bg2);
+  }
+  .next-rel-eta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .next-rel-card ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .next-rel-card li { margin-bottom: 4px; color: var(--muted); }
+  .next-rel-card li::marker { color: var(--cyan); }
+
   /* ── Minecraft server (unrelated community section) ── */
   .mc-section {
     position: relative;
@@ -1607,6 +1679,140 @@
     </div>
   </div>
 <!-- @end:screenshots -->
+</section>
+
+
+<!-- Next releases (tabbed roadmap) -->
+<section class="section" style="padding-top:24px; padding-bottom:8px;" id="next-releases-section">
+  <div class="section-label">Roadmap</div>
+  <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 12px; max-width:980px; margin-left:auto; margin-right:auto; padding:0 16px;">Next releases</h2>
+<!-- @sync:next-releases -->
+  <div id="next-releases" class="next-releases">
+    <p class="prev-versions-note">Planned work — versions, ETAs, and scope can change. Experimental ships first; Beta and Stable absorb proven features. · Updated 2026-07-18</p>
+    <div class="next-rel-tabs" role="tablist" aria-label="Next releases by channel">
+      <button type="button" role="tab" id="next-tab-experimental" aria-controls="next-panel-experimental" aria-selected="true" class="next-rel-tab is-active" data-next-tab="experimental" data-color="#b8a0ff" data-bg="rgba(155,123,255,0.12)" data-border="rgba(155,123,255,0.45)" onclick="setNextReleaseTab('experimental')" style="padding:7px 16px; border-radius:20px; border:1px solid rgba(155,123,255,0.45); background:rgba(155,123,255,0.12); color:#b8a0ff; font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer;">Experimental</button>
+      <button type="button" role="tab" id="next-tab-beta" aria-controls="next-panel-beta" aria-selected="false" class="next-rel-tab" data-next-tab="beta" data-color="var(--orange)" data-bg="rgba(255,140,26,0.12)" data-border="rgba(255,140,26,0.4)" onclick="setNextReleaseTab('beta')" style="padding:7px 16px; border-radius:20px; border:1px solid rgba(255,140,26,0.4); background:transparent; color:var(--muted); font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer;">Beta</button>
+      <button type="button" role="tab" id="next-tab-stable" aria-controls="next-panel-stable" aria-selected="false" class="next-rel-tab" data-next-tab="stable" data-color="var(--green)" data-bg="rgba(0,255,136,0.12)" data-border="rgba(0,255,136,0.35)" onclick="setNextReleaseTab('stable')" style="padding:7px 16px; border-radius:20px; border:1px solid rgba(0,255,136,0.35); background:transparent; color:var(--muted); font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer;">Stable</button>
+      <button type="button" role="tab" id="next-tab-other" aria-controls="next-panel-other" aria-selected="false" class="next-rel-tab" data-next-tab="other" data-color="var(--cyan)" data-bg="rgba(0,217,255,0.1)" data-border="rgba(0,217,255,0.35)" onclick="setNextReleaseTab('other')" style="padding:7px 16px; border-radius:20px; border:1px solid rgba(0,217,255,0.35); background:transparent; color:var(--muted); font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer;">Other platforms</button>
+    </div>
+      <div id="next-panel-experimental" role="tabpanel" aria-labelledby="next-tab-experimental" class="next-rel-panel" data-next-panel="experimental" style="display:block;">
+        <p class="prev-versions-note">Current on this channel: <strong style="color:#b8a0ff;">v1.3.15-Experimental</strong></p>
+        <div class="next-rel-grid">
+          <div class="next-rel-card" style="border-color:rgba(155,123,255,0.45);">
+            <div class="next-rel-card-head">
+              <strong style="color:#b8a0ff;">v1.3.16-Experimental</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: Next Exp</p>
+            <ul>
+              <li>Lighter battery sampling (IOPS-first, less pmset subprocess load)</li>
+              <li>Drain session log (local % / remaining / watts while discharging)</li>
+              <li>Battery settings panel (automation, chemical gauge, live-draw ETA toggles)</li>
+            </ul>
+          </div>
+          <div class="next-rel-card" style="border-color:rgba(155,123,255,0.45);">
+            <div class="next-rel-card-head">
+              <strong style="color:#b8a0ff;">v1.3.x Exp</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: Ongoing</p>
+            <ul>
+              <li>Menu bar battery slot always matches IOPS/pmset strip</li>
+              <li>Fathom deep-link with optional diagnostics clipboard</li>
+              <li>Lab / playground experiments (expect breakage)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="next-panel-beta" role="tabpanel" aria-labelledby="next-tab-beta" class="next-rel-panel" data-next-panel="beta" style="display:none;">
+        <p class="prev-versions-note">Current on this channel: <strong style="color:var(--orange);">v1.2.13</strong></p>
+        <div class="next-rel-grid">
+          <div class="next-rel-card" style="border-color:rgba(255,140,26,0.4);">
+            <div class="next-rel-card-head">
+              <strong style="color:var(--orange);">v1.2.14 Beta</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: When Exp battery path is stable</p>
+            <ul>
+              <li>Promote IOPS + pmset battery accuracy from Experimental</li>
+              <li>OS strip + Compare with macOS parity self-test</li>
+              <li>Low-battery automation toggles (notify / dim / mute stress)</li>
+            </ul>
+          </div>
+          <div class="next-rel-card" style="border-color:rgba(255,140,26,0.4);">
+            <div class="next-rel-card-head">
+              <strong style="color:var(--orange);">v1.2.x Beta</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: Later</p>
+            <ul>
+              <li>Lab polish and reliability</li>
+              <li>Update UX parity with Experimental channel badge / SHA labels</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="next-panel-stable" role="tabpanel" aria-labelledby="next-tab-stable" class="next-rel-panel" data-next-panel="stable" style="display:none;">
+        <p class="prev-versions-note">Current on this channel: <strong style="color:var(--green);">v1.2.9-Final</strong></p>
+        <div class="next-rel-grid">
+          <div class="next-rel-card" style="border-color:rgba(0,255,136,0.35);">
+            <div class="next-rel-card-head">
+              <strong style="color:var(--green);">v1.3.0 Final (tentative)</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: After Beta soak</p>
+            <ul>
+              <li>Daily-driver battery readings aligned with menu bar (IOPS/pmset)</li>
+              <li>Hardened auto-update (ZIP SHA-256, install path allowlist, codesign verify)</li>
+              <li>Theme + font catalog from current Final line</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="next-panel-other" role="tabpanel" aria-labelledby="next-tab-other" class="next-rel-panel" data-next-panel="other" style="display:none;">
+        <p class="prev-versions-note">Current on this channel: <strong style="color:var(--cyan);">CLI v0.2 · Linux v0.1 · Windows legacy</strong></p>
+        <div class="next-rel-grid">
+          <div class="next-rel-card" style="border-color:rgba(0,217,255,0.35);">
+            <div class="next-rel-card-head">
+              <strong style="color:var(--cyan);">CLI / Linux</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: Best-effort</p>
+            <ul>
+              <li>CLI sensor accuracy improvements where possible</li>
+              <li>Linux packaging polish (still pre-release)</li>
+            </ul>
+          </div>
+          <div class="next-rel-card" style="border-color:rgba(0,217,255,0.35);">
+            <div class="next-rel-card-head">
+              <strong style="color:var(--cyan);">Website</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: Ongoing</p>
+            <ul>
+              <li>HQ-only download origin as getrnitro redeploy stays limited</li>
+              <li>Keep Next releases tab updated with each ship</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+  </div>
+
+  <script>
+  function setNextReleaseTab(id) {
+    document.querySelectorAll('.next-rel-tab').forEach(function(btn) {
+      var on = btn.getAttribute('data-next-tab') === id;
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      btn.classList.toggle('is-active', on);
+      btn.style.background = on ? (btn.getAttribute('data-bg') || 'transparent') : 'transparent';
+      btn.style.color = on ? (btn.getAttribute('data-color') || 'var(--text)') : 'var(--muted)';
+    });
+    document.querySelectorAll('.next-rel-panel').forEach(function(p) {
+      p.style.display = p.getAttribute('data-next-panel') === id ? 'block' : 'none';
+    });
+  }
+  </script>
+<!-- @end:next-releases -->
 </section>
 
 <!-- Changelog (above Community / Minecraft) -->

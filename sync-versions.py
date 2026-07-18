@@ -1029,6 +1029,122 @@ def download_card_windows(data: dict) -> str:
   </div>"""
 
 
+
+def load_roadmap() -> dict:
+    path = SITE / "roadmap.json"
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def next_releases_section(data: dict | None = None, roadmap: dict | None = None) -> str:
+    """Tabbed Next releases roadmap (Experimental / Beta / Stable / Other)."""
+    roadmap = roadmap if roadmap is not None else load_roadmap()
+    channels = roadmap.get("channels") or []
+    if not channels:
+        return ""
+    if data is None:
+        try:
+            data = v.load()
+        except Exception:
+            data = {}
+    exp = v.experimental_release(data) if data else {}
+    beta = v.beta_release(data) if data else {}
+    stable = v.stable_release(data) if data else {}
+    current_map = {
+        "experimental": exp.get("id") or data.get("experimental", ""),
+        "beta": beta.get("id") or data.get("beta", ""),
+        "stable": stable.get("id") or data.get("latest", ""),
+    }
+    accent_css = {
+        "green": ("var(--green)", "rgba(0,255,136,0.35)", "rgba(0,255,136,0.12)"),
+        "orange": ("var(--orange)", "rgba(255,140,26,0.4)", "rgba(255,140,26,0.12)"),
+        "purple": ("#b8a0ff", "rgba(155,123,255,0.45)", "rgba(155,123,255,0.12)"),
+        "cyan": ("var(--cyan)", "rgba(0,217,255,0.35)", "rgba(0,217,255,0.1)"),
+    }
+    tabs = []
+    panels = []
+    for i, ch in enumerate(channels):
+        cid = ch.get("id", f"ch{i}")
+        label = ch.get("label", cid)
+        accent = ch.get("accent", "green")
+        color, border, bg = accent_css.get(accent, accent_css["green"])
+        selected = i == 0
+        aria = "true" if selected else "false"
+        active = " is-active" if selected else ""
+        tab_style = (
+            f"padding:7px 16px; border-radius:20px; border:1px solid {border}; "
+            f"background:{bg if selected else 'transparent'}; "
+            f"color:{color if selected else 'var(--muted)'}; "
+            f"font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer;"
+        )
+        tabs.append(
+            f'      <button type="button" role="tab" id="next-tab-{cid}" aria-controls="next-panel-{cid}" '
+            f'aria-selected="{aria}" class="next-rel-tab{active}" data-next-tab="{cid}" '
+            f'data-color="{color}" data-bg="{bg}" data-border="{border}" '
+            f'onclick="setNextReleaseTab(\'{cid}\')" style="{tab_style}">{label}</button>'
+        )
+        cur = current_map.get(cid) or ch.get("current", "—")
+        cards = []
+        for item in ch.get("next") or []:
+            ver = item.get("version", "TBD")
+            eta = item.get("eta", "")
+            status = item.get("status", "planned")
+            lis = "\n".join(f"              <li>{x}</li>" for x in (item.get("items") or []))
+            eta_html = f'<p class="next-rel-eta">ETA: {eta}</p>' if eta else ""
+            cards.append(
+                f'          <div class="next-rel-card" style="border-color:{border};">\n'
+                f'            <div class="next-rel-card-head">\n'
+                f'              <strong style="color:{color};">{ver}</strong>\n'
+                f'              <span class="next-rel-badge">{status}</span>\n'
+                f'            </div>\n'
+                f'            {eta_html}\n'
+                f'            <ul>\n{lis}\n            </ul>\n'
+                f'          </div>'
+            )
+        body = "\n".join(cards) if cards else '          <p class="prev-versions-note">No planned items yet.</p>'
+        display = "block" if selected else "none"
+        panels.append(
+            f'      <div id="next-panel-{cid}" role="tabpanel" aria-labelledby="next-tab-{cid}" '
+            f'class="next-rel-panel" data-next-panel="{cid}" style="display:{display};">\n'
+            f'        <p class="prev-versions-note">Current on this channel: '
+            f'<strong style="color:{color};">{cur}</strong></p>\n'
+            f'        <div class="next-rel-grid">\n{body}\n        </div>\n'
+            f'      </div>'
+        )
+    note = roadmap.get("note") or "Planned work — versions and dates may change."
+    updated = roadmap.get("updated") or ""
+    updated_line = f" · Updated {updated}" if updated else ""
+    script = """
+  <script>
+  function setNextReleaseTab(id) {
+    document.querySelectorAll('.next-rel-tab').forEach(function(btn) {
+      var on = btn.getAttribute('data-next-tab') === id;
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      btn.classList.toggle('is-active', on);
+      btn.style.background = on ? (btn.getAttribute('data-bg') || 'transparent') : 'transparent';
+      btn.style.color = on ? (btn.getAttribute('data-color') || 'var(--text)') : 'var(--muted)';
+    });
+    document.querySelectorAll('.next-rel-panel').forEach(function(p) {
+      p.style.display = p.getAttribute('data-next-panel') === id ? 'block' : 'none';
+    });
+  }
+  </script>"""
+    return (
+        f'  <div id="next-releases" class="next-releases">\n'
+        f'    <p class="prev-versions-note">{note}{updated_line}</p>\n'
+        f'    <div class="next-rel-tabs" role="tablist" aria-label="Next releases by channel">\n'
+        f'{chr(10).join(tabs)}\n'
+        f'    </div>\n'
+        f'{chr(10).join(panels)}\n'
+        f'  </div>\n'
+        f'{script}'
+    )
+
+
 def whats_new_section(changelog: dict) -> str:
     cards = []
     for card in changelog.get("whats_new", []):
@@ -1711,6 +1827,7 @@ def sync_index(data: dict) -> None:
         "download-previous": download_previous_section(data),
         "stable-beta-compare": stable_beta_compare_section(changelog, data),
         "whats-new": whats_new_section(changelog),
+        "next-releases": next_releases_section(data, load_roadmap()),
         "changelog": changelog_section(changelog),
         "chat-kb-platform": chat_kb_platform(data),
         "chat-whats-new": chat_whats_new_kb(data, changelog),

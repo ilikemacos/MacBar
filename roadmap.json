@@ -1,0 +1,105 @@
+{
+  "updated": "2026-07-18",
+  "note": "Planned work — versions, ETAs, and scope can change. Experimental ships first; Beta and Stable absorb proven features.",
+  "channels": [
+    {
+      "id": "experimental",
+      "label": "Experimental",
+      "accent": "purple",
+      "current": "v1.3.15-Experimental",
+      "next": [
+        {
+          "version": "v1.3.16-Experimental",
+          "eta": "Next Exp",
+          "status": "planned",
+          "items": [
+            "Lighter battery sampling (IOPS-first, less pmset subprocess load)",
+            "Drain session log (local % / remaining / watts while discharging)",
+            "Battery settings panel (automation, chemical gauge, live-draw ETA toggles)"
+          ]
+        },
+        {
+          "version": "v1.3.x Exp",
+          "eta": "Ongoing",
+          "status": "planned",
+          "items": [
+            "Menu bar battery slot always matches IOPS/pmset strip",
+            "Fathom deep-link with optional diagnostics clipboard",
+            "Lab / playground experiments (expect breakage)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "beta",
+      "label": "Beta",
+      "accent": "orange",
+      "current": "v1.2.13",
+      "next": [
+        {
+          "version": "v1.2.14 Beta",
+          "eta": "When Exp battery path is stable",
+          "status": "planned",
+          "items": [
+            "Promote IOPS + pmset battery accuracy from Experimental",
+            "OS strip + Compare with macOS parity self-test",
+            "Low-battery automation toggles (notify / dim / mute stress)"
+          ]
+        },
+        {
+          "version": "v1.2.x Beta",
+          "eta": "Later",
+          "status": "planned",
+          "items": [
+            "Lab polish and reliability",
+            "Update UX parity with Experimental channel badge / SHA labels"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stable",
+      "label": "Stable",
+      "accent": "green",
+      "current": "v1.2.9-Final",
+      "next": [
+        {
+          "version": "v1.3.0 Final (tentative)",
+          "eta": "After Beta soak",
+          "status": "planned",
+          "items": [
+            "Daily-driver battery readings aligned with menu bar (IOPS/pmset)",
+            "Hardened auto-update (ZIP SHA-256, install path allowlist, codesign verify)",
+            "Theme + font catalog from current Final line"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "label": "Other platforms",
+      "accent": "cyan",
+      "current": "CLI v0.2 · Linux v0.1 · Windows legacy",
+      "next": [
+        {
+          "version": "CLI / Linux",
+          "eta": "Best-effort",
+          "status": "planned",
+          "items": [
+            "CLI sensor accuracy improvements where possible",
+            "Linux packaging polish (still pre-release)"
+          ]
+        },
+        {
+          "version": "Website",
+          "eta": "Ongoing",
+          "status": "planned",
+          "items": [
+            "HQ-only download origin as getrnitro redeploy stays limited",
+            "Keep Next releases tab updated with each ship"
+          ]
+        }
+      ]
+    }
+  ]
+}
