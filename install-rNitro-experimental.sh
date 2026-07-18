@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="f69e3315e3288ef967dc89aea306425960028e6a3759846fa186a66d9e0be649"
+EXPECTED_HASH="00354010b0817fdaf2af8a1e9cd5407967248285e194f5ba608344e4a272cdf4"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -377,7 +377,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.16-Experimental"
+let CURRENT_VERSION = "v1.3.17-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -3115,7 +3115,7 @@ class BatteryMonitor: ObservableObject {
         return parts.joined(separator: " · ")
     }
 
-    struct ParityReport: Equatable {
+    struct ParityReport: Equatable, Codable {
         var iopsPercent: Int?
         var iopsRemainingMin: Int?
         var pmsetPercent: Int?
@@ -3129,7 +3129,11 @@ class BatteryMonitor: ObservableObject {
         var remainingOK: Bool
         var summary: String
         var detailText: String
+        var checkedAt: Date?
     }
+
+    private static let parityCacheKey = "rnitro.battery.lastParityReport"
+    private static let batteryExpandedKey = "rnitro.sectionExpanded.battery"
 
     func runParitySelfTest() {
         guard !parityRunning else { return }
@@ -3179,7 +3183,8 @@ class BatteryMonitor: ObservableObject {
                 if !percentOK { return "Mismatch: charge %" }
                 return "Mismatch: remaining time"
             }()
-            let report = ParityReport(
+            let checked = Date()
+            var report = ParityReport(
                 iopsPercent: iopsPct,
                 iopsRemainingMin: iopsRem,
                 pmsetPercent: pmPct,
@@ -3192,8 +3197,14 @@ class BatteryMonitor: ObservableObject {
                 percentOK: percentOK,
                 remainingOK: remainingOK,
                 summary: summary,
-                detailText: lines.joined(separator: "\n")
+                detailText: "",
+                checkedAt: checked
             )
+            lines.insert("Checked: " + ISO8601DateFormatter().string(from: checked), at: 1)
+            report.detailText = lines.joined(separator: "\n")
+            if let data = try? JSONEncoder().encode(report) {
+                UserDefaults.standard.set(data, forKey: Self.parityCacheKey)
+            }
             DispatchQueue.main.async {
                 self.parityReport = report
                 self.parityRunning = false
@@ -3256,9 +3267,23 @@ class BatteryMonitor: ObservableObject {
         var diagSourceLabel = "IOKit"
     }
 
-    init() {}
+    init() {
+        Self.ensureBatterySectionDefaultExpanded()
+        if let data = UserDefaults.standard.data(forKey: Self.parityCacheKey),
+           let cached = try? JSONDecoder().decode(ParityReport.self, from: data) {
+            parityReport = cached
+        }
+    }
+
+    static func ensureBatterySectionDefaultExpanded() {
+        let d = UserDefaults.standard
+        if d.object(forKey: batteryExpandedKey) == nil {
+            d.set(true, forKey: batteryExpandedKey)
+        }
+    }
 
     func startMonitoring() {
+        Self.ensureBatterySectionDefaultExpanded()
         applyActivityInterval()
     }
 
@@ -3449,9 +3474,22 @@ class BatteryMonitor: ObservableObject {
         //  4) ioreg fallback if needed
         // Never invent a different charge % than IOPS/pmset.
         var snap = readIOPS() ?? Snapshot()
-        if let pm = readPmset() { mergePmsetAsAuthority(pm, into: &snap) }
+        if shouldRefreshPmset(for: snap) {
+            if let pm = readPmset() {
+                mergePmsetAsAuthority(pm, into: &snap)
+                lastPmsetRefresh = Date()
+                lastPmsetLevel = snap.levelPercent
+            }
+        } else if snap.levelPercent > 0 {
+            if snap.remainingSource.isEmpty || snap.remainingSource == "IOKit" {
+                snap.remainingSource = "IOPS"
+            }
+        }
         if let iokit = readIOKitBattery() { mergeIOKitTelemetryOnly(iokit, into: &snap) }
-        if let hw = readIoreg() { mergeIoreg(hw, into: &snap) }
+        if shouldRefreshIoreg(for: snap), let hw = readIoreg() {
+            mergeIoreg(hw, into: &snap)
+            lastIoregRefresh = Date()
+        }
         finalizeSnapshot(
             &snap,
             prevLevel: prevLevel,
@@ -3459,6 +3497,30 @@ class BatteryMonitor: ObservableObject {
             recentDrainPctPerHour: recentDrainPctPerHour
         )
         return snap
+    }
+
+    private static var lastPmsetRefresh: Date = .distantPast
+    private static var lastPmsetLevel: Int = -1
+    private static var lastIoregRefresh: Date = .distantPast
+    private static let pmsetMinInterval: TimeInterval = 30
+    private static let ioregMinInterval: TimeInterval = 120
+
+    private static func shouldRefreshPmset(for snap: Snapshot) -> Bool {
+        if snap.levelPercent <= 0 { return true }
+        let needsTime = (!snap.isOnAC && !snap.isCharging && (snap.timeRemainingMinutes == nil || (snap.timeRemainingMinutes ?? 0) <= 0))
+            || (snap.isCharging && (snap.timeToFullMinutes == nil || (snap.timeToFullMinutes ?? 0) <= 0))
+        if needsTime { return true }
+        if Date().timeIntervalSince(lastPmsetRefresh) >= pmsetMinInterval { return true }
+        if lastPmsetLevel >= 0, abs(snap.levelPercent - lastPmsetLevel) >= 2,
+           Date().timeIntervalSince(lastPmsetRefresh) >= 5 {
+            return true
+        }
+        return false
+    }
+
+    private static func shouldRefreshIoreg(for snap: Snapshot) -> Bool {
+        if snap.cycleCount == nil && snap.healthPercent == nil { return true }
+        return Date().timeIntervalSince(lastIoregRefresh) >= ioregMinInterval
     }
 
     private static func finalizeSnapshot(
@@ -13676,6 +13738,13 @@ struct MonitorBatterySectionView: View {
     let onBatteryTap: () -> Void
     let onCpuPowerTap: () -> Void
 
+    private func parityAgeLabel(_ date: Date?) -> String {
+        guard let date else { return "last check" }
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .short
+        return f.localizedString(for: date, relativeTo: Date())
+    }
+
     var body: some View {
         MonitorSection(
             title: display.tr("section.battery"),
@@ -13806,6 +13875,9 @@ struct MonitorBatterySectionView: View {
                             Text(rep.summary)
                                 .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                                 .foregroundColor(rep.percentOK && rep.remainingOK ? .nGreen : .nOrange)
+                            Text(parityAgeLabel(rep.checkedAt))
+                                .font(rNitroFont(.micro, metrics: metrics))
+                                .foregroundColor(.secondary)
                         }
                         Text("IOPS \(rep.iopsPercent.map { "\($0)%" } ?? "—") · pmset \(rep.pmsetPercent.map { "\($0)%" } ?? "—") · profiler \(rep.profilerSoC.map { "\($0)%" } ?? "—") · rNitro \(rep.rnitroPercent)%")
                             .font(rNitroFont(.micro, metrics: metrics))
@@ -13875,6 +13947,7 @@ struct MonitorBatterySectionView: View {
             )
             .frame(height: metrics.graphHeight)
         }
+        .onAppear { BatteryMonitor.ensureBatterySectionDefaultExpanded() }
     }
 }
 
@@ -17546,8 +17619,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.16-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.16-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.17-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.17-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

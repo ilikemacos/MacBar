@@ -1,6 +1,6 @@
 {
   "latest": "v1.2.9-Final",
-  "beta": "v1.2.13",
+  "beta": "v1.2.14",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
   "windows": "v4.2.4-Windows-Final-x86",
   "cli": "v0.2-cli",
@@ -14,13 +14,13 @@
       "zip": "rNitro-v1.2.9-Final.zip"
     },
     "beta": {
-      "label": "v1.2.13 Beta",
-      "short": "v1.2.13",
-      "sh": "rNitro-v1.2.13.sh",
+      "label": "v1.2.14 Beta",
+      "short": "v1.2.14",
+      "sh": "rNitro-v1.2.14.sh",
       "source_sh": "install-rNitro.sh",
-      "pkg": "rNitro-v1.2.13.pkg",
-      "dmg": "rNitro-v1.2.13.dmg",
-      "zip": "rNitro-v1.2.13.zip"
+      "pkg": "rNitro-v1.2.14.pkg",
+      "dmg": "rNitro-v1.2.14.dmg",
+      "zip": "rNitro-v1.2.14.zip"
     },
     "linux": {
       "label": "v0.1 Linux Beta Pre-release",
@@ -54,24 +54,24 @@
       "sh": "rNitro-v1.1.0-Intel.sh"
     },
     "experimental": {
-      "label": "v1.3.16 Experimental",
-      "short": "v1.3.16-Exp",
-      "sh": "rNitro-v1.3.16-Experimental.sh",
+      "label": "v1.3.17 Experimental",
+      "short": "v1.3.17-Exp",
+      "sh": "rNitro-v1.3.17-Experimental.sh",
       "source_sh": "install-rNitro-experimental.sh",
-      "pkg": "rNitro-v1.3.16-Experimental.pkg",
-      "dmg": "rNitro-v1.3.16-Experimental.dmg",
-      "zip": "rNitro-v1.3.16-Experimental.zip"
+      "pkg": "rNitro-v1.3.17-Experimental.pkg",
+      "dmg": "rNitro-v1.3.17-Experimental.dmg",
+      "zip": "rNitro-v1.3.17-Experimental.zip"
     }
   },
   "hashes": {
     "stable_sh": "6bc8ec614c6d558ebd9e6a9a9096bfc2b229cdf2dcdd0f328d8c22b442367e44",
-    "beta_sh": "6ca3915b1a4f8e8a3f64dcd3e34505cadcde6151ce03912260faba72493e9b64",
+    "beta_sh": "fd0b18b17a47cbed728c875dc7035429cdabee37d1ef1df76c11072171ebf92f",
     "intel_beta_sh": "",
     "intel_stable_sh": "",
     "stable_zip": "1e05f5d3cee6c94105c291c0fe1bad339277636becf439d2fab89bbbacd4d803",
-    "beta_zip": "3033d6334907e70bb617f51abfa49df4c3bfcf4d990a85df171f3710bcf0ba3e",
-    "experimental_zip": "fea249f48ef34197c06921d621713dd32a33ec8687b862aeef447eb1e75764fd",
-    "experimental_sh": "8a01e712d7c85d05a2e4d7f3330abc5e7a803c9d07af15c5a08241d823aa4b82"
+    "beta_zip": "cc22f0a56429f3af9a3b6fed86518ce00654e240a4017224eea66752b8694bec",
+    "experimental_zip": "a1170e6adf817df483514118f895ef3e004af85e01f40c872db84b64ecec26e5",
+    "experimental_sh": "8e754a25dd62db3cd2e7b01e3a3db333405c792a5e364a086bd4b11c626dd40d"
   },
   "archive": [
     {
@@ -104,5 +104,5 @@
   ],
   "intel_beta": "v1.2.3-Intel",
   "intel_stable": "v1.1.0-Intel",
-  "experimental": "v1.3.16-Experimental"
+  "experimental": "v1.3.17-Experimental"
 }

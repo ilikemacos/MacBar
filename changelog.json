@@ -1,6 +1,40 @@
 {
   "whats_new": [
     {
+      "channel": "beta",
+      "title": "v1.2.14 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Battery matches menu bar",
+          "text": " \u2014 IOPS + pmset charge % and remaining (same path as Experimental); IOKit for amps/mAh/health only."
+        },
+        {
+          "strong": "OS strip + parity",
+          "text": " \u2014 menu % \u00b7 remaining \u00b7 source; Compare with macOS self-test with cached result."
+        },
+        {
+          "strong": "Low-battery automation",
+          "text": " \u2014 optional notify / dim / mute stress at 20%/10%."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.17 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Parity memory",
+          "text": " \u2014 last Compare with macOS result is saved and shown after relaunch; battery section defaults expanded for OS strip."
+        },
+        {
+          "strong": "Lighter IOPS polling",
+          "text": " \u2014 IOPS every tick; pmset subprocess only ~every 30s or when %/remaining missing or level jumps."
+        }
+      ]
+    },
+    {
       "channel": "experimental",
       "title": "v1.3.16 Experimental",
       "accent": "purple",
