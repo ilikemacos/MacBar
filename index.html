@@ -2692,7 +2692,7 @@
     </label>
     <label class="tc-checkbox-row" for="tc-remember" style="margin-top:4px; opacity:0.92;">
       <input type="checkbox" id="tc-remember">
-      <span>Remember for this browser session (won&rsquo;t ask again until you close the tab)</span>
+      <span>Remember agreement for this browser session only (still requires Agree once first)</span>
     </label>
     <div class="tc-modal-actions">
       <button type="button" class="btn btn-secondary" id="tc-disagree-btn" onclick="disagreeTcAndGoHome()">I Disagree</button>
@@ -2871,6 +2871,9 @@
   // Every download / curl-copy opens the T&C modal. Agree continues; Disagree → home.
   let pendingDownloadUrl = null;
   let pendingCopyCurl = null;
+  let pendingCopyText = null;
+  let pendingCopyToast = '✓ Copied';
+  let pendingActionKind = 'download';
 
   function homeUrl() {
     const base = (window.__RNITRO_BASE__ || '').replace(/\/$/, '');
@@ -2892,10 +2895,18 @@
     const fileEl = document.getElementById('tc-download-file');
     const noticeEl = document.getElementById('tc-platform-notice');
     const platform = platformForDownload(url);
-    const fileName = url.split('/').pop() || url;
+    const fileName = String(url || '').split('/').pop() || String(url || '');
     if (fileEl) {
-      fileEl.innerHTML = `Downloading: <code>${fileName}</code>`;
+      if (pendingActionKind === 'copy') {
+        fileEl.innerHTML = `Copying command: <code>${fileName.replace(/</g, '')}</code>`;
+      } else {
+        fileEl.innerHTML = `Downloading: <code>${fileName.replace(/</g, '')}</code>`;
+      }
       fileEl.hidden = false;
+    }
+    const agreeBtn = document.getElementById('tc-agree-btn');
+    if (agreeBtn) {
+      agreeBtn.textContent = pendingActionKind === 'copy' ? 'I Agree & Copy' : 'I Agree & Download';
     }
     if (noticeEl) {
       const notices = {
@@ -2981,9 +2992,12 @@
   }
 
   function requestDownload(url) {
+    if (!url) return;
     pendingDownloadUrl = url;
     pendingCopyCurl = null;
-    // Optional: remember agreement for this browser session only.
+    pendingCopyText = null;
+    pendingActionKind = 'download';
+    // Optional: remember agreement for this browser session only (still requires Agree first).
     if (tcSessionAccepted()) {
       triggerFileDownload(url);
       return;
@@ -3005,6 +3019,8 @@
     clearTcModalContext();
     pendingDownloadUrl = null;
     pendingCopyCurl = null;
+    pendingCopyText = null;
+    pendingActionKind = 'download';
   }
 
   /** Disagree: clear pending download and return to the product home page. */
@@ -3028,7 +3044,17 @@
       const which = pendingCopyCurl;
       pendingCopyCurl = null;
       pendingDownloadUrl = null;
+      pendingCopyText = null;
       _copyCurlCmdUnlocked(which);
+      return;
+    }
+    if (pendingCopyText) {
+      const txt = pendingCopyText;
+      const msg = pendingCopyToast;
+      pendingCopyText = null;
+      pendingDownloadUrl = null;
+      pendingCopyCurl = null;
+      _copyTextUnlocked(txt, msg);
       return;
     }
     if (!pendingDownloadUrl) return;
@@ -3141,24 +3167,53 @@
   function copyCurlCmd(which) {
     pendingCopyCurl = which;
     pendingDownloadUrl = null;
+    pendingCopyText = null;
+    pendingActionKind = 'copy';
     if (tcSessionAccepted()) {
       _copyCurlCmdUnlocked(which);
       return;
     }
-    if (!openTcModal((which || 'curl') + ' install')) {
+    if (!openTcModal((which || 'curl') + ' install command')) {
       alert('Please accept the Terms and Conditions before copying the install command.');
       return;
     }
   }
 
-  function copyHash(which) {
-    const hash = RNITRO_VERSIONS[which]?.hash || RNITRO_VERSIONS.stable.hash;
-    navigator.clipboard.writeText(hash).then(() => {
+  function _copyTextUnlocked(cmd, okMsg) {
+    navigator.clipboard.writeText(cmd).then(() => {
       const toast = document.getElementById('toast');
-      toast.textContent = '✓ Hash copied to clipboard';
+      if (!toast) return;
+      toast.textContent = okMsg || '✓ Copied';
       toast.classList.add('show');
-      setTimeout(() => { toast.classList.remove('show'); toast.textContent = '✓ Copied to clipboard'; }, 2500);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        toast.textContent = '✓ Copied to clipboard';
+      }, 2500);
+    }).catch(() => {
+      alert('Could not copy automatically. Command:\n\n' + cmd);
     });
+  }
+
+  /** Generic install-command copy, always T&C-gated. */
+  function requireTcThenCopy(textToCopy, label, toastMsg) {
+    if (!textToCopy) return;
+    pendingDownloadUrl = null;
+    pendingCopyCurl = null;
+    pendingCopyText = textToCopy;
+    pendingCopyToast = toastMsg || '✓ Copied';
+    pendingActionKind = 'copy';
+    if (tcSessionAccepted()) {
+      _copyTextUnlocked(textToCopy, pendingCopyToast);
+      return;
+    }
+    if (!openTcModal(label || 'install command')) {
+      alert('Please accept the Terms and Conditions before copying the command.');
+    }
+  }
+
+  function copyHash(which) {
+    const hash = RNITRO_VERSIONS[which]?.hash || RNITRO_VERSIONS.stable?.hash || '';
+    requireTcThenCopy(hash, (which || 'package') + ' SHA-256', '✓ Hash copied to clipboard');
   }
 
 // @sync:js-settab
