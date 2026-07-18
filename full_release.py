@@ -59,6 +59,7 @@ WEBSITE_FILES = [
     "googleadfac0eaf77a74e6.html",
     "version.json",
     "changelog.json",
+    "roadmap.json",
     "terms-and-conditions.txt",
     "favicon.ico",
     "favicon.png",
