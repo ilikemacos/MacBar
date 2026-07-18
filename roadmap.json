@@ -1,12 +1,12 @@
 {
   "updated": "2026-07-18",
-  "note": "Planned work — versions, ETAs, and scope can change. Experimental ships first; Beta and Stable absorb proven features.",
+  "note": "Planned work \u2014 versions, ETAs, and scope can change. Experimental ships first; Beta and Stable absorb proven features.",
   "channels": [
     {
       "id": "experimental",
       "label": "Experimental",
       "accent": "purple",
-      "current": "v1.3.15-Experimental",
+      "current": "v1.3.16-Experimental",
       "next": [
         {
           "version": "v1.3.16-Experimental",
@@ -79,7 +79,7 @@
       "id": "other",
       "label": "Other platforms",
       "accent": "cyan",
-      "current": "CLI v0.2 · Linux v0.1 · Windows legacy",
+      "current": "CLI v0.2 \u00b7 Linux v0.1 \u00b7 Windows legacy",
       "next": [
         {
           "version": "CLI / Linux",

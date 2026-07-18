@@ -2,6 +2,17 @@
   "whats_new": [
     {
       "channel": "experimental",
+      "title": "v1.3.16 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Lab speed test",
+          "text": " \u2014 Experimental Lab toy: ping / download / upload via Cloudflare public endpoints; recent results kept on-device."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
       "title": "v1.3.15 Experimental",
       "accent": "purple",
       "items": [
