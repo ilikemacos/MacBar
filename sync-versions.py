@@ -53,7 +53,7 @@ def recommended_zip_block(
     return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.4);">
         <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.45); background:rgba({accent_rgb},0.1);">Recommended Download</div>
         <div class="dl-recommended-title" style="color:{accent};">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. No admin password needed.</p>
+        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Served from <strong>GitHub Releases</strong> + chopstickshq.com (HTTPS). Verify SHA-256 on this page if Chrome marks the file uncommon.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="requestDownload('{zip_file}')">⬇ Download App ZIP{size}</button>
       </div>"""
 
@@ -435,15 +435,17 @@ def download_card_full(data: dict) -> str:
   </div>"""
 
 
-# CDN for binaries / version.json / curl installers
-SITE_URL = "https://getrnitro.netlify.app"
-# Public marketing URL (Google indexes this; getrnitro 301s pages here)
-PUBLIC_SITE_URL = "https://chopstickshq.com/rnitro"
+# Canonical product + binary host (HQ). Prefer over getrnitro for trust/reputation.
+SITE_URL = "https://chopstickshq.com/rnitro"
+# Legacy CDN (still mirrored when available)
+LEGACY_CDN_URL = "https://getrnitro.netlify.app"
+PUBLIC_SITE_URL = SITE_URL
 GITHUB_URL = "https://github.com/ilikemacos/rNitro"
 
 
 def curl_install_cmd(sh_name: str) -> str:
     """One-liner: download .sh to disk then run (installer blocks curl|bash)."""
+    # HQ only — single trusted origin for install scripts (helps Safe Browsing reputation).
     return f"curl -fsSL {SITE_URL}/{sh_name} -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
 
 

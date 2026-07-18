@@ -387,7 +387,8 @@ private let RNITRO_UI_FONT_DEFAULT = "Varela Round"
 let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/rnitro/version.json")!
 private let UPDATE_CHECK_URL_FALLBACK = URL(string: "https://getrnitro.netlify.app/version.json")!
 let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/rnitro/")!
-private let UPDATE_CDN_ORIGIN = "https://getrnitro.netlify.app"
+private let UPDATE_CDN_ORIGIN = "https://chopstickshq.com/rnitro"
+private let UPDATE_CDN_ORIGIN_LEGACY = "https://getrnitro.netlify.app"
 
 struct VersionInfo: Decodable {
     let latest: String
@@ -1084,13 +1085,18 @@ enum UpdateInstaller {
         URL(string: "\(UPDATE_CDN_ORIGIN)/\(zipName)")!
     }
 
-    /// Prefer CDN; fall back to HQ product path if the CDN host is unreachable.
-    private static func zipCandidates(for zipName: String) -> [URL] {
+    /// Prefer HQ, then GitHub Releases (high reputation), then legacy CDN.
+    private static func zipCandidates(for zipName: String, version: String) -> [URL] {
         let encoded = zipName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? zipName
-        return [
+        let ver = version.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? version
+        var urls: [URL] = [
             URL(string: "\(UPDATE_CDN_ORIGIN)/\(encoded)")!,
-            URL(string: "https://chopstickshq.com/rnitro/\(encoded)")!,
         ]
+        if !ver.isEmpty {
+            urls.append(URL(string: "https://github.com/ilikemacos/rNitro/releases/download/\(ver)/\(encoded)")!)
+        }
+        urls.append(URL(string: "\(UPDATE_CDN_ORIGIN_LEGACY)/\(encoded)")!)
+        return urls
     }
 
     static func fetchManifestPublic() -> VersionManifest? { fetchManifest() }
@@ -1250,7 +1256,7 @@ enum UpdateInstaller {
         let sem = DispatchSemaphore(value: 0)
         var dlError: Error?
         var httpStatus = 0
-        let candidates = zipCandidates(for: zipName)
+        let candidates = zipCandidates(for: zipName, version: remoteVersion)
         func downloadNext(_ i: Int) {
             guard i < candidates.count else {
                 sem.signal()

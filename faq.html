@@ -44,6 +44,14 @@
     },
     {
       "@type": "Question",
+      "name": "Why does Chrome say the rNitro download is suspicious?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Chrome often labels uncommon indie app downloads as not commonly downloaded. That is a reputation warning, not a malware verdict. Download from chopstickshq.com/rnitro or GitHub Releases, verify SHA-256, and use Keep if you started the download yourself. macOS may still require right-click Open until the app is Apple-notarized."
+      }
+    },
+    {
+      "@type": "Question",
       "name": "Why does macOS say the app cannot be opened?",
       "acceptedAnswer": {
         "@type": "Answer",
@@ -241,5 +249,18 @@
       <summary>Why might battery % or remaining time look different from other tools?</summary>
       <p>rNitro shows the <strong>same charge percentage as the macOS menu bar</strong> (CurrentCapacity / pmset). Remaining time is an <strong>estimate</strong> from the system and recent drain — it changes with CPU load. A separate chemical gauge can trail the menu bar by a few points; that is normal. Use <strong>Copy battery diagnostics</strong> in the Battery section to compare pmset / IOPS / IOKit sources.</p>
     </details>
+
+    <details open>
+      <summary>Chrome / Google says the download is suspicious or “not commonly downloaded”</summary>
+      <p>That warning is common for <strong>small independent apps</strong> and does <strong>not</strong> mean Google found malware. rNitro is open source, ad-hoc signed (not yet Apple-notarized), and has lower download volume than big vendors.</p>
+      <ul>
+        <li>Prefer the <strong>App ZIP from this site</strong> — files are also hosted on <a href="https://github.com/ilikemacos/rNitro/releases">GitHub Releases</a>.</li>
+        <li>In Chrome: open the downloads shelf → <strong>Keep</strong> / <strong>Download anyway</strong> if you initiated it from chopstickshq.com/rnitro.</li>
+        <li>Verify the file: match SHA-256 on the download page with <code>shasum -a 256</code> in Terminal.</li>
+        <li>On Mac: right-click the app → <strong>Open</strong> the first time (Gatekeeper).</li>
+        <li>Report a false positive: <a href="https://safebrowsing.google.com/safebrowsing/report_error/">Google Safe Browsing error report</a>.</li>
+      </ul>
+    </details>
+
 </body>
 </html>
