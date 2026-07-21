@@ -1,89 +1,94 @@
 # rNitro
 
-> Free menu bar system monitor for Apple Silicon Macs — CPU, temperature, battery, GPU, RAM, and network. Open source. No account. No telemetry.
+**Free menu bar system monitor for macOS** — CPU, temperature, battery, GPU, RAM, network.  
+Open source · no account · no telemetry · no subscription.
 
-**[Download](https://getrnitro.netlify.app/)** · **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** · **[CLI](https://getrnitro.netlify.app/cli.html)** · **[Linux](https://getrnitro.netlify.app/linux.html)** · **[Windows](https://getrnitro.netlify.app/windows.html)** · **[Privacy](https://getrnitro.netlify.app/privacy.html)** · **[Releases](https://github.com/ilikemacos/rNitro/releases)**
-
-> Same product site at **[getrnitro.netlify.app](https://getrnitro.netlify.app/)** and **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** (HQ hub: [chopstickshq.com](https://chopstickshq.com/)).
+| Download | HQ | Releases |
+|----------|-----|----------|
+| **[getrnitro.netlify.app](https://getrnitro.netlify.app/)** | **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** | **[GitHub Releases](https://github.com/ilikemacos/rNitro/releases)** |
 
 [![Stable](https://img.shields.io/badge/stable-v1.2.9%20Final-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.9-Final)
 [![Beta](https://img.shields.io/badge/beta-v1.2.14-ff8c1a)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.14)
-[![Experimental](https://img.shields.io/badge/experimental-v1.3.18--Exp-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.18-Experimental)
+[![Experimental](https://img.shields.io/badge/experimental-v1.3.20--Exp-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.20-Experimental)
+[![License](https://img.shields.io/badge/license-see%20repo-6b6b8a)](https://github.com/ilikemacos/rNitro)
 
-### Which channel?
+---
+
+## Install in 3 steps (macOS)
+
+1. Download the **App ZIP** from [Releases](https://github.com/ilikemacos/rNitro/releases) or the [website](https://chopstickshq.com/rnitro/) (accept Terms when prompted on the site).
+2. Unzip → drag **rNitro.app** to **Applications** (or `~/Applications`).
+3. First launch: if macOS blocks it, **right-click → Open → Open**.
+
+Also available: **PKG**, **DMG**, or **`.sh`** (compiles on your Mac with Xcode CLT).
+
+**Latest Experimental ZIP:**  
+[rNitro-v1.3.20-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.20-Experimental/rNitro-v1.3.20-Experimental.zip)
+
+> Builds are ad-hoc signed. Apple notarization is planned. Prefer GitHub Releases or chopstickshq.com for downloads.
+
+---
+
+## Which channel?
 
 | Channel | Version | Best for |
 |---------|---------|----------|
 | **Stable** | v1.2.9 Final | Daily monitoring; AI: OpenAI + OpenRouter |
 | **Beta** | v1.2.14 | Lab tools + every AI provider |
-| **Experimental** | v1.3.18 Exp | Newest features (unstable playground) |
+| **Experimental** | v1.3.20 Exp | Newest UI/features (may change quickly) |
 
-Full feature matrix: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)
+- **Stable** = boring reliability.  
+- **Beta** = power users.  
+- **Experimental** = playground (e.g. **New style** glass monitor UI, display modes).
 
----
-
-## Display modes
-
-**Experimental (v1.3.18+)** and the **website** share the same display-mode config.
-
-| Mode | Look |
-|------|------|
-| **System** | Follows macOS light/dark |
-| **Light** | Classic light chrome |
-| **Dark** | Classic dark chrome |
-| **OLED** | Pure black (AMOLED-friendly) |
-| **IPS** | Deep navy-black, richer midtones |
-| **LCD** | Elevated blacks, softer contrast |
-| **Mini LED** | Near-black with punchy highlights |
-
-- **App:** Settings → Appearance → **Display mode** (menu picker). Stored as `rnitro.appearanceMode`.
-- **Website:** nav **display mode** dropdown + **◐ Mode** cycle button. Stored in `localStorage` as `rnitro.siteTheme`.
+Full matrix: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)
 
 ---
 
-## Install (macOS)
+## Why people pick rNitro
 
-Prefer **App ZIP** from [Releases](https://github.com/ilikemacos/rNitro/releases) or the site (after accepting Terms).
-
-| Format | Notes |
-|--------|--------|
-| **ZIP** | Unzip → drag `rNitro.app` to Applications / `~/Applications` |
-| **PKG** | Double-click installer |
-| **DMG** | Open image → drag app to Applications |
-| **.sh** | Compiles from readable source on your Mac |
-
-**Experimental ZIP (latest):**  
-[rNitro-v1.3.18-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.18-Experimental/rNitro-v1.3.18-Experimental.zip)
-
-First launch: if Gatekeeper blocks, right-click → **Open** → **Open**. Builds are ad-hoc signed (Apple notarization planned).
+- **Free** alternative to paid menu bar monitors (not affiliated with iStat)
+- **Local-first** — battery and sensors from macOS APIs (IOPS / IOKit / pmset)
+- **No account, no product telemetry**
+- **Optional AI** (Beta/Exp) with *your* API keys in Keychain
+- **Open source** install path via shell + GitHub
 
 ---
 
 ## Features (high level)
 
-- Menu bar stats: CPU, temp, battery %, GPU, RAM, network
-- Battery from local OS sources (IOPS / IOKit / pmset)
-- Appearance: fonts (Google Fonts OFL catalog), size, language, monitor UI style
-- **Display modes** (Exp): System / Light / Dark / OLED / IPS / LCD / Mini LED
-- Beta/Exp: AI chat (bring your own API keys), Lab tools, Experimental extras
-- CLI companion and limited Linux / Windows builds on the site
+- Menu bar: CPU, temp, battery %, GPU, RAM, network  
+- Battery % aligned with the macOS menu bar; remaining time is a system/estimate-based value  
+- Appearance: fonts (Google Fonts OFL, offline), size, language  
+- **Monitor UI:** Modern · Legacy · **New style** (glass dashboard, Exp)  
+- **Display modes** (Exp + website): System / Light / Dark / OLED / IPS / LCD / Mini LED  
+- CLI, limited Linux / Windows companions on the site  
 
 ---
 
 ## Privacy
 
-No accounts, no built-in telemetry. API keys (Chat) stay in Keychain when you use them. See [Privacy](https://getrnitro.netlify.app/privacy.html) and [Terms](https://getrnitro.netlify.app/terms.html).
+No accounts. No product telemetry. Optional chat keys stay on your Mac.  
+[Privacy](https://getrnitro.netlify.app/privacy.html) · [Terms](https://getrnitro.netlify.app/terms.html) · [FAQ](https://getrnitro.netlify.app/faq.html)
 
 ---
 
-## Links
+## Part of Chopsticks HQ
 
-| | |
-|--|--|
-| Product site | https://getrnitro.netlify.app/ |
-| HQ / downloads | https://chopstickshq.com/rnitro/ |
-| Releases | https://github.com/ilikemacos/rNitro/releases |
-| Issues | https://github.com/ilikemacos/rNitro/issues |
+Tools and games under one lab:
+
+- **rNitro** — this monitor  
+- **Fathom** — battery drain (local)  
+- **Doomlike-FPS** — browser raycast FPS (beta)  
+
+Hub: [chopstickshq.com](https://chopstickshq.com/)
+
+---
+
+## Support
+
+- Issues: [github.com/ilikemacos/rNitro/issues](https://github.com/ilikemacos/rNitro/issues)  
+- FAQ: [faq.html](https://getrnitro.netlify.app/faq.html)
 
 ---
 
