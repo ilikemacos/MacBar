@@ -1,6 +1,15 @@
 {
   "whats_new": [
     {
+      "version": "v1.3.24-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Renamed Experimental product to **MacBar** (formerly rNitro) for clearer discovery.",
+        "Installs as MacBar.app; same sensors, same chopstickshq.com/rnitro downloads.",
+        "Keeps rNitro as alternate name in search metadata during the transition."
+      ]
+    },
+    {
       "version": "v1.3.23-Experimental",
       "channel": "experimental",
       "highlights": [

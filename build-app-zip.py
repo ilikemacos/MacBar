@@ -16,21 +16,22 @@ import versions as v
 TERMS_FILE = SCRIPT_DIR / "terms-and-conditions.txt"
 TERMS_ZIP_NAME = "Terms and Conditions.txt"
 
-README_SINGLE = """rNitro {version}
+README_SINGLE = """MacBar {version}
 {underline}
+(formerly rNitro)
 
 INSTALLATION
 ------------
-1. Double-click this ZIP file to extract rNitro.app
-2. Drag rNitro.app into your Applications folder
+1. Double-click this ZIP file to extract MacBar.app (or rNitro.app on Stable/Beta)
+2. Drag the app into your Applications folder
    (Finder → Applications, or ~/Applications)
-3. Open Applications and double-click rNitro
-4. rNitro lives in your menu bar (top-right). Click the icon to open the monitor.
+3. Open Applications and double-click MacBar
+4. MacBar lives in your menu bar (top-right). Click the icon to open the monitor.
 
 FIRST LAUNCH
 ------------
 If macOS says the app cannot be opened:
-  • Right-click rNitro.app → Open → Open (one time only), or
+  • Right-click MacBar.app → Open → Open (one time only), or
   • System Settings → Privacy & Security → Open Anyway
 
 REQUIREMENTS
@@ -41,16 +42,16 @@ REQUIREMENTS
 
 UNINSTALL
 ---------
-Drag rNitro.app from Applications to Trash.
+Drag MacBar.app from Applications to Trash.
 
 ALTERNATIVE: COMPILE FROM SOURCE
 --------------------------------
-The .sh installer on https://getrnitro.netlify.app/ compiles rNitro on your Mac
-(~30 seconds) and installs to ~/Applications/rNitro.app.
+The .sh installer on https://chopstickshq.com/rnitro/ compiles MacBar on your Mac
+(~30 seconds) and installs to ~/Applications/MacBar.app.
 
 SUPPORT
 -------
-https://getrnitro.netlify.app/
+https://chopstickshq.com/rnitro/
 """
 
 README_COMBINED_TEMPLATE = """rNitro macOS — Stable + Beta
@@ -139,9 +140,16 @@ def create_zip(
             work=work,
             quick=quick,
         )
-        shutil.move(str(app_stage), str(stage / "rNitro.app"))
-        prepare_app_bundle(stage / "rNitro.app")
-        (stage / "README — Install rNitro.txt").write_text(readme_text(version), encoding="utf-8")
+        bundle_name = apps.bundle_folder_name(app_stage)
+        dest_app = stage / bundle_name
+        shutil.move(str(app_stage), str(dest_app))
+        prepare_app_bundle(dest_app)
+        readme_name = (
+            "README — Install MacBar.txt"
+            if bundle_name == "MacBar.app"
+            else "README — Install rNitro.txt"
+        )
+        (stage / readme_name).write_text(readme_text(version), encoding="utf-8")
         (stage / TERMS_ZIP_NAME).write_text(terms_text(), encoding="utf-8")
         write_zip(stage, out_zip)
     return out_zip
