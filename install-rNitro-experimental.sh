@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="219e5dcdcb831844c29282bfe33061a678578056faec6597af5b82eb19fc8881"
+EXPECTED_HASH="d7d78fcc96c5846649c63d110581e3f20e5caed792b43552e549b6c56523598e"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -4052,7 +4052,11 @@ class BatteryMonitor: ObservableObject {
         else { return nil }
         guard let entry else { return nil }
         if let n = entry as? NSNumber { return n.intValue }
-        return cfInt(entry as? CFTypeRef)
+        if let s = entry as? String {
+            return Int(s.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        // IOKit registry values are CF types (class-backed); unconditional bridge, no as? warn.
+        return cfInt(entry as AnyObject as CFTypeRef)
     }
 
     /// IOPM / AppleSmartBattery often stores signed mA as two's-complement in a wide integer.
@@ -5205,7 +5209,7 @@ final class DeveloperModeStore: ObservableObject {
             if FileManager.default.fileExists(atPath: file.path),
                let handle = try? FileHandle(forWritingTo: file) {
                 defer { try? handle.close() }
-                try? handle.seekToEnd()
+                _ = try? handle.seekToEnd()
                 try? handle.write(contentsOf: data)
             } else {
                 try? data.write(to: file)
