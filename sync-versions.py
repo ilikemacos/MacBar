@@ -436,7 +436,7 @@ def download_card_full(data: dict) -> str:
 
 
 # Canonical product + binary host (HQ). Prefer over getrnitro for trust/reputation.
-SITE_URL = "https://chopstickshq.com/rnitro"
+SITE_URL = "https://chopstickshq.com/macbar"
 # Legacy CDN (still mirrored when available)
 LEGACY_CDN_URL = "https://getrnitro.netlify.app"
 PUBLIC_SITE_URL = SITE_URL

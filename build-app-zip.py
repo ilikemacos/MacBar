@@ -46,12 +46,12 @@ Drag MacBar.app from Applications to Trash.
 
 ALTERNATIVE: COMPILE FROM SOURCE
 --------------------------------
-The .sh installer on https://chopstickshq.com/rnitro/ compiles MacBar on your Mac
+The .sh installer on https://chopstickshq.com/macbar/ compiles MacBar on your Mac
 (~30 seconds) and installs to ~/Applications/MacBar.app.
 
 SUPPORT
 -------
-https://chopstickshq.com/rnitro/
+https://chopstickshq.com/macbar/
 """
 
 README_COMBINED_TEMPLATE = """rNitro macOS — Stable + Beta
