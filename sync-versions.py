@@ -43,12 +43,19 @@ def sized_label(text: str, filename: str | None) -> str:
 
 
 def zip_terminal_install_cmd(zip_name: str) -> str:
-    """Short Terminal install of pre-built App ZIP — no Xcode."""
+    """Pre-built App ZIP install with a simple Terminal progress bar (no Xcode)."""
+    # curl --progress-bar draws a live bar; step banners mark unzip/install.
     return (
-        f'curl -fsSL {SITE_URL}/{zip_name} -o /tmp/rnitro.zip && '
+        f'printf "\\n[######--------------] 1/3 Download\\n" && '
+        f'curl --progress-bar -fL {SITE_URL}/{zip_name} -o /tmp/rnitro.zip && '
+        f'printf "\\n[############--------] 2/3 Unzip\\n" && '
+        f'rm -rf /tmp/rnitro-app && mkdir -p /tmp/rnitro-app && '
         f'unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && '
+        f'printf "[####################] 3/3 Install\\n" && '
+        f'mkdir -p ~/Applications && rm -rf ~/Applications/rNitro.app && '
         f'ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && '
-        f'xattr -cr ~/Applications/rNitro.app'
+        f'xattr -cr ~/Applications/rNitro.app && '
+        f'printf "✓ Done → ~/Applications/rNitro.app\\n"'
     )
 
 
@@ -449,9 +456,13 @@ GITHUB_URL = "https://github.com/ilikemacos/rNitro"
 
 
 def curl_install_cmd(sh_name: str) -> str:
-    """One-liner: download .sh to disk then run (installer blocks curl|bash)."""
-    # HQ only — single trusted origin for install scripts (helps Safe Browsing reputation).
-    return f"curl -fsSL {SITE_URL}/{sh_name} -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+    """Download .sh then compile-install, with Terminal progress (needs Xcode CLT)."""
+    return (
+        f'printf "\\n[########------------] 1/2 Download installer\\n" && '
+        f'curl --progress-bar -fL {SITE_URL}/{sh_name} -o /tmp/rnitro-install.sh && '
+        f'printf "\\n[####################] 2/2 Compile & install (Xcode CLT)\\n" && '
+        f'bash /tmp/rnitro-install.sh'
+    )
 
 
 def hero_curl_recommended_block(
