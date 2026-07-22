@@ -51,9 +51,9 @@ def recommended_zip_block(
 ) -> str:
     size = file_size_label(zip_file)
     return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.4);">
-        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.45); background:rgba({accent_rgb},0.1);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:{accent};">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Served from <strong>GitHub Releases</strong> + chopstickshq.com (HTTPS). Verify SHA-256 on this page if Chrome marks the file uncommon.</p>
+        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.45); background:rgba({accent_rgb},0.1);">Recommended · no Xcode</div>
+        <div class="dl-recommended-title" style="color:{accent};">App ZIP (pre-built)</div>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="requestDownload('{zip_file}')">⬇ Download App ZIP{size}</button>
       </div>"""
 
@@ -314,8 +314,8 @@ def hero_stable_card(data: dict) -> str:
     return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">{s["id"]}</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
-{curl_block}
 {recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136")}
+{curl_block}
 {other}
     </div>"""
 
@@ -337,8 +337,8 @@ def hero_beta_card(data: dict) -> str:
       <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Beta notice:</strong> Power-user channel without the playground toys. Terms required before download.
       </p>
-{hero_curl_recommended_block("beta", b["sh"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
 {recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
+{hero_curl_recommended_block("beta", b["sh"], accent="var(--orange)", accent_rgb="255,140,26")}
 {other}
     </div>"""
 
@@ -355,37 +355,21 @@ def hero_experimental_card(data: dict) -> str:
             <button class="btn btn-secondary" onclick="copyCurlCmd('experimental')">⎘ Copy curl install</button>""",
         note="<strong>Experimental:</strong> Beta + duel, ghost-load, budget, cloak, peer, AirDrop card, desktop widget, confession, alibi, presets. Unstable.",
     )
-    curl_block = hero_curl_recommended_block(
-        "experimental",
-        e.get("sh") or "install-rNitro-experimental.sh",
-        accent="#b8a0ff",
-        accent_rgb="184,160,255",
-        btn_style="background:#9b7bff; color:#000;",
-    )
-    # hero_curl_recommended_block may only take which stable/beta - check signature
     return f"""    <div style="width:100%; background:var(--card); border:1px solid #9b7bff; border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:#b8a0ff; margin-bottom:4px;">{e["id"]}</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;"><strong style="color:#b8a0ff;">Experimental</strong> — everything in Beta <em>plus</em> Lab toys (duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets).</div>
       <p style="font-size:14px; color:#b8a0ff; background:rgba(155,123,255,0.1); border:1px solid rgba(155,123,255,0.4); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Unstable playground.</strong> Prefer Beta for daily use. Terms required before download. Apple Silicon recommended.
       </p>
-      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.45);">
-        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.5); background:rgba(155,123,255,0.12);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:#b8a0ff;">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag to Applications → right-click <strong>Open</strong> once if blocked.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="requestDownload('{e.get("zip", "")}')">⬇ Download App ZIP</button>
-      </div>
-      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.4); margin-top:12px;">
-        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.45); background:rgba(155,123,255,0.1);">Terminal</div>
-        <div class="dl-recommended-title" style="color:#b8a0ff;">curl one-liner</div>
-        <div style="background:var(--card2); border:1px solid rgba(155,123,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:#b8a0ff; word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
-          {curl_install_cmd(e.get("sh") or "install-rNitro-experimental.sh")}
-        </div>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="copyCurlCmd('experimental')">⎘ Copy curl one-liner</button>
-      </div>
+{recommended_zip_block(e.get("zip") or "", accent="#b8a0ff", accent_rgb="155,123,255", btn_style="background:#9b7bff; color:#000;")}
+{hero_curl_recommended_block(
+        "experimental",
+        e.get("sh") or "install-rNitro-experimental.sh",
+        accent="#b8a0ff",
+        accent_rgb="155,123,255",
+    )}
 {other}
     </div>"""
-
 
 
 def pkg_gatekeeper_warning() -> str:
@@ -458,14 +442,14 @@ def hero_curl_recommended_block(
     btn_style: str = "",
 ) -> str:
     cmd = curl_install_cmd(sh_name)
-    return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.45);">
-        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.5); background:rgba({accent_rgb},0.12);">Best first launch</div>
-        <div class="dl-recommended-title" style="color:{accent};">Terminal one-liner</div>
-        <p class="dl-recommended-steps">Paste in Terminal — compiles on your Mac (~30s). Usually <strong>does not</strong> trigger Gatekeeper like ZIP, PKG, or DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+    return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.35); margin-top:12px;">
+        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.4); background:rgba({accent_rgb},0.08);">Optional · needs Xcode</div>
+        <div class="dl-recommended-title" style="color:{accent};">Terminal one-liner (compile from source)</div>
+        <p class="dl-recommended-steps">Only if you prefer building from source. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a> (~30s compile). Most people should use the <strong>App ZIP</strong> above instead.</p>
         <div style="background:var(--card2); border:1px solid rgba({accent_rgb},0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:{accent}; word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
           {cmd}
         </div>
-        <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="copyCurlCmd('{which}')">⎘ Copy curl one-liner</button>
+        <button type="button" class="btn btn-secondary" style="{btn_style}" onclick="copyCurlCmd('{which}')">⎘ Copy curl one-liner</button>
       </div>"""
 
 
