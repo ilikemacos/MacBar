@@ -1,9 +1,9 @@
 # rNitro
 
-**Free menu bar system monitor for macOS** (formerly **rNitro**) — CPU, temperature, battery, GPU, RAM, network.  
+**Free menu bar system monitor for macOS** — CPU, temperature, battery, GPU, RAM, network.  
 Open source · no account · no telemetry · no subscription.
 
-**Keywords:** rNitro · free macOS menu bar monitor · Apple Silicon CPU/temp · MacBook battery · open-source iStat/Stats alternative · btop-style CLI · no telemetry · rNitro
+**Keywords:** free macOS menu bar monitor · Apple Silicon CPU/temp · MacBook battery · open-source iStat/Stats alternative · btop-style CLI · no telemetry
 
 | Download | HQ | Releases |
 |----------|-----|----------|
@@ -11,23 +11,21 @@ Open source · no account · no telemetry · no subscription.
 
 [![Stable](https://img.shields.io/badge/stable-v1.2.9%20Final-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.9-Final)
 [![Beta](https://img.shields.io/badge/beta-v1.2.14-ff8c1a)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.14)
-[![Experimental](https://img.shields.io/badge/experimental-rNitro%20v1.3.24-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.24-Experimental)
+[![Experimental](https://img.shields.io/badge/experimental-v1.3.26-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.26-Experimental)
 [![License](https://img.shields.io/badge/license-see%20repo-6b6b8a)](https://github.com/ilikemacos/rNitro)
-
-> **Name change:** Experimental is now branded **rNitro**. Stable/Beta installers may still say rNitro until those channels are renamed. Same app family, same site.
 
 ---
 
 ## Install in 3 steps (macOS)
 
 1. Download the **App ZIP** from [Releases](https://github.com/ilikemacos/rNitro/releases) or the [website](https://chopstickshq.com/rnitro/) (accept Terms when prompted on the site).
-2. Unzip → drag **rNitro.app** (Experimental) or **rNitro.app** (Stable/Beta) to **Applications**.
+2. Unzip → drag **rNitro.app** to **Applications**.
 3. First launch: if macOS blocks it, **right-click → Open → Open**.
 
 Also available: **PKG**, **DMG**, or **`.sh`** (compiles on your Mac with Xcode CLT).
 
-**Latest Experimental (rNitro) ZIP:**  
-[rNitro-v1.3.24-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.24-Experimental/rNitro-v1.3.24-Experimental.zip)
+**Latest Experimental ZIP:**  
+[rNitro-v1.3.26-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.26-Experimental/rNitro-v1.3.26-Experimental.zip)
 
 > Builds are ad-hoc signed. Apple notarization is planned. Prefer GitHub Releases or chopstickshq.com for downloads.
 
@@ -39,7 +37,7 @@ Also available: **PKG**, **DMG**, or **`.sh`** (compiles on your Mac with Xcode 
 |---------|---------|----------|
 | **Stable** | v1.2.9 Final | Daily monitoring; AI: OpenAI + OpenRouter |
 | **Beta** | v1.2.14 | Lab tools + every AI provider |
-| **Experimental** | v1.3.24 Exp (rNitro) | Newest UI/features (may change quickly) |
+| **Experimental** | v1.3.26 Exp (rNitro) | Newest UI/features (may change quickly) |
 
 - **Stable** = boring reliability.  
 - **Beta** = power users.  
