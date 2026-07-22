@@ -436,11 +436,11 @@ def download_card_full(data: dict) -> str:
 
 
 # Canonical product + binary host (HQ). Prefer over getrnitro for trust/reputation.
-SITE_URL = "https://chopstickshq.com/macbar"
+SITE_URL = "https://chopstickshq.com/rnitro"
 # Legacy CDN (still mirrored when available)
 LEGACY_CDN_URL = "https://getrnitro.netlify.app"
 PUBLIC_SITE_URL = SITE_URL
-GITHUB_URL = "https://github.com/ilikemacos/MacBar"
+GITHUB_URL = "https://github.com/ilikemacos/rNitro"
 
 
 def curl_install_cmd(sh_name: str) -> str:
@@ -482,14 +482,14 @@ def hero_head(data: dict) -> str:
     beta = v.beta_release(data)
     linux = v.linux_release(data)
     desc = (
-        f"MacBar (formerly rNitro) — free open-source macOS menu bar system monitor "
+        f"rNitro — free open-source macOS menu bar system monitor "
         f"({stable['short']} Stable / {beta['short']} Beta). Live CPU, temperature, "
         f"MacBook battery %, GPU, RAM, network. Free iStat/Stats alternative · btop-style CLI. "
         f"Linux {linux['short']} pre-release. No account, no telemetry. Apple Silicon &amp; Intel."
     )
     # High-intent discovery phrases (honest alternatives; no trademark-as-product claims).
     keywords = (
-        "MacBar, macbar, MacBar monitor, rNitro, rnitro, getrnitro, chopsticks hq, "
+        "rNitro, rnitro, getrnitro, chopsticks hq rnitro, "
         "free macOS menu bar monitor, free mac system monitor, open source mac monitor, "
         "macOS system monitor, mac menu bar CPU monitor, Apple Silicon system monitor, "
         "M1 M2 M3 M4 CPU monitor, MacBook battery monitor, menu bar CPU temperature, "
@@ -505,17 +505,10 @@ def hero_head(data: dict) -> str:
         {
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
-            "name": "MacBar",
-            "alternateName": [
-                "MacBar Monitor",
-                "rNitro",
-                "r Nitro",
-                "getrnitro",
-                "rNitro Monitor",
-                "Chopsticks MacBar",
-            ],
+            "name": "rNitro",
+            "alternateName": ["r Nitro", "getrnitro", "rNitro Monitor", "Chopsticks rNitro"],
             "description": (
-                "MacBar (formerly rNitro) is a free open-source menu bar system monitor for macOS "
+                "rNitro is a free open-source menu bar system monitor for macOS "
                 "(Apple Silicon & Intel). Live CPU, temperature, GPU, RAM, battery, and network. "
                 "Free alternative to paid menubar monitors. Optional CLI and Linux builds. "
                 "No account, no product telemetry."
@@ -583,7 +576,7 @@ def hero_head(data: dict) -> str:
         },
         ensure_ascii=False,
     )
-    return f"""<title>MacBar — Free Open Source macOS Menu Bar Monitor (formerly rNitro)</title>
+    return f"""<title>rNitro — Free Open Source macOS Menu Bar Monitor (formerly rNitro)</title>
 <meta name="description" content="{desc}">
 <meta name="keywords" content="{keywords}">
 <meta name="robots" content="index,follow,max-image-preview:large">
@@ -592,13 +585,13 @@ def hero_head(data: dict) -> str:
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="rNitro">
 <meta property="og:locale" content="en_US">
-<meta property="og:title" content="MacBar — Free Open Source macOS Menu Bar System Monitor">
+<meta property="og:title" content="rNitro — Free Open Source macOS Menu Bar System Monitor">
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{public}">
 <meta property="og:image" content="{og_image}">
 <meta property="og:image:alt" content="rNitro menu bar system monitor on macOS">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MacBar — Free Open Source macOS Menu Bar Monitor">
+<meta name="twitter:title" content="rNitro — Free Open Source macOS Menu Bar Monitor">
 <meta name="twitter:description" content="{desc}">
 <meta name="twitter:image" content="{og_image}">
 <script type="application/ld+json">{ld_json}</script>

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# MacBar installer — hardened
+# rNitro installer — hardened
 #
 # v8.4.3-Beta-arm64 — menubar stays visible when other apps are focused (.accessory + on-demand main window).
 # v8.4.3-Beta-arm64 — Chat tab: API keys moved to dedicated API sub-tab (out of Settings).
@@ -86,7 +86,7 @@
 # genuine parallel fan-out. Scores are now based on real completed work
 # (iterations/second), which the compiler can no longer discard.
 #
-# v5.1.1a — More accurate temperatures: MacBar now reads real sensor data
+# v5.1.1a — More accurate temperatures: rNitro now reads real sensor data
 # straight from the SMC (the same controller iStat Menus, TG Pro, and Macs
 # Fan Control read from) across known Apple Silicon sensor keys, falling
 # back to the old thermalState-based estimate only if the SMC can't be
@@ -160,7 +160,7 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 umask 077
 
-echo "🚀 MacBar Installer"
+echo "🚀 rNitro Installer"
 echo "-------------------"
 
 # ── Security: refuse to run via a pipe (curl|bash) ───────────────────────────
@@ -175,13 +175,13 @@ fi
 
 # ── Security: macOS only ─────────────────────────────────────────────────────
 if [[ "$(uname)" != "Darwin" ]]; then
-  echo "❌ MacBar is macOS only. Aborting."
+  echo "❌ rNitro is macOS only. Aborting."
   exit 1
 fi
 
 # ── Security: must be Apple Silicon ──────────────────────────────────────────
 if [[ "$(uname -m)" != "arm64" ]]; then
-  echo "❌ MacBar requires Apple Silicon (M1/M2/M3). Aborting."
+  echo "❌ rNitro requires Apple Silicon (M1/M2/M3). Aborting."
   exit 1
 fi
 
@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="96d6f8af14fecca490c6052ab1f09cc73cadeaaa3f7369a8a3cc239e541642a9"
+EXPECTED_HASH="219e5dcdcb831844c29282bfe33061a678578056faec6597af5b82eb19fc8881"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -240,7 +240,7 @@ echo ""
 #    predictable path under Downloads. Using mktemp avoids symlink/race
 #    attacks where another local user could pre-create or swap the directory.
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rnitro-build.XXXXXXXX")"
-APP_DEST="$HOME/Applications/MacBar.app"
+APP_DEST="$HOME/Applications/rNitro.app"
 
 # ── Security: always clean up the build dir, even on failure/interrupt ───────
 cleanup() { rm -rf -- "$WORK_DIR"; }
@@ -257,7 +257,7 @@ chmod 700 "$WORK_DIR"
 sign_app_bundle() {
   local app="$1"
   xattr -cr "$app" 2>/dev/null || true
-  local exe="$app/Contents/MacOS/MacBar"
+  local exe="$app/Contents/MacOS/rNitro"
   if [[ ! -f "$exe" ]]; then
     echo "⚠️  Cannot sign: missing $exe"
     return 1
@@ -310,8 +310,8 @@ func verifyBinaryIntegrity() {
           let code = staticCode else { return }
     if SecStaticCodeCheckValidity(code, [], nil) != errSecSuccess {
         let alert = NSAlert()
-        alert.messageText = "MacBar Integrity Check Failed"
-        alert.informativeText = "The MacBar app signature is invalid — the bundle may have been modified after installation. Reinstall from getrnitro.netlify.app, or run: xattr -cr ~/Applications/MacBar.app"
+        alert.messageText = "rNitro Integrity Check Failed"
+        alert.informativeText = "The rNitro app signature is invalid — the bundle may have been modified after installation. Reinstall from getrnitro.netlify.app, or run: xattr -cr ~/Applications/rNitro.app"
         alert.alertStyle = .critical
         alert.addButton(withTitle: "Quit")
         alert.runModal()
@@ -336,7 +336,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
     static let shared: URLSession = {
         let cfg = URLSessionConfiguration.ephemeral
         cfg.tlsMinimumSupportedProtocolVersion = .TLSv12
-        cfg.httpAdditionalHeaders = ["User-Agent": "MacBar/\(CURRENT_VERSION)"]
+        cfg.httpAdditionalHeaders = ["User-Agent": "rNitro/\(CURRENT_VERSION)"]
         cfg.urlCache = nil
         cfg.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         return URLSession(configuration: cfg, delegate: PinnedSession(), delegateQueue: nil)
@@ -377,17 +377,17 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.25-Experimental"
+let CURRENT_VERSION = "v1.3.26-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
 let RNITRO_FEATURE_EXPERIMENTAL_UI = (RNITRO_BUILD_CHANNEL == "experimental")
 private let RNITRO_UI_FONT_DEFAULT = "Varela Round"
 // Prefer HQ (canonical product site we control) then getrnitro CDN.
-let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/macbar/version.json")!
+let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/rnitro/version.json")!
 private let UPDATE_CHECK_URL_FALLBACK = URL(string: "https://getrnitro.netlify.app/version.json")!
-let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/macbar/")!
-private let UPDATE_CDN_ORIGIN = "https://chopstickshq.com/macbar"
+let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/rnitro/")!
+private let UPDATE_CDN_ORIGIN = "https://chopstickshq.com/rnitro"
 private let UPDATE_CDN_ORIGIN_LEGACY = "https://getrnitro.netlify.app"
 
 struct VersionInfo: Decodable {
@@ -428,7 +428,7 @@ struct VersionManifest: Decodable {
             return expZip
         }
         // Common fallback when manifest omits a channel but the ZIP naming is consistent.
-        return "MacBar-\(versionId).zip"
+        return "rNitro-\(versionId).zip"
     }
 
     /// Expected SHA-256 for a channel ZIP, or nil if the server has not published one yet.
@@ -652,7 +652,7 @@ enum UpdateChecker {
     /// Short bullet lines from site changelog.json for a version / channel.
     static func changelogBlurb(for versionId: String, channel: String, completion: @escaping (String?) -> Void) {
         let urls = [
-            URL(string: "https://chopstickshq.com/macbar/changelog.json")!,
+            URL(string: "https://chopstickshq.com/rnitro/changelog.json")!,
             URL(string: "https://getrnitro.netlify.app/changelog.json")!,
         ]
         func tryFetch(_ i: Int) {
@@ -743,7 +743,7 @@ enum UpdateChecker {
 
     private static func checkPendingUpdateResult() {
         let resultURL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/MacBar/update-result.txt")
+            .appendingPathComponent("Library/Logs/rNitro/update-result.txt")
         guard let raw = try? String(contentsOf: resultURL, encoding: .utf8) else { return }
         try? FileManager.default.removeItem(at: resultURL)
         let content = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -755,7 +755,7 @@ enum UpdateChecker {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             let alert = NSAlert()
             alert.messageText = "Previous Update Did Not Complete"
-            alert.informativeText = detail + "\n\nCheck ~/Library/Logs/MacBar/update.log or download the App ZIP from chopstickshq.com/macbar."
+            alert.informativeText = detail + "\n\nCheck ~/Library/Logs/rNitro/update.log or download the App ZIP from chopstickshq.com/rnitro."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open Website")
             alert.addButton(withTitle: "OK")
@@ -823,7 +823,7 @@ enum UpdateChecker {
                 if manual {
                     let alert = NSAlert()
                     alert.messageText = "You're Up to Date"
-                    alert.informativeText = "MacBar \(displayLabel(CURRENT_VERSION)) is the newest build on your channel, or no newer release is available yet."
+                    alert.informativeText = "rNitro \(displayLabel(CURRENT_VERSION)) is the newest build on your channel, or no newer release is available yet."
                     alert.alertStyle = .informational
                     alert.runModal()
                 }
@@ -880,7 +880,7 @@ enum UpdateChecker {
                                         notes: String?, snoozeIds: [String]) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "MacBar Update Available"
+        alert.messageText = "rNitro Update Available"
         var lines = ["You're running \(displayLabel(CURRENT_VERSION))."]
         if stableNewer {
             lines.append("• Stable \(displayLabel(stable)) is available (production-ready).")
@@ -905,7 +905,7 @@ enum UpdateChecker {
             lines.append("\nWhat's new:")
             lines.append(notes)
         }
-        lines.append("\nPick which build to download and install. MacBar will restart when done.")
+        lines.append("\nPick which build to download and install. rNitro will restart when done.")
         alert.informativeText = lines.joined(separator: "\n")
         alert.alertStyle = .informational
 
@@ -955,14 +955,14 @@ enum UpdateInstaller {
     private static var progressDetail: NSTextField?
     private static var downloadProgressObservation: NSKeyValueObservation?
     private static let updateLogURL = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Logs/MacBar/update.log")
+        .appendingPathComponent("Library/Logs/rNitro/update.log")
     private static let updateResultURL = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Logs/MacBar/update-result.txt")
+        .appendingPathComponent("Library/Logs/rNitro/update-result.txt")
 
     static func isSystemApplicationsBundle(_ path: String) -> Bool {
         if path.hasPrefix("/Applications/") { return true }
         if path.contains("/System/Volumes/Data/Applications/") { return true }
-        if path.hasSuffix("/Applications/MacBar.app") {
+        if path.hasSuffix("/Applications/rNitro.app") {
             let home = FileManager.default.homeDirectoryForCurrentUser.path
             return !path.hasPrefix(home + "/")
         }
@@ -972,17 +972,17 @@ enum UpdateInstaller {
     private static func systemApplicationsDestination(from dest: URL) -> URL {
         // Hard-lock admin installs to the canonical system path only.
         _ = dest
-        return URL(fileURLWithPath: "/Applications/MacBar.app")
+        return URL(fileURLWithPath: "/Applications/rNitro.app")
     }
 
-    /// Only /Applications/MacBar.app or ~/Applications/MacBar.app (and Data volume twin).
+    /// Only /Applications/rNitro.app or ~/Applications/rNitro.app (and Data volume twin).
     private static func isAllowedInstallDestination(_ url: URL) -> Bool {
         let path = url.standardizedFileURL.resolvingSymlinksInPath().path
         let homeApps = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Applications/MacBar.app", isDirectory: true)
+            .appendingPathComponent("Applications/rNitro.app", isDirectory: true)
             .resolvingSymlinksInPath().path
-        if path == "/Applications/MacBar.app" { return true }
-        if path == "/System/Volumes/Data/Applications/MacBar.app" { return true }
+        if path == "/Applications/rNitro.app" { return true }
+        if path == "/System/Volumes/Data/Applications/rNitro.app" { return true }
         if path == homeApps { return true }
         return false
     }
@@ -1022,7 +1022,7 @@ enum UpdateInstaller {
         }
         if actual != expected {
             log("ZIP hash mismatch expected=\(expected) actual=\(actual)")
-            return "Update package failed integrity check (SHA-256 mismatch). Refusing to install. Re-download from chopstickshq.com/macbar."
+            return "Update package failed integrity check (SHA-256 mismatch). Refusing to install. Re-download from chopstickshq.com/rnitro."
         }
         log("ZIP SHA-256 OK (\(actual.prefix(16))…)")
         UserDefaults.standard.set(actual, forKey: "rnitro.update.remoteZipSha")
@@ -1030,15 +1030,15 @@ enum UpdateInstaller {
         return nil
     }
 
-    /// Ensure staged bundle looks like MacBar and passes codesign --verify.
+    /// Ensure staged bundle looks like rNitro and passes codesign --verify.
     private static func verifyStagedApp(_ app: URL) -> String? {
         let plist = app.appendingPathComponent("Contents/Info.plist")
         guard FileManager.default.fileExists(atPath: plist.path) else {
             return "Staged app is missing Info.plist."
         }
-        let exe = app.appendingPathComponent("Contents/MacOS/MacBar")
+        let exe = app.appendingPathComponent("Contents/MacOS/rNitro")
         guard FileManager.default.isExecutableFile(atPath: exe.path) else {
-            return "Staged app is missing a runnable MacOS/MacBar binary."
+            return "Staged app is missing a runnable MacOS/rNitro binary."
         }
         // Bundle identifier must be our product family.
         let idProc = Process()
@@ -1055,13 +1055,13 @@ enum UpdateInstaller {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !bid.lowercased().contains("rnitro") {
             log("Unexpected bundle id: \(bid)")
-            return "Staged app bundle id is not MacBar (\(bid)). Refusing to install."
+            return "Staged app bundle id is not rNitro (\(bid)). Refusing to install."
         }
         // codesign --verify (ad-hoc signed builds still verify as valid)
         let verify = runCommand("/usr/bin/codesign", ["--verify", "--deep", app.path])
         if verify.0 != 0 {
             log("codesign --verify failed: \(verify.1)")
-            return "Staged app failed code signature verification. Refusing to install. Re-download from chopstickshq.com/macbar."
+            return "Staged app failed code signature verification. Refusing to install. Re-download from chopstickshq.com/rnitro."
         }
         log("codesign --verify OK for \(app.lastPathComponent) id=\(bid)")
         return nil
@@ -1093,7 +1093,7 @@ enum UpdateInstaller {
             URL(string: "\(UPDATE_CDN_ORIGIN)/\(encoded)")!,
         ]
         if !ver.isEmpty {
-            urls.append(URL(string: "https://github.com/ilikemacos/MacBar/releases/download/\(ver)/\(encoded)")!)
+            urls.append(URL(string: "https://github.com/ilikemacos/rNitro/releases/download/\(ver)/\(encoded)")!)
         }
         urls.append(URL(string: "\(UPDATE_CDN_ORIGIN_LEGACY)/\(encoded)")!)
         return urls
@@ -1161,7 +1161,7 @@ enum UpdateInstaller {
             backing: .buffered,
             defer: false
         )
-        panel.title = "MacBar Update"
+        panel.title = "rNitro Update"
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.hidesOnDeactivate = false
@@ -1246,9 +1246,9 @@ enum UpdateInstaller {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory
         let manifest = fetchManifest()
-        let zipName = manifest?.zipName(for: remoteVersion) ?? "MacBar-\(remoteVersion).zip"
+        let zipName = manifest?.zipName(for: remoteVersion) ?? "rNitro-\(remoteVersion).zip"
         let zipFile = tmp.appendingPathComponent(zipName)
-        let extractDir = tmp.appendingPathComponent("MacBar-update-extract", isDirectory: true)
+        let extractDir = tmp.appendingPathComponent("rNitro-update-extract", isDirectory: true)
         try? fm.removeItem(at: zipFile)
         try? fm.removeItem(at: extractDir)
         log("Resolved zip: \(zipName)")
@@ -1307,7 +1307,7 @@ enum UpdateInstaller {
         }
         if httpStatus != 0 && httpStatus != 200 {
             log("HTTP \(httpStatus) for \(zipName)")
-            return .failure("Server returned HTTP \(httpStatus) for \(zipName). Download the App ZIP manually from chopstickshq.com/macbar.")
+            return .failure("Server returned HTTP \(httpStatus) for \(zipName). Download the App ZIP manually from chopstickshq.com/rnitro.")
         }
         guard fm.fileExists(atPath: zipFile.path) else {
             return .failure("Download did not save \(zipName). Try again or use the website.")
@@ -1344,8 +1344,8 @@ enum UpdateInstaller {
             return .failure("Could not extract \(zipName): \(extractError)")
         }
         guard let staged = findAppBundle(in: extractDir) else {
-            log("MacBar.app missing after extract")
-            return .failure("MacBar.app not found inside \(zipName). Download manually from chopstickshq.com/macbar.")
+            log("rNitro.app missing after extract")
+            return .failure("rNitro.app not found inside \(zipName). Download manually from chopstickshq.com/rnitro.")
         }
         if let stageErr = verifyStagedApp(staged) {
             try? fm.removeItem(at: extractDir)
@@ -1370,7 +1370,7 @@ enum UpdateInstaller {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Update Installed"
-            alert.informativeText = "MacBar will restart now to finish applying \(UpdateChecker.displayLabel(remoteVersion))."
+            alert.informativeText = "rNitro will restart now to finish applying \(UpdateChecker.displayLabel(remoteVersion))."
             alert.alertStyle = .informational
             alert.runModal()
             LaunchAtLoginManager.refreshRegistrationIfNeeded()
@@ -1436,7 +1436,7 @@ enum UpdateInstaller {
     private static func installDestination() -> URL {
         let current = URL(fileURLWithPath: Bundle.main.bundlePath).standardizedFileURL
         let homeApp = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Applications/MacBar.app", isDirectory: true)
+            .appendingPathComponent("Applications/rNitro.app", isDirectory: true)
         let path = current.path
 
         // Quarantined / translocated copies cannot be updated in place.
@@ -1449,7 +1449,7 @@ enum UpdateInstaller {
             return systemApplicationsDestination(from: current)
         }
 
-        // Only update in place when already under ~/Applications/MacBar.app.
+        // Only update in place when already under ~/Applications/rNitro.app.
         if isAllowedInstallDestination(current) {
             let parent = current.deletingLastPathComponent()
             if FileManager.default.isWritableFile(atPath: parent.path) {
@@ -1463,7 +1463,7 @@ enum UpdateInstaller {
         guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: [.isDirectoryKey]) else { return nil }
         for case let url as URL in e {
             var isDir: ObjCBool = false
-            if url.lastPathComponent == "MacBar.app",
+            if url.lastPathComponent == "rNitro.app",
                FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
                 return url
             }
@@ -1485,8 +1485,8 @@ enum UpdateInstaller {
         try? fm.createDirectory(at: parent, withIntermediateDirectories: true)
 
         let cacheDir = fm.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Caches/MacBar/update-staging", isDirectory: true)
-        let durableStage = cacheDir.appendingPathComponent("MacBar.app", isDirectory: true)
+            .appendingPathComponent("Library/Caches/rNitro/update-staging", isDirectory: true)
+        let durableStage = cacheDir.appendingPathComponent("rNitro.app", isDirectory: true)
         try? fm.createDirectory(at: cacheDir, withIntermediateDirectories: true)
         try? fm.removeItem(at: durableStage)
 
@@ -1508,7 +1508,7 @@ enum UpdateInstaller {
             return ReplaceResult(error: "Refusing admin install to unexpected path \(adminDest.path).")
         }
         // Admin path must be exactly system Applications — never a user-controlled string.
-        let adminTargetPath = "/Applications/MacBar.app"
+        let adminTargetPath = "/Applications/rNitro.app"
         let staged = shellQuote(durableStage.path)
         let target = shellQuote(
             isSystemApplicationsBundle(destination.path) ? adminTargetPath : adminDest.path
@@ -1530,13 +1530,13 @@ enum UpdateInstaller {
 set -euo pipefail
 STAGED='\(staged)'
 test -d "$STAGED"
-test -x "$STAGED/Contents/MacOS/MacBar"
+test -x "$STAGED/Contents/MacOS/rNitro"
 /usr/bin/codesign --verify --deep "$STAGED"
 mkdir -p /Applications
-rm -rf /Applications/MacBar.app
-/usr/bin/ditto "$STAGED" /Applications/MacBar.app
-/usr/bin/xattr -cr /Applications/MacBar.app || true
-/usr/bin/codesign --verify --deep /Applications/MacBar.app
+rm -rf /Applications/rNitro.app
+/usr/bin/ditto "$STAGED" /Applications/rNitro.app
+/usr/bin/xattr -cr /Applications/rNitro.app || true
+/usr/bin/codesign --verify --deep /Applications/rNitro.app
 """
             do {
                 try adminScript.write(to: adminHelper, atomically: true, encoding: .utf8)
@@ -1562,7 +1562,7 @@ rm -rf /Applications/MacBar.app
             if proc.terminationStatus != 0 {
                 let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
                 log("Admin install failed (status \(proc.terminationStatus)): \(err)")
-                return ReplaceResult(error: "Could not replace MacBar in /Applications (admin install failed or signature check failed). Download the App ZIP from chopstickshq.com/macbar.")
+                return ReplaceResult(error: "Could not replace rNitro in /Applications (admin install failed or signature check failed). Download the App ZIP from chopstickshq.com/rnitro.")
             }
             return ReplaceResult(opensBeforeQuit: true)
         }
@@ -1583,18 +1583,18 @@ write_result() {
 trap 'code=$?; if [ ! -f "$RESULT" ] || [ ! -s "$RESULT" ]; then write_result fail "Update helper exited with code $code. See $LOG"; fi' EXIT
 write_result pending "Update in progress…"
 echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] apply-update pid=\(pid) dest=$TARGET" >> "$LOG"
-# Path must end with MacBar.app and live under Applications
+# Path must end with rNitro.app and live under Applications
 case "$TARGET" in
-  */Applications/MacBar.app) ;;
+  */Applications/rNitro.app) ;;
   *) write_result fail "Refusing unexpected install path"; exit 1 ;;
 esac
 test -d "$STAGED" || { write_result fail "Staged app missing"; exit 1; }
-test -x "$STAGED/Contents/MacOS/MacBar" || { write_result fail "Staged binary missing"; exit 1; }
+test -x "$STAGED/Contents/MacOS/rNitro" || { write_result fail "Staged binary missing"; exit 1; }
 /usr/bin/codesign --verify --deep "$STAGED" || { write_result fail "Staged app failed codesign"; exit 1; }
 while kill -0 \(pid) 2>/dev/null; do sleep 0.25; done
 sleep 0.5
 mkdir -p "$PARENT" || { write_result fail "Could not create install folder"; exit 1; }
-rm -rf "$TARGET" || { write_result fail "Could not remove old MacBar.app"; exit 1; }
+rm -rf "$TARGET" || { write_result fail "Could not remove old rNitro.app"; exit 1; }
 if ! /usr/bin/ditto "$STAGED" "$TARGET" 2>>"$LOG"; then
   write_result fail "ditto failed copying the update. See $LOG"
   exit 1
@@ -2018,7 +2018,7 @@ fileprivate final class SMCReader {
 @_silgen_name("IOHIDEventSystemClientCreate")
 private func IOHIDEventSystemClientCreate(_ allocator: CFAllocator?) -> UnsafeMutableRawPointer?
 // IMPORTANT: Apple declares this as void — a fake Int32 return was garbage and
-// always failed `== 0`, so MacBar never read MTR temps on Apple Silicon.
+// always failed `== 0`, so rNitro never read MTR temps on Apple Silicon.
 @_silgen_name("IOHIDEventSystemClientSetMatching")
 private func IOHIDEventSystemClientSetMatching(_ client: UnsafeMutableRawPointer?, _ match: CFDictionary?)
 @_silgen_name("IOHIDEventSystemClientCopyServices")
@@ -3166,7 +3166,7 @@ class BatteryMonitor: ObservableObject {
 
     var diagnosticsText: String {
         var lines: [String] = []
-        lines.append("MacBar battery diagnostics — \(CURRENT_VERSION)")
+        lines.append("rNitro battery diagnostics — \(CURRENT_VERSION)")
         lines.append("Menu / UI %: \(levelPercent)")
         if let p = diagPmsetPercent { lines.append("pmset %: \(p)") }
         if let p = diagIOPSPercent { lines.append("IOPS %: \(p)") }
@@ -3275,8 +3275,8 @@ class BatteryMonitor: ObservableObject {
             }()
 
             var lines: [String] = []
-            lines.append("MacBar battery parity — \(CURRENT_VERSION)")
-            lines.append("MacBar UI: \(uiPct)%  rem=\(uiRem.map(String.init) ?? "—")  source=\(uiSrc)")
+            lines.append("rNitro battery parity — \(CURRENT_VERSION)")
+            lines.append("rNitro UI: \(uiPct)%  rem=\(uiRem.map(String.init) ?? "—")  source=\(uiSrc)")
             lines.append("IOPS: \(iopsPct.map { "\($0)%" } ?? "—")  rem=\(iopsRem.map(String.init) ?? "—") min")
             lines.append("pmset: \(pmPct.map { "\($0)%" } ?? "—")  rem=\(pmRem.map(String.init) ?? "—") min")
             lines.append("system_profiler SoC: \(profSoc.map { "\($0)%" } ?? "—")  health=\(profHealth.map { "\($0)%" } ?? "—")")
@@ -5197,7 +5197,7 @@ final class DeveloperModeStore: ObservableObject {
     func log(_ message: String) {
         guard verboseLogging else { return }
         let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/MacBar", isDirectory: true)
+            .appendingPathComponent("Library/Logs/rNitro", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let file = dir.appendingPathComponent("verbose.log")
         let line = "\(ISO8601DateFormatter().string(from: Date()))  \(message)\n"
@@ -5215,7 +5215,7 @@ final class DeveloperModeStore: ObservableObject {
 
     func openLogFolder() {
         let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/MacBar", isDirectory: true)
+            .appendingPathComponent("Library/Logs/rNitro", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         NSWorkspace.shared.open(dir)
     }
@@ -5224,7 +5224,7 @@ final class DeveloperModeStore: ObservableObject {
         let cpu = CPUMonitor.shared
         let bat = BatteryMonitor.shared
         let lines = [
-            "MacBar \(CURRENT_VERSION) sensor dump",
+            "rNitro \(CURRENT_VERSION) sensor dump",
             "CPU: \(String(format: "%.1f", cpu.totalUsage))%  temp: \(String(format: "%.1f", cpu.temperature))°C  power: \(String(format: "%.2f", cpu.packagePowerWatts))W",
             "RAM: \(String(format: "%.1f", cpu.memoryUsedPercent))%",
             "Battery present: \(bat.isPresent)  level: \(bat.levelPercent)%  charging: \(bat.isCharging)",
@@ -5264,7 +5264,7 @@ final class DeveloperModeStore: ObservableObject {
             fontFiles = items.filter { $0.hasSuffix(".ttf") || $0.hasSuffix(".otf") }.sorted()
         }
         let lines = [
-            "MacBar environment manifest",
+            "rNitro environment manifest",
             "version: \(CURRENT_VERSION)",
             "channel: \(RNITRO_BUILD_CHANNEL)",
             "bundle: \(Bundle.main.bundlePath)",
@@ -5272,7 +5272,7 @@ final class DeveloperModeStore: ObservableObject {
             "resources: \(Bundle.main.resourcePath ?? "—")",
             "fontsBundled: \(fontFiles.count)",
             "fontSample: \(fontFiles.prefix(8).joined(separator: ", "))",
-            "logs: ~/Library/Logs/MacBar",
+            "logs: ~/Library/Logs/rNitro",
             "appearance: \(DisplayPreferencesStore.shared.appearanceMode.rawValue)",
             "uiFont: \(DisplayPreferencesStore.shared.uiFontName)",
             "updateURL: \(UPDATE_CHECK_URL.absoluteString)",
@@ -5287,7 +5287,7 @@ final class DeveloperModeStore: ObservableObject {
 
     func copyRegisteredFonts() {
         let names = UIFontCatalog.all.map { "\($0.id) → \($0.family) [\($0.category.rawValue)]" }
-        let body = (["MacBar UI font catalog (\(names.count))"] + names).joined(separator: "\n")
+        let body = (["rNitro UI font catalog (\(names.count))"] + names).joined(separator: "\n")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(body, forType: .string)
     }
@@ -5778,12 +5778,12 @@ struct MonitorRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(label)
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .frame(minWidth: 72, alignment: .leading)
             Spacer(minLength: 4)
             Text(value)
-                .font(MacBarFont(.caption, metrics: metrics, weight: .medium))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
                 .foregroundColor(valueColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
@@ -5863,7 +5863,7 @@ struct MonitorSection<Content: View>: View {
                         .fill(accent)
                         .frame(width: 3, height: 22)
                     Text(title)
-                        .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer(minLength: 4)
                     if let sparkline, !sparkline.isEmpty {
@@ -5871,7 +5871,7 @@ struct MonitorSection<Content: View>: View {
                             .frame(width: 44, height: 14)
                     }
                     Text(summary)
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .medium))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -5946,7 +5946,7 @@ struct CoreRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(HardwareLabelMapper.coreLabel(index: index, isEfficiency: isEfficiency, clusterIndex: clusterIndex))
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(isEfficiency ? .nBlue.opacity(0.9) : .accent.opacity(0.9))
                 .frame(minWidth: 22, maxWidth: 30, alignment: .leading).lineLimit(1)
             GeometryReader { g in
@@ -5958,7 +5958,7 @@ struct CoreRow: View {
                 }
             }.frame(height: 4)
             Text(String(format: "%.0f%%", core.usage))
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .frame(minWidth: 28, maxWidth: 40, alignment: .trailing).lineLimit(1)
         }
@@ -5980,7 +5980,7 @@ struct MinimalButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(MacBarFont(.body, metrics: metrics, weight: .medium))
+                .font(rNitroFont(.body, metrics: metrics, weight: .medium))
                 .foregroundColor(disabled ? .secondary : tint)
                 .padding(.horizontal, metrics.compact ? 10 : 12)
                 .padding(.vertical, metrics.compact ? 5 : 6)
@@ -6045,7 +6045,7 @@ enum AppTab: String, CaseIterable, Identifiable {
 }
 
 extension Notification.Name {
-    static let MacBarOpenMainWindow = Notification.Name("rnitro.openMainWindow")
+    static let rNitroOpenMainWindow = Notification.Name("rnitro.openMainWindow")
 }
 
 // ── Multi-provider AI chat (BYO API keys, stored in Keychain) ───────────────
@@ -6897,7 +6897,7 @@ final class AIChatModel: ObservableObject {
             return try await streamOpenAICompatible(
                 url: "https://openrouter.ai/api/v1/chat/completions", apiKey: apiKey, model: "openrouter/auto",
                 messages: messages, domain: "OpenRouter", requireAuth: true, onDelta: onDelta,
-                extraHeaders: ["HTTP-Referer": "https://getrnitro.netlify.app", "X-Title": "MacBar"]
+                extraHeaders: ["HTTP-Referer": "https://getrnitro.netlify.app", "X-Title": "rNitro"]
             )
         case .lmStudio:
             return try await streamOpenAICompatible(
@@ -7167,7 +7167,7 @@ final class AIChatModel: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         req.setValue("https://getrnitro.netlify.app", forHTTPHeaderField: "HTTP-Referer")
-        req.setValue("MacBar", forHTTPHeaderField: "X-Title")
+        req.setValue("rNitro", forHTTPHeaderField: "X-Title")
         req.timeoutInterval = 120
         let msgs: [[String: String]] = chatHistory(messages).map {
             ["role": $0.role == "user" ? "user" : "assistant", "content": $0.text]
@@ -7268,7 +7268,7 @@ struct AIProviderPicker: View {
                             Text(p.rawValue)
                             ProviderStatusIndicator(status: chat.status(for: p))
                         }
-                        .font(MacBarFont(.caption, metrics: metrics, weight: chat.selectedProvider == p ? .semibold : .regular))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: chat.selectedProvider == p ? .semibold : .regular))
                         .foregroundColor(chat.selectedProvider == p ? .accent : .secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
@@ -7348,9 +7348,9 @@ struct ChatTabView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(display.tr("chat.title"))
-                    .font(MacBarFont(.title, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
                 Text(display.tr("chat.subtitle"))
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, metrics.hPad)
@@ -7365,7 +7365,7 @@ struct ChatTabView: View {
                                 Image(systemName: s.icon)
                                     .font(.system(size: 11, weight: .semibold))
                                 Text(s.label)
-                                    .font(MacBarFont(.caption, metrics: metrics, weight: section == s ? .semibold : .regular))
+                                    .font(rNitroFont(.caption, metrics: metrics, weight: section == s ? .semibold : .regular))
                             }
                             .foregroundColor(section == s ? .accent : .secondary)
                             .padding(.horizontal, 10)
@@ -7395,7 +7395,7 @@ struct ChatTabView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(Color.bg)
-        .onReceive(NotificationCenter.default.publisher(for: .MacBarOpenMainWindow)) { note in
+        .onReceive(NotificationCenter.default.publisher(for: .rNitroOpenMainWindow)) { note in
             if let raw = note.userInfo?["chatSection"] as? String,
                let s = ChatSection(rawValue: raw) {
                 section = s
@@ -7415,10 +7415,10 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Text(display.tr("settings.title"))
-                        .font(MacBarFont(.title, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
                     if devMode.isEnabled {
                         Text("DEV")
-                            .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                            .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                             .foregroundColor(.bg)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -7426,7 +7426,7 @@ struct SettingsView: View {
                     }
                 }
                 Text(display.tr("settings.subtitle"))
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, metrics.hPad)
@@ -7441,7 +7441,7 @@ struct SettingsView: View {
                                 Image(systemName: s.icon)
                                     .font(.system(size: 11, weight: .semibold))
                                 Text(s.label)
-                                    .font(MacBarFont(.caption, metrics: metrics, weight: section == s ? .semibold : .regular))
+                                    .font(rNitroFont(.caption, metrics: metrics, weight: section == s ? .semibold : .regular))
                             }
                             .foregroundColor(section == s ? .accent : .secondary)
                             .padding(.horizontal, 10)
@@ -7476,7 +7476,7 @@ struct SettingsView: View {
         .onChange(of: devMode.isEnabled) { _, on in
             if !on && section == .developer { section = .general }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .MacBarOpenMainWindow)) { note in
+        .onReceive(NotificationCenter.default.publisher(for: .rNitroOpenMainWindow)) { note in
             if let raw = note.userInfo?["settingsSection"] as? String,
                let s = SettingsSection(rawValue: raw) {
                 section = s
@@ -7496,13 +7496,13 @@ struct ChatAPISection: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("AI Providers")
-                        .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                     Text("API keys are encrypted in Keychain. Cloud providers need a key; LM Studio, Ollama, and Hermes use Enable.")
-                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                     HStack(spacing: 8) {
                         ProviderStatusIndicator(status: chat.status(for: chat.selectedProvider))
                         Text(chat.status(for: chat.selectedProvider).state.rawValue)
-                            .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                            .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                             .foregroundColor(chat.status(for: chat.selectedProvider).state.color)
                         Spacer()
                         MinimalButton(
@@ -7513,18 +7513,18 @@ struct ChatAPISection: View {
                         )
                     }
                     Text(chat.selectedProvider.setupHint)
-                        .font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                        .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                     if chat.selectedProvider.requiresApiKey {
                         SecureField("API key", text: $chat.apiKeyDraft)
                             .textFieldStyle(.plain)
-                            .font(MacBarFont(.body, metrics: metrics))
+                            .font(rNitroFont(.body, metrics: metrics))
                             .padding(10)
                             .background(Color.card)
                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.6), lineWidth: 1))
                     } else {
                         SecureField("API key (optional)", text: $chat.apiKeyDraft)
                             .textFieldStyle(.plain)
-                            .font(MacBarFont(.body, metrics: metrics))
+                            .font(rNitroFont(.body, metrics: metrics))
                             .padding(10)
                             .background(Color.card)
                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.6), lineWidth: 1))
@@ -7536,13 +7536,13 @@ struct ChatAPISection: View {
                         )
                         if chat.hasSavedKey(for: chat.selectedProvider) {
                             Button("Remove Key") { chat.removeApiKey() }
-                                .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.nRed).buttonStyle(.plain)
+                                .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.nRed).buttonStyle(.plain)
                         }
                     }
                     Link("Get a key: \(chat.selectedProvider.keyHint)", destination: URL(string: chat.selectedProvider.keyURL)!)
-                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.accent)
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.accent)
                     Text("Privacy: keys stay on this Mac. Chat messages are sent only to the provider you pick.")
-                        .font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                        .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                 }
                 .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
             }
@@ -7575,7 +7575,7 @@ struct FontFamilyPickerView: View {
                     .foregroundColor(.secondary)
                 TextField(display.tr("appearance.fontSearch"), text: $search)
                     .textFieldStyle(.plain)
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                 if !search.isEmpty {
                     Button {
                         search = ""
@@ -7600,7 +7600,7 @@ struct FontFamilyPickerView: View {
                             category = cat
                         } label: {
                             Text(cat.label)
-                                .font(MacBarFont(.micro, metrics: metrics, weight: on ? .semibold : .regular))
+                                .font(rNitroFont(.micro, metrics: metrics, weight: on ? .semibold : .regular))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12)))
@@ -7614,12 +7614,12 @@ struct FontFamilyPickerView: View {
             // Match count + current
             HStack {
                 Text(String(format: display.tr("appearance.fontCount"), filtered.count))
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
                 Spacer(minLength: 0)
                 if let current = UIFontCatalog.all.first(where: { $0.id == display.fontFamilyID }) {
                     Text(display.tr("appearance.fontCurrent") + ": " + current.label)
-                        .font(MacBarFont(.micro, metrics: metrics))
+                        .font(rNitroFont(.micro, metrics: metrics))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -7641,7 +7641,7 @@ struct FontFamilyPickerView: View {
                                         .foregroundColor(.primary)
                                         .lineLimit(1)
                                     Text(font.category.label)
-                                        .font(MacBarFont(.micro, metrics: metrics))
+                                        .font(rNitroFont(.micro, metrics: metrics))
                                         .foregroundColor(.secondary)
                                 }
                                 Spacer(minLength: 4)
@@ -7676,7 +7676,7 @@ struct FontFamilyPickerView: View {
 
             if filtered.isEmpty {
                 Text(display.tr("appearance.fontEmpty"))
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
         }
@@ -7693,11 +7693,11 @@ struct SettingsAppearanceSection: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(display.tr("appearance.title"))
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("appearance.subtitle"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("appearance.theme"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Picker(display.tr("appearance.theme"), selection: Binding(
                     get: { display.appearanceMode },
                     set: { display.setAppearanceMode($0) }
@@ -7708,9 +7708,9 @@ struct SettingsAppearanceSection: View {
                 }
                 .pickerStyle(.menu)
                 Text(display.tr("appearance.theme.hint"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("appearance.fontSize"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Picker(display.tr("appearance.fontSize"), selection: Binding(
                     get: { display.fontSize },
                     set: { display.setFontSize($0) }
@@ -7721,19 +7721,19 @@ struct SettingsAppearanceSection: View {
                 }
                 .pickerStyle(.segmented)
                 Text(display.tr("appearance.fontFamily"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
                 Text(display.tr("appearance.fontFamily.hint"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 FontFamilyPickerView()
                 Text(display.tr("appearance.pangram"))
-                    .font(MacBarFont(.body, metrics: metrics))
+                    .font(rNitroFont(.body, metrics: metrics))
                     .padding(.vertical, 2)
                 Text(display.tr("appearance.fontOFL"))
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary.opacity(0.85))
                 Text(display.tr("appearance.accent"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
                 Picker(display.tr("appearance.accent"), selection: $ui.accentPreset) {
                     ForEach(AccentPreset.allCases) { p in
@@ -7743,10 +7743,10 @@ struct SettingsAppearanceSection: View {
                 .pickerStyle(.segmented)
                 HStack(spacing: 8) {
                     Circle().fill(ui.accentColor).frame(width: 14, height: 14)
-                    Text(display.tr("appearance.accent.preview")).font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("appearance.accent.preview")).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
                 Text(display.tr("appearance.language"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
                 Picker(display.tr("appearance.language"), selection: Binding(
                     get: { display.language },
@@ -7758,10 +7758,10 @@ struct SettingsAppearanceSection: View {
                 }
                 .pickerStyle(.menu)
                 Text(display.tr("appearance.monitorUI"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
                 Text(display.tr("appearance.monitorUI.hint"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Picker(display.tr("appearance.monitorUI"), selection: $uiStyleRaw) {
                     ForEach(MonitorUIStyle.allCases) { style in
                         Text(style.label).tag(style.rawValue)
@@ -7769,22 +7769,22 @@ struct SettingsAppearanceSection: View {
                 }
                 .pickerStyle(.menu)
                 Text(display.tr("appearance.sections"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 6)
                 Toggle(isOn: $ui.showPerCore) {
-                    Text(display.tr("appearance.showPerCore")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("appearance.showPerCore")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $ui.showFans) {
-                    Text(display.tr("appearance.showFans")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("appearance.showFans")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $ui.showProcesses) {
-                    Text(display.tr("appearance.showProcesses")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("appearance.showProcesses")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Button(display.tr("appearance.reset")) { ui.resetAppearanceDefaults() }
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
                     .buttonStyle(.plain)
                     .padding(.top, 4)
@@ -7812,11 +7812,11 @@ struct SettingsMenubarSection: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(display.tr("menubar.title"))
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("menubar.subtitle"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("menubar.presets"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 HStack(spacing: 8) {
                     ForEach(MenuBarPreset.allCases) { preset in
                         let selected = MenuBarConfig.lastPreset == preset
@@ -7825,7 +7825,7 @@ struct SettingsMenubarSection: View {
                             menuBarLayoutRaw = MenuBarConfig.layout.rawValue
                             slotOrderTick += 1
                         }
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                         .tint(selected ? .accentColor : nil)
@@ -7839,12 +7839,12 @@ struct SettingsMenubarSection: View {
                         menuBarLayoutRaw = MenuBarConfig.layout.rawValue
                         slotOrderTick += 1
                     }
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .buttonStyle(.plain)
                     .foregroundColor(.secondary)
                 }
                 Text(display.tr("menubar.presets.hint"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Picker(display.tr("menubar.layout"), selection: $menuBarLayoutRaw) {
                     ForEach(MenuBarLayout.allCases) { layout in
                         Text(layout.label).tag(layout.rawValue)
@@ -7857,7 +7857,7 @@ struct SettingsMenubarSection: View {
                     }
                 }
                 Text("Density")
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Picker("Density", selection: $ui.density) {
                     ForEach(MenubarDensity.allCases) { d in
                         Text(d.label).tag(d)
@@ -7865,7 +7865,7 @@ struct SettingsMenubarSection: View {
                 }
                 .pickerStyle(.segmented)
                 Text("Left-click action")
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Picker("Click", selection: $ui.menubarClick) {
                     ForEach(MenubarClickBehavior.allCases) { b in
                         Text(b.label).tag(b)
@@ -7873,7 +7873,7 @@ struct SettingsMenubarSection: View {
                 }
                 .pickerStyle(.segmented)
                 Text("Slots (toggle + reorder)")
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 4)
                 // Stable id with tick so reorder refreshes list
                 let _ = slotOrderTick
@@ -7883,7 +7883,7 @@ struct SettingsMenubarSection: View {
                             get: { MenuBarConfig.isSlotEnabled(slot) },
                             set: { MenuBarConfig.setSlot(slot, enabled: $0); slotOrderTick += 1 }
                         )) {
-                            Text(slot.label).font(MacBarFont(.label, metrics: metrics))
+                            Text(slot.label).font(rNitroFont(.label, metrics: metrics))
                         }
                         .toggleStyle(.switch)
                         Spacer(minLength: 4)
@@ -7910,27 +7910,27 @@ struct SettingsMenubarSection: View {
                         get: { false },
                         set: { MenuBarConfig.setSlot(slot, enabled: $0); slotOrderTick += 1 }
                     )) {
-                        Text(slot.label).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                        Text(slot.label).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                     }
                     .toggleStyle(.switch)
                 }
                 Text("Preview: \(MenuBarStatusFormatter.render(layout: MenuBarConfig.layout))")
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.accent)
                     .padding(.top, 2)
                 if RNITRO_FEATURE_BETA_UI {
                     Divider().padding(.vertical, 4)
                     Text(display.tr("menubar.whisper"))
-                        .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     Toggle(isOn: Binding(
                         get: { UserDefaults.standard.bool(forKey: MonitorPreferences.whisperModeKey) },
                         set: { UserDefaults.standard.set($0, forKey: MonitorPreferences.whisperModeKey) }
                     )) {
-                        Text(display.tr("menubar.whisper.toggle")).font(MacBarFont(.label, metrics: metrics))
+                        Text(display.tr("menubar.whisper.toggle")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
                     Text(display.tr("menubar.whisper.hint"))
-                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                     Picker(display.tr("menubar.whisper.sensitivity"), selection: Binding(
                         get: { UserDefaults.standard.string(forKey: MonitorPreferences.whisperSensitivityKey) ?? WhisperSensitivity.normal.rawValue },
                         set: { UserDefaults.standard.set($0, forKey: MonitorPreferences.whisperSensitivityKey) }
@@ -7946,7 +7946,7 @@ struct SettingsMenubarSection: View {
                     menuBarLayoutRaw = MenuBarLayout.inline.rawValue
                     slotOrderTick += 1
                 }
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .buttonStyle(.plain)
             }
@@ -7972,40 +7972,40 @@ struct SettingsMonitorSection: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(display.tr("monitor.title"))
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("monitor.subtitle"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Toggle(isOn: $showStressUI) {
-                    Text(display.tr("monitor.stress")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("monitor.stress")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 .onChange(of: showStressUI) { _, on in if !on { stress.stop() } }
                 Toggle(isOn: $showBenchmarkUI) {
-                    Text(display.tr("monitor.benchmark")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("monitor.benchmark")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch).disabled(bench.isRunning)
                 Toggle(isOn: $showNetworkUI) {
-                    Text(display.tr("monitor.network")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("monitor.network")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 if RNITRO_FEATURE_BETA_UI {
                     Toggle(isOn: $soloMode) {
-                        Text(display.tr("monitor.solo")).font(MacBarFont(.label, metrics: metrics))
+                        Text(display.tr("monitor.solo")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
                     Toggle(isOn: $showWeather) {
-                        Text(display.tr("monitor.weather")).font(MacBarFont(.label, metrics: metrics))
+                        Text(display.tr("monitor.weather")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
                     Text(display.tr("monitor.panels"))
-                        .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                         .padding(.top, 4)
                     ForEach(MonitorPanel.allCases.filter { $0 != .cleaner }) { panel in
                         Toggle(isOn: Binding(
                             get: { UserDefaults.standard.object(forKey: "rnitro.panelVisible.\(panel.rawValue)") == nil ? true : UserDefaults.standard.bool(forKey: "rnitro.panelVisible.\(panel.rawValue)") },
                             set: { UserDefaults.standard.set($0, forKey: "rnitro.panelVisible.\(panel.rawValue)") }
                         )) {
-                            Text(panel.title).font(MacBarFont(.caption, metrics: metrics))
+                            Text(panel.title).font(rNitroFont(.caption, metrics: metrics))
                         }
                         .toggleStyle(.switch)
                     }
@@ -8034,11 +8034,11 @@ struct SettingsAlertsSection: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(display.tr("alerts.advisorTitle"))
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("alerts.advisorSubtitle"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("alerts.thresholds"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 thresholdRow(display.tr("alerts.tempWarn"), value: $advisor.thresholds.tempWarning, range: 55...95, step: 1)
                 thresholdRow(display.tr("alerts.tempCrit"), value: $advisor.thresholds.tempCritical, range: 65...105, step: 1)
                 thresholdRow(display.tr("alerts.cpuPct"), value: $advisor.thresholds.cpuWarning, range: 50...100, step: 1)
@@ -8046,27 +8046,27 @@ struct SettingsAlertsSection: View {
                 thresholdRow(display.tr("alerts.gpuPct"), value: $advisor.thresholds.gpuWarning, range: 50...100, step: 1)
                 thresholdRow(display.tr("alerts.batteryLow"), value: $advisor.thresholds.batteryLow, range: 5...40, step: 1)
                 Toggle(isOn: $advisor.thresholds.proactiveEnabled) {
-                    Text(display.tr("alerts.proactive")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("alerts.proactive")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 .onChange(of: advisor.thresholds.proactiveEnabled) { _, _ in advisor.refreshThresholds() }
                 Toggle(isOn: $advisor.thresholds.criticalTempBannersEnabled) {
-                    Text(display.tr("alerts.banners")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("alerts.banners")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 .onChange(of: advisor.thresholds.criticalTempBannersEnabled) { _, _ in advisor.refreshThresholds() }
                 Text(display.tr("alerts.colorThresholds"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 8)
                 Text(display.tr("alerts.colorHint"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 colorThresholdRow(display.tr("alerts.cpuGreen"), value: $ui.cpuGreenMax, range: 10...60)
                 colorThresholdRow(display.tr("alerts.cpuOrange"), value: $ui.cpuOrangeMax, range: 40...90)
                 colorThresholdRow(display.tr("alerts.cpuRed"), value: $ui.cpuRedMin, range: 70...100)
                 colorThresholdRow("Temp green below °C", value: $ui.tempGreenMax, range: 40...75)
                 colorThresholdRow("Temp orange below °C", value: $ui.tempOrangeMax, range: 55...95)
                 Button("Reset color thresholds") { ui.resetColorThresholds() }
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
                     .buttonStyle(.plain)
             }
@@ -8082,22 +8082,22 @@ struct SettingsAlertsSection: View {
 
     private func thresholdRow(_ label: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double) -> some View {
         HStack {
-            Text(label).font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+            Text(label).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
             Spacer()
             Slider(value: value, in: range, step: step).frame(maxWidth: 200)
             Text("\(Int(value.wrappedValue))")
-                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 .frame(width: 28, alignment: .trailing)
         }
     }
 
     private func colorThresholdRow(_ label: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
         HStack {
-            Text(label).font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+            Text(label).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
             Spacer()
             Slider(value: value, in: range, step: 1).frame(maxWidth: 200)
             Text("\(Int(value.wrappedValue))")
-                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 .frame(width: 28, alignment: .trailing)
         }
     }
@@ -8114,26 +8114,26 @@ struct SettingsGeneralSection: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(display.tr("general.title"))
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 // Channel + updates strip
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         Text(display.tr("general.channel"))
-                            .font(MacBarFont(.caption, metrics: metrics))
+                            .font(rNitroFont(.caption, metrics: metrics))
                             .foregroundColor(.secondary)
                         Text(updateStatus.channelDisplayName)
-                            .font(MacBarFont(.caption, metrics: metrics, weight: .bold))
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .bold))
                             .foregroundColor(updateStatus.channelTint)
                             .padding(.horizontal, 8).padding(.vertical, 3)
                             .background(updateStatus.channelTint.opacity(0.15))
                             .clipShape(Capsule())
                         Spacer(minLength: 4)
                         Text(UpdateChecker.displayLabel(CURRENT_VERSION))
-                            .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                             .foregroundColor(.primary.opacity(0.85))
                     }
                     Text(updateStatus.lastCheckLabel)
-                        .font(MacBarFont(.caption, metrics: metrics))
+                        .font(rNitroFont(.caption, metrics: metrics))
                         .foregroundColor(.secondary)
                     HStack(spacing: 10) {
                         MinimalButton(title: display.tr("general.checkUpdates"), action: {
@@ -8141,11 +8141,11 @@ struct SettingsGeneralSection: View {
                             updateStatus.refreshIntegrityLabels()
                             UpdateChecker.checkManually()
                         })
-                        if let url = URL(string: "https://chopstickshq.com/macbar/") {
+                        if let url = URL(string: "https://chopstickshq.com/rnitro/") {
                             Button(display.tr("general.openSite")) {
                                 NSWorkspace.shared.open(url)
                             }
-                            .font(MacBarFont(.caption, metrics: metrics))
+                            .font(rNitroFont(.caption, metrics: metrics))
                             .buttonStyle(.plain)
                             .foregroundColor(.accent)
                         }
@@ -8154,7 +8154,7 @@ struct SettingsGeneralSection: View {
                         MonitorRow(label: display.tr("general.installedSha"), value: updateStatus.installedBinarySha)
                         MonitorRow(label: display.tr("general.remoteZipSha"), value: updateStatus.remoteZipShaShort)
                         Text("Installed SHA is the local binary; remote is the published App ZIP hash from version.json (verified on update).")
-                            .font(MacBarFont(.micro, metrics: metrics))
+                            .font(rNitroFont(.micro, metrics: metrics))
                             .foregroundColor(.secondary.opacity(0.85))
                     }
                     .onAppear { updateStatus.refreshIntegrityLabels() }
@@ -8162,18 +8162,18 @@ struct SettingsGeneralSection: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
                                 Text(display.tr("general.whatsNew"))
-                                    .font(MacBarFont(.caption, metrics: metrics, weight: .bold))
+                                    .font(rNitroFont(.caption, metrics: metrics, weight: .bold))
                                     .foregroundColor(updateStatus.channelTint)
                                 Spacer()
                                 Button(display.tr("general.whatsNew.dismiss")) {
                                     updateStatus.dismissWhatsNew()
                                 }
-                                .font(MacBarFont(.caption, metrics: metrics))
+                                .font(rNitroFont(.caption, metrics: metrics))
                                 .buttonStyle(.plain)
                                 .foregroundColor(.secondary)
                             }
                             Text(updateStatus.whatsNewText)
-                                .font(MacBarFont(.caption, metrics: metrics))
+                                .font(rNitroFont(.caption, metrics: metrics))
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -8187,7 +8187,7 @@ struct SettingsGeneralSection: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 if #available(macOS 13.0, *) {
                     Toggle(isOn: $launchAtLogin) {
-                        Text(display.tr("general.launchAtLogin")).font(MacBarFont(.label, metrics: metrics))
+                        Text(display.tr("general.launchAtLogin")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
                     .onChange(of: launchAtLogin) { _, _ in
@@ -8197,10 +8197,10 @@ struct SettingsGeneralSection: View {
                     }
                 } else {
                     Text(display.tr("general.launchAtLogin.req"))
-                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
                 Text(display.tr("general.idleEfficiency"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 6)
                 Picker(display.tr("general.idleProfile"), selection: Binding(
                     get: { IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .balanced },
@@ -8212,35 +8212,35 @@ struct SettingsGeneralSection: View {
                 }
                 .pickerStyle(.segmented)
                 Text(display.tr("general.idleHint"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("battery.lowAuto"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 8)
                 Text(display.tr("battery.lowAuto.hint"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Toggle(isOn: Binding(
                     get: { LowBatteryAutomation.shared.isEnabled },
                     set: { LowBatteryAutomation.shared.isEnabled = $0; LowBatteryAutomation.shared.evaluate(battery: BatteryMonitor.shared) }
                 )) {
-                    Text(display.tr("battery.lowAuto")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("battery.lowAuto")).font(rNitroFont(.label, metrics: metrics))
                 }.toggleStyle(.switch)
                 Toggle(isOn: Binding(
                     get: { LowBatteryAutomation.shared.notifyEnabled },
                     set: { LowBatteryAutomation.shared.notifyEnabled = $0 }
                 )) {
-                    Text(display.tr("battery.lowNotify")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("battery.lowNotify")).font(rNitroFont(.label, metrics: metrics))
                 }.toggleStyle(.switch)
                 Toggle(isOn: Binding(
                     get: { LowBatteryAutomation.shared.dimEnabled },
                     set: { LowBatteryAutomation.shared.dimEnabled = $0; LowBatteryAutomation.shared.evaluate(battery: BatteryMonitor.shared) }
                 )) {
-                    Text(display.tr("battery.lowDim")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("battery.lowDim")).font(rNitroFont(.label, metrics: metrics))
                 }.toggleStyle(.switch)
                 Toggle(isOn: Binding(
                     get: { LowBatteryAutomation.shared.muteStressEnabled },
                     set: { LowBatteryAutomation.shared.muteStressEnabled = $0; LowBatteryAutomation.shared.evaluate(battery: BatteryMonitor.shared) }
                 )) {
-                    Text(display.tr("battery.lowMute")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("battery.lowMute")).font(rNitroFont(.label, metrics: metrics))
                 }.toggleStyle(.switch)
                 if RNITRO_FEATURE_BETA_UI {
                     Toggle(isOn: Binding(
@@ -8253,17 +8253,17 @@ struct SettingsGeneralSection: View {
                             CompileFarmDetector.shared.applyPreferenceChange()
                         }
                     )) {
-                        Text(display.tr("general.compileFarm")).font(MacBarFont(.label, metrics: metrics))
+                        Text(display.tr("general.compileFarm")).font(rNitroFont(.label, metrics: metrics))
                     }
                     .toggleStyle(.switch)
                     Text(display.tr("general.compileFarm.hint"))
-                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                     Divider().padding(.vertical, 4)
                     Toggle(isOn: $devMode.isEnabled) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(display.tr("general.developerMode")).font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                            Text(display.tr("general.developerMode")).font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                             Text("Unlock advanced sampling, sensor dump, logging, and a Developer settings tab. Basic UI customization stays available either way.")
-                                .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                                .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                         }
                     }
                     .toggleStyle(.switch)
@@ -8293,19 +8293,19 @@ struct SettingsDeveloperSection: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(display.tr("dev.title"))
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Text(display.tr("dev.subtitle"))
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Toggle(isOn: $dev.forceHighSampleRate) {
-                    Text(display.tr("dev.highSample")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("dev.highSample")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $dev.verboseLogging) {
-                    Text(display.tr("dev.verbose")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("dev.verbose")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 Toggle(isOn: $dev.showRawSensors) {
-                    Text(display.tr("dev.rawSensors")).font(MacBarFont(.label, metrics: metrics))
+                    Text(display.tr("dev.rawSensors")).font(rNitroFont(.label, metrics: metrics))
                 }
                 .toggleStyle(.switch)
                 MinimalButton(title: display.tr("dev.copySensor"), action: {
@@ -8320,9 +8320,9 @@ struct SettingsDeveloperSection: View {
                 MinimalButton(title: display.tr("dev.openLogs"), action: { dev.openLogFolder() })
                 Divider().padding(.vertical, 4)
                 Text(display.tr("dev.surprise"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Text(display.tr("dev.surprise.hint"))
-                    .font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                 MinimalButton(title: display.tr("dev.envManifest"), action: {
                     dev.copyEnvironmentManifest()
                     copiedNote = display.tr("dev.copied.env")
@@ -8349,7 +8349,7 @@ struct SettingsDeveloperSection: View {
                 })
                 Divider().padding(.vertical, 4)
                 Text(display.tr("dev.uiConfig"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 MinimalButton(title: display.tr("dev.copyUIConfig"), action: {
                     let json = UICustomizationStore.shared.exportConfigJSON()
                     NSPasteboard.general.clearContents()
@@ -8357,9 +8357,9 @@ struct SettingsDeveloperSection: View {
                     copiedNote = display.tr("dev.copied.ui")
                 })
                 Text(display.tr("dev.importHint"))
-                    .font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                 TextEditor(text: $importDraft)
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .frame(minHeight: 72)
                     .padding(6)
                     .background(Color.card)
@@ -8373,10 +8373,10 @@ struct SettingsDeveloperSection: View {
                     }
                 })
                 if !copiedNote.isEmpty {
-                    Text(copiedNote).font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.nGreen)
+                    Text(copiedNote).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.nGreen)
                 }
                 Text("Channel: \(RNITRO_BUILD_CHANNEL) · \(CURRENT_VERSION)")
-                    .font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
             }
             .padding(.horizontal, metrics.hPad).padding(.vertical, 14)
         }
@@ -8404,19 +8404,19 @@ struct AIChatView: View {
 
     private var needsSetupPanel: some View {
         VStack(spacing: 14) {
-            Text("AI Chat").font(MacBarFont(.title, metrics: metrics, weight: .semibold))
+            Text("AI Chat").font(rNitroFont(.title, metrics: metrics, weight: .semibold))
             AIProviderPicker(chat: chat)
             Text("Set up \(chat.selectedProvider.rawValue) before chatting.")
-                .font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
+                .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
             if compact {
                 popoverMiniKeySetup
             } else if let onOpenAPISetup {
                 Text("Open the API sub-tab to save keys and test connections.")
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
                 MinimalButton(title: "Open API Setup", action: onOpenAPISetup)
             } else {
                 Text("Open Chat → API to save keys and test connections.")
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
                 MinimalButton(title: "Open API Setup", action: openAPISetupInMainWindow)
             }
         }
@@ -8428,7 +8428,7 @@ struct AIChatView: View {
             if chat.selectedProvider.requiresApiKey {
                 SecureField("API key", text: $chat.apiKeyDraft)
                     .textFieldStyle(.plain)
-                    .font(MacBarFont(.body, metrics: metrics))
+                    .font(rNitroFont(.body, metrics: metrics))
                     .padding(8)
                     .background(Color.card)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.6), lineWidth: 1))
@@ -8438,34 +8438,34 @@ struct AIChatView: View {
                 action: { chat.saveApiKey() }
             )
             Button("Open main window → API") { openAPISetupInMainWindow() }
-                .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.accent).buttonStyle(.plain)
+                .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.accent).buttonStyle(.plain)
         }
     }
 
     private func openAPISetupInMainWindow() {
-        NotificationCenter.default.post(name: .MacBarOpenMainWindow, object: nil, userInfo: ["tab": AppTab.chat.rawValue, "chatSection": ChatSection.api.rawValue])
+        NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: ["tab": AppTab.chat.rawValue, "chatSection": ChatSection.api.rawValue])
     }
 
     private var chatPanel: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                Text(chat.selectedProvider.rawValue).font(MacBarFont(metrics.compact ? .label : .body, metrics: metrics, weight: .semibold))
+                Text(chat.selectedProvider.rawValue).font(rNitroFont(metrics.compact ? .label : .body, metrics: metrics, weight: .semibold))
                 ProviderStatusIndicator(status: chat.status(for: chat.selectedProvider))
                 if !compact {
                     Text(chat.status(for: chat.selectedProvider).state.rawValue)
-                        .font(MacBarFont(.micro, metrics: metrics))
+                        .font(rNitroFont(.micro, metrics: metrics))
                         .foregroundColor(chat.status(for: chat.selectedProvider).state.color)
                 }
                 Spacer()
                 if !chat.messages.isEmpty {
                     Button("Clear") { chat.clearHistory() }
-                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary).buttonStyle(.plain)
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, compact ? 10 : 14).padding(.vertical, compact ? 6 : 8)
             if !compact {
                 Text("History is saved on this Mac. Messages go to \(chat.selectedProvider.rawValue) — manage keys in the API sub-tab.")
-                    .font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                     .padding(.horizontal, 14).padding(.bottom, 6)
             }
             AIProviderPicker(chat: chat).padding(.horizontal, compact ? 10 : 14).padding(.bottom, compact ? 6 : 8)
@@ -8476,7 +8476,7 @@ struct AIChatView: View {
                     LazyVStack(alignment: .leading, spacing: 10) {
                         if chat.messages.isEmpty {
                             Text("Ask anything — powered by \(chat.selectedProvider.modelLabel).")
-                                .font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                                .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                                 .padding(.top, 8)
                         }
                         ForEach(chat.messages) { msg in
@@ -8497,7 +8497,7 @@ struct AIChatView: View {
             HStack(spacing: 8) {
                 TextField("Message…", text: $chat.inputText)
                     .textFieldStyle(.plain)
-                    .font(MacBarFont(.body, metrics: metrics))
+                    .font(rNitroFont(.body, metrics: metrics))
                     .padding(8)
                     .frame(maxWidth: .infinity)
                     .background(Color.card)
@@ -8517,7 +8517,7 @@ struct AIChatView: View {
         return HStack {
             if msg.role == "user" { Spacer(minLength: metrics.bubbleSpacer) }
             Text(display)
-                .font(MacBarFont(.label, metrics: metrics))
+                .font(rNitroFont(.label, metrics: metrics))
                 .foregroundColor(msg.isError ? .nRed : (msg.role == "user" ? .primary : .secondary))
                 .padding(10)
                 .background(msg.role == "user" ? Color.accent.opacity(0.15) : Color.card)
@@ -8608,7 +8608,7 @@ enum AdvisorNotificationCenter {
             format: "CPU is %.1f°C — above your %.0f°C critical limit. Ease load or improve cooling.",
             current, limit
         )
-        deliver(id: "rnitro.temp.critical", title: "MacBar — Critical Temperature", body: body)
+        deliver(id: "rnitro.temp.critical", title: "rNitro — Critical Temperature", body: body)
     }
 
     static func postMacOSThermalCritical(temp: Double, stateLabel: String) {
@@ -8616,11 +8616,11 @@ enum AdvisorNotificationCenter {
             format: "macOS reports %@ thermal pressure. CPU at %.1f°C.",
             stateLabel, temp
         )
-        deliver(id: "rnitro.thermal.critical", title: "MacBar — Thermal Critical", body: body)
+        deliver(id: "rnitro.thermal.critical", title: "rNitro — Thermal Critical", body: body)
     }
 
     static func postBatteryLow(level: Int, critical: Bool) {
-        let title = critical ? "MacBar — Critical Battery" : "MacBar — Low Battery"
+        let title = critical ? "rNitro — Critical Battery" : "rNitro — Low Battery"
         let body = critical
             ? "Battery at \(level)%. Plug in soon — stress tools muted and UI dimmed if enabled."
             : "Battery at \(level)%. Consider plugging in or enabling Low Power Mode."
@@ -8854,7 +8854,7 @@ final class SystemAdvisorModel: ObservableObject {
     private func postWelcome() {
         let snap = currentSnapshot()
         appendMessage(role: "advisor", text: """
-        Hi — I'm your MacBar System Advisor. I read live specs from this Mac and can warn you when temps, CPU, RAM, or GPU cross limits you set.
+        Hi — I'm your rNitro System Advisor. I read live specs from this Mac and can warn you when temps, CPU, RAM, or GPU cross limits you set.
 
         \(snap.specsSummary())
 
@@ -8973,7 +8973,7 @@ final class SystemAdvisorModel: ObservableObject {
         }
         if matches(t, ["help", "what can", "how do"]) {
             return """
-            I can answer questions about YOUR Mac using live MacBar readings:
+            I can answer questions about YOUR Mac using live rNitro readings:
             • specs / hardware
             • temperature & thermal state
             • CPU, RAM, GPU, battery, disk, network
@@ -9088,7 +9088,7 @@ struct SystemAdvisorView: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text("System Advisor").font(MacBarFont(metrics.compact ? .label : .body, metrics: metrics, weight: .semibold))
+                    Text("System Advisor").font(rNitroFont(metrics.compact ? .label : .body, metrics: metrics, weight: .semibold))
                     if CPUMonitor.shared.isLowPowerModeEnabled {
                         LowPowerModeBadge(compact: true)
                     }
@@ -9097,26 +9097,26 @@ struct SystemAdvisorView: View {
                     }
                 }
                 Text("Live specs · alert thresholds in Settings → Alerts")
-                    .font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
             }
             Spacer()
             if !advisor.messages.isEmpty {
                 Button("Clear") { advisor.clearHistory() }
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary).buttonStyle(.plain)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).buttonStyle(.plain)
             }
             if RNITRO_FEATURE_BETA_UI {
                 Button(display.tr("lab.open")) {
                     NotificationCenter.default.post(
-                        name: .MacBarOpenMainWindow,
+                        name: .rNitroOpenMainWindow,
                         object: nil,
                         userInfo: ["tab": AppTab.lab.rawValue]
                     )
                 }
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.nOrange).buttonStyle(.plain)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.nOrange).buttonStyle(.plain)
             }
             if !compact {
                 Button("Alert settings") { openAlertsSettings() }
-                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.accent).buttonStyle(.plain)
+                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.accent).buttonStyle(.plain)
             }
         }
         .padding(.horizontal, compact ? 10 : 14)
@@ -9125,7 +9125,7 @@ struct SystemAdvisorView: View {
 
     private func openAlertsSettings() {
         NotificationCenter.default.post(
-            name: .MacBarOpenMainWindow,
+            name: .rNitroOpenMainWindow,
             object: nil,
             userInfo: ["tab": AppTab.settings.rawValue, "settingsSection": SettingsSection.alerts.rawValue]
         )
@@ -9158,7 +9158,7 @@ struct SystemAdvisorView: View {
         return HStack {
             if isUser { Spacer(minLength: metrics.bubbleSpacer) }
             Text(msg.text)
-                .font(MacBarFont(.label, metrics: metrics))
+                .font(rNitroFont(.label, metrics: metrics))
                 .foregroundColor(fg)
                 .padding(10)
                 .background(bg)
@@ -9172,7 +9172,7 @@ struct SystemAdvisorView: View {
         HStack(spacing: 8) {
             TextField("Ask about your Mac…", text: $advisor.inputText)
                 .textFieldStyle(.plain)
-                .font(MacBarFont(.body, metrics: metrics))
+                .font(rNitroFont(.body, metrics: metrics))
                 .padding(8)
                 .frame(maxWidth: .infinity)
                 .background(Color.card)
@@ -9204,9 +9204,9 @@ struct UsageBarRow: View {
         Button(action: { action?() }) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(label).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                    Text(label).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                     Spacer()
-                    Text(String(format: "%.0f%%", usedPercent)).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                    Text(String(format: "%.0f%%", usedPercent)).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                 }
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
@@ -9220,7 +9220,7 @@ struct UsageBarRow: View {
                     Spacer()
                     Text(String(format: "%.1f GB free", freeGB))
                 }
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
             }
         }
@@ -9236,11 +9236,11 @@ struct StatCell: View {
     var body: some View {
         Button(action: { action?() }) {
             VStack(spacing: 3) {
-                Text(title).font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary).tracking(0.5)
+                Text(title).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary).tracking(0.5)
                     .lineLimit(1).minimumScaleFactor(0.85)
-                Text(value).font(MacBarFont(.statValue, metrics: metrics, weight: .semibold)).foregroundColor(color)
+                Text(value).font(rNitroFont(.statValue, metrics: metrics, weight: .semibold)).foregroundColor(color)
                     .lineLimit(1).minimumScaleFactor(0.8)
-                Text(unit).font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary.opacity(0.8))
+                Text(unit).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary.opacity(0.8))
                     .lineLimit(1).minimumScaleFactor(0.85)
             }
             .frame(maxWidth: .infinity)
@@ -9264,26 +9264,26 @@ struct ExpandedStatPanel: View {
         Button(action: { action?() }) {
             VStack(spacing: 5) {
                 Text(title)
-                    .font(MacBarFont(.label, metrics: metrics))
+                    .font(rNitroFont(.label, metrics: metrics))
                     .foregroundColor(.secondary)
                     .tracking(0.6)
                     .lineLimit(1)
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     Text(value)
-                        .font(MacBarFont(.title, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
                         .foregroundColor(color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                     if !unit.isEmpty {
                         Text(unit)
-                            .font(MacBarFont(.body, metrics: metrics))
+                            .font(rNitroFont(.body, metrics: metrics))
                             .foregroundColor(.secondary.opacity(0.85))
                             .lineLimit(1)
                     }
                 }
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(MacBarFont(.caption, metrics: metrics))
+                        .font(rNitroFont(.caption, metrics: metrics))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -9310,7 +9310,7 @@ struct LowPowerModeBadge: View {
                 .font(.system(size: compact ? 9 : 10, weight: .semibold))
             Text(compact ? "LP" : "Low Power")
         }
-        .font(MacBarFont(compact ? .micro : .caption, metrics: metrics, weight: .semibold))
+        .font(rNitroFont(compact ? .micro : .caption, metrics: metrics, weight: .semibold))
         .foregroundColor(accent)
         .padding(.horizontal, compact ? 6 : 8)
         .padding(.vertical, compact ? 3 : 4)
@@ -9380,26 +9380,26 @@ struct NetworkMonitorRow: View {
     var body: some View {
         HStack(spacing: metrics.compact ? 8 : 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(HardwareLabelMapper.networkInterface(net.interfaceName)).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                Text(HardwareLabelMapper.networkInterface(net.interfaceName)).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                 Text(net.isAvailable ? net.interfaceName : "No link")
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary.opacity(0.85))
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
             HStack(spacing: metrics.compact ? 10 : 14) {
                 HStack(spacing: 4) {
-                    Text("↓").font(MacBarFont(.caption, metrics: metrics, weight: .semibold)).foregroundColor(.accent)
+                    Text("↓").font(rNitroFont(.caption, metrics: metrics, weight: .semibold)).foregroundColor(.accent)
                     Text(NetworkMonitor.formatSpeed(net.downloadMbps))
-                        .font(MacBarFont(.label, metrics: metrics, weight: .medium))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .medium))
                         .foregroundColor(.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                 }
                 HStack(spacing: 4) {
-                    Text("↑").font(MacBarFont(.caption, metrics: metrics, weight: .semibold)).foregroundColor(.nGreen)
+                    Text("↑").font(rNitroFont(.caption, metrics: metrics, weight: .semibold)).foregroundColor(.nGreen)
                     Text(NetworkMonitor.formatSpeed(net.uploadMbps))
-                        .font(MacBarFont(.label, metrics: metrics, weight: .medium))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .medium))
                         .foregroundColor(.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -9425,10 +9425,10 @@ struct StatDetailPopup: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(popupTitle).font(MacBarFont(.headline, metrics: metrics, weight: .semibold))
+                Text(popupTitle).font(rNitroFont(.headline, metrics: metrics, weight: .semibold))
                 Spacer()
                 Button("Close", action: close)
-                    .font(MacBarFont(.body, metrics: metrics))
+                    .font(rNitroFont(.body, metrics: metrics))
                     .foregroundColor(.secondary)
                     .buttonStyle(.plain)
             }
@@ -9438,7 +9438,7 @@ struct StatDetailPopup: View {
                     if kind == .cpuPower {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("CPU power (last ~60s)")
-                                .font(MacBarFont(.caption, metrics: metrics))
+                                .font(rNitroFont(.caption, metrics: metrics))
                                 .foregroundColor(.secondary)
                             PowerGraphView(
                                 history: monitor.powerHistory,
@@ -9455,8 +9455,8 @@ struct StatDetailPopup: View {
                     }
                     ForEach(detailRows, id: \.0) { row in
                         HStack(alignment: .top, spacing: 10) {
-                            Text(row.0).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary).frame(minWidth: 72, maxWidth: 120, alignment: .leading)
-                            Text(row.1).font(MacBarFont(.label, metrics: metrics)).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                            Text(row.0).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary).frame(minWidth: 72, maxWidth: 120, alignment: .leading)
+                            Text(row.1).font(rNitroFont(.label, metrics: metrics)).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -9680,7 +9680,7 @@ extension EnvironmentValues {
     }
 }
 
-func MacBarFont(_ role: FontRole, metrics: UIMetrics, weight: Font.Weight = .regular) -> Font {
+func rNitroFont(_ role: FontRole, metrics: UIMetrics, weight: Font.Weight = .regular) -> Font {
     let name = DisplayPreferencesStore.shared.uiFontName
     return .custom(name, size: metrics.size(role)).weight(weight)
 }
@@ -10197,7 +10197,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "dev.surprise.hint": "Diagnostics & toys for people who open Dev Mode on purpose.",
         "dev.title": "Developer",
         "dev.uiConfig": "UI config",
-        "dev.verbose": "Verbose logging to ~/Library/Logs/MacBar",
+        "dev.verbose": "Verbose logging to ~/Library/Logs/rNitro",
         "duel.expand": "Expand for LAN host/join duel (no cloud).",
         "duel.host": "Host",
         "duel.join": "Join",
@@ -10301,7 +10301,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.noConfess": "No recent cool-down story yet. Create some heat, then chill.",
         "lab.open": "Open Lab",
         "lab.overnight": "Overnight watch",
-        "lab.overnight.hint": "While MacBar runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
         "lab.peer": "Polite peer",
         "lab.peer.active": "Peer active — sampling eased",
         "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
@@ -10476,7 +10476,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tab.settings": "Settings",
         "tips.gotIt": "Got it — open monitor",
         "tips.quick": "Quick start — takes 10 seconds.",
-        "tips.title": "Welcome to MacBar",
+        "tips.title": "Welcome to rNitro",
         "ui.legacy": "Legacy",
         "ui.modern": "Modern (iStats-style)",
         "ui.optimac": "New style",
@@ -10617,7 +10617,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "dev.surprise.hint": "給認真開啟開發者模式的人的診斷與小玩具。",
         "dev.title": "開發者",
         "dev.uiConfig": "UI 設定",
-        "dev.verbose": "詳細日誌寫入 ~/Library/Logs/MacBar",
+        "dev.verbose": "詳細日誌寫入 ~/Library/Logs/rNitro",
         "duel.expand": "展開區域網對決。",
         "duel.host": "主機",
         "duel.join": "加入",
@@ -10692,7 +10692,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.noConfess": "尚無冷卻故事。",
         "lab.open": "Open Lab",
         "lab.overnight": "Overnight watch",
-        "lab.overnight.hint": "While MacBar runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
         "lab.peer": "Polite peer",
         "lab.peer.active": "Peer active — sampling eased",
         "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
@@ -10867,7 +10867,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tab.settings": "設定",
         "tips.gotIt": "知道了 — 開啟監控",
         "tips.quick": "快速開始 — 約 10 秒。",
-        "tips.title": "歡迎使用 MacBar",
+        "tips.title": "歡迎使用 rNitro",
         "ui.legacy": "經典",
         "ui.modern": "現代 (iStats 風格)",
         "ui.optimac": "新風格",
@@ -11008,7 +11008,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "dev.surprise.hint": "Diagnósticos y juguetes.",
         "dev.title": "Desarrollador",
         "dev.uiConfig": "Config UI",
-        "dev.verbose": "Log en ~/Library/Logs/MacBar",
+        "dev.verbose": "Log en ~/Library/Logs/rNitro",
         "duel.expand": "Expandir duelo.",
         "duel.host": "Alojar",
         "duel.join": "Unirse",
@@ -11083,7 +11083,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.noConfess": "Sin enfriamiento.",
         "lab.open": "Open Lab",
         "lab.overnight": "Overnight watch",
-        "lab.overnight.hint": "While MacBar runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
         "lab.peer": "Polite peer",
         "lab.peer.active": "Peer active — sampling eased",
         "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
@@ -11258,7 +11258,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tab.settings": "Ajustes",
         "tips.gotIt": "Entendido",
         "tips.quick": "Inicio rápido.",
-        "tips.title": "Bienvenido a MacBar",
+        "tips.title": "Bienvenido a rNitro",
         "ui.legacy": "Clásico",
         "ui.modern": "Moderno (estilo iStats)",
         "ui.optimac": "Nuevo estilo",
@@ -11399,7 +11399,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "dev.surprise.hint": "Diagnose & Spielereien.",
         "dev.title": "Entwickler",
         "dev.uiConfig": "UI-Konfiguration",
-        "dev.verbose": "Logging ~/Library/Logs/MacBar",
+        "dev.verbose": "Logging ~/Library/Logs/rNitro",
         "duel.expand": "LAN-Duell.",
         "duel.host": "Hosten",
         "duel.join": "Beitreten",
@@ -11474,7 +11474,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "lab.noConfess": "Keine Abkühl-Story.",
         "lab.open": "Open Lab",
         "lab.overnight": "Overnight watch",
-        "lab.overnight.hint": "While MacBar runs: max temp/CPU and minutes above 80°C for today.",
+        "lab.overnight.hint": "While rNitro runs: max temp/CPU and minutes above 80°C for today.",
         "lab.peer": "Polite peer",
         "lab.peer.active": "Peer active — sampling eased",
         "lab.peer.hint": "When Activity Monitor / Instruments / powermetrics is running, ease sampling so tools don't fight.",
@@ -11649,7 +11649,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tab.settings": "Einstellungen",
         "tips.gotIt": "Verstanden",
         "tips.quick": "Schnellstart.",
-        "tips.title": "Willkommen bei MacBar",
+        "tips.title": "Willkommen bei rNitro",
         "ui.legacy": "Legacy",
         "ui.modern": "Modern (iStats-Stil)",
         "ui.optimac": "Neuer Stil",
@@ -11685,37 +11685,37 @@ struct FirstLaunchTipsSheet: View {
     private func tipRow(_ n: String, _ title: String, _ detail: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Text(n)
-                .font(MacBarFont(.caption, metrics: metrics, weight: .bold))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .bold))
                 .foregroundColor(.accent)
                 .frame(width: 20, height: 20)
                 .background(Color.accent.opacity(0.15))
                 .clipShape(Circle())
             VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(MacBarFont(.label, metrics: metrics, weight: .semibold))
-                Text(detail).font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(title).font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                Text(detail).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Welcome to MacBar")
-                .font(MacBarFont(.title, metrics: metrics, weight: .semibold))
+            Text("Welcome to rNitro")
+                .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
             Text("Quick start — pick a menubar layout, then open the monitor.")
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
             VStack(alignment: .leading, spacing: 12) {
-                tipRow("1", "Find the menubar icon", "MacBar lives in the top-right menu bar. Click it for live CPU, temp, and battery.")
-                tipRow("2", "First launch on macOS", "If Gatekeeper blocks the app: right-click MacBar.app → Open → Open once.")
+                tipRow("1", "Find the menubar icon", "rNitro lives in the top-right menu bar. Click it for live CPU, temp, and battery.")
+                tipRow("2", "First launch on macOS", "If Gatekeeper blocks the app: right-click rNitro.app → Open → Open once.")
                 tipRow("3", "Menubar layout", "Choose a preset once. Change slots anytime in Settings → Menubar.")
             }
             Text("Start with")
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             HStack(spacing: 8) {
                 ForEach(MenuBarPreset.allCases) { preset in
                     let on = chosenPreset == preset
                     Button(preset.label) { chosenPreset = preset }
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                         .tint(on ? .accentColor : nil)
@@ -11724,7 +11724,7 @@ struct FirstLaunchTipsSheet: View {
                 }
             }
             Text(MenuBarConfig.presetHint(chosenPreset))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Button(action: {
                 MenuBarConfig.applyPreset(chosenPreset)
@@ -11732,7 +11732,7 @@ struct FirstLaunchTipsSheet: View {
                 isPresented = false
             }) {
                 Text("Got it — open monitor")
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
             }
@@ -12536,29 +12536,29 @@ struct DetectiveSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Why is my Mac hot?")
-                    .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 Spacer()
                 Text(report.weather.emoji + " " + report.weather.label)
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
             Text(report.headline)
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 .foregroundColor(.nOrange)
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(report.bullets.enumerated()), id: \.offset) { _, line in
                     HStack(alignment: .top, spacing: 6) {
                         Text("•").foregroundColor(.secondary)
-                        Text(line).font(MacBarFont(.caption, metrics: metrics))
+                        Text(line).font(rNitroFont(.caption, metrics: metrics))
                     }
                 }
             }
             Text("Suggestion")
-                .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
             Text(report.suggestion)
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
             HStack {
                 MinimalButton(title: "Refresh", action: { report = ThermalDetective.analyze() })
                 Spacer()
@@ -12880,7 +12880,7 @@ struct SpeedTestPanel: View {
                     }
                 )
                 Text(speed.statusText)
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
@@ -12896,21 +12896,21 @@ struct SpeedTestPanel: View {
             }
             if let err = speed.lastError, speed.phase == .failed {
                 Text(err)
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.nRed)
             }
             Text("Via \(speed.serverLabel) · results stay on this Mac")
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary.opacity(0.85))
             if !speed.history.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Recent")
-                        .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                         .foregroundColor(.secondary)
                     ForEach(speed.history.prefix(4)) { row in
                         Text(String(format: "%@  %.0f ms · ↓%.1f · ↑%.1f Mbps",
                                     Self.fmtTime(row.date), row.pingMs, row.downloadMbps, row.uploadMbps))
-                            .font(MacBarFont(.micro, metrics: metrics))
+                            .font(rNitroFont(.micro, metrics: metrics))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -12921,10 +12921,10 @@ struct SpeedTestPanel: View {
     private func metric(title: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Text(value)
-                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 .foregroundColor(color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -12947,12 +12947,12 @@ struct StressDuelPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Stress duel (LAN)")
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text("Local network only — no cloud. Host on one Mac, join with the code on another.")
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Text(duel.statusText)
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(duel.phase == .failed ? .nRed : .secondary)
             HStack(spacing: 8) {
                 MinimalButton(title: "Host", disabled: duel.phase == .racing || duel.phase == .hosting, action: { duel.host() })
@@ -12973,7 +12973,7 @@ struct StressDuelPanel: View {
             }
             if !duel.winnerText.isEmpty {
                 Text(duel.winnerText)
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
             }
         }
@@ -13507,10 +13507,10 @@ struct AppCleanerView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if model.isScanning {
-                Text("Scanning…").font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Text("Scanning…").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
             } else if model.displayedApps.isEmpty {
                 Text(model.search.isEmpty ? "No apps found" : "No matches for \"\(model.search)\"")
-                    .font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                    .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
@@ -13521,13 +13521,13 @@ struct AppCleanerView: View {
                                         Image(nsImage: icon).resizable().frame(width: 28, height: 28)
                                     }
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(app.name).font(MacBarFont(.label, metrics: metrics, weight: .medium))
+                                        Text(app.name).font(rNitroFont(.label, metrics: metrics, weight: .medium))
                                         Text(relativeLastUsed(app.lastUsed))
-                                            .font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                                            .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                                     }
                                     Spacer()
                                     Text(app.appBytes.map(Self.formatBytes) ?? "…")
-                                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                                 }
                                 .padding(.vertical, 4)
                             }
@@ -13571,26 +13571,26 @@ struct AppCleanerView: View {
 
     private func cleanerDetail(_ app: InstalledApp) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(app.name).font(MacBarFont(.title, metrics: metrics, weight: .semibold))
-            Text(app.path).font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+            Text(app.name).font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+            Text(app.path).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
             if !app.leftoversLoaded {
                 HStack(spacing: 8) {
                     ProgressView().scaleEffect(0.75)
-                    Text("Scanning leftovers…").font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                    Text("Scanning leftovers…").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
             } else if app.leftovers.isEmpty {
-                Text("No leftover files found").font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                Text("No leftover files found").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
             } else {
-                Text("Leftover files").font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                Text("Leftover files").font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 ForEach(app.leftovers) { item in
                     Toggle(isOn: Binding(
                         get: { selectedLeftovers.contains(item.id) },
                         set: { on in if on { selectedLeftovers.insert(item.id) } else { selectedLeftovers.remove(item.id) } }
                     )) {
                         HStack {
-                            Text(item.label).font(MacBarFont(.caption, metrics: metrics))
+                            Text(item.label).font(rNitroFont(.caption, metrics: metrics))
                             Spacer()
-                            Text(Self.formatBytes(item.bytes)).font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                            Text(Self.formatBytes(item.bytes)).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                         }
                     }
                 }
@@ -13759,7 +13759,7 @@ struct AppTabSidebar: View {
                     .help(display.tr("lab.sidebar.section"))
             } else {
                 Text(display.tr("lab.sidebar.section"))
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .bold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
                     .foregroundColor(.nOrange)
                     .textCase(.uppercase)
                     .tracking(0.4)
@@ -13784,7 +13784,7 @@ struct AppTabSidebar: View {
                     .frame(width: 16)
                 if !compact {
                     Text(t.localizedTitle)
-                        .font(MacBarFont(.label, metrics: metrics, weight: tab == t ? .semibold : .regular))
+                        .font(rNitroFont(.label, metrics: metrics, weight: tab == t ? .semibold : .regular))
                 }
                 if t == .advisor && advisorHasWarnings {
                     Circle().fill(Color.nOrange).frame(width: 6, height: 6)
@@ -13822,27 +13822,27 @@ struct ProcessUsageRow: View {
             HStack(spacing: 6) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(snapshot.name)
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .medium))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
                         .lineLimit(1).truncationMode(.tail)
                     Text("pid \(snapshot.pid)")
-                        .font(MacBarFont(.micro, metrics: metrics))
+                        .font(rNitroFont(.micro, metrics: metrics))
                         .foregroundColor(.secondary)
                 }
                 Spacer(minLength: 4)
                 if highlight == .cpu {
                     Text(String(format: "%.1f%%", snapshot.cpuPercent))
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         .foregroundColor(Color.usage(min(100, snapshot.cpuPercent)))
                     Text(String(format: "%.0f MB", snapshot.memoryMB))
-                        .font(MacBarFont(.micro, metrics: metrics))
+                        .font(rNitroFont(.micro, metrics: metrics))
                         .foregroundColor(.secondary)
                         .frame(width: 52, alignment: .trailing)
                 } else {
                     Text(String(format: "%.0f MB", snapshot.memoryMB))
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         .foregroundColor(.nPurple)
                     Text(String(format: "%.1f%%", snapshot.cpuPercent))
-                        .font(MacBarFont(.micro, metrics: metrics))
+                        .font(rNitroFont(.micro, metrics: metrics))
                         .foregroundColor(.secondary)
                         .frame(width: 44, alignment: .trailing)
                 }
@@ -13857,12 +13857,12 @@ struct ProcessUsageRow: View {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(line, forType: .string)
                         NotificationCenter.default.post(
-                            name: .MacBarOpenMainWindow,
+                            name: .rNitroOpenMainWindow,
                             object: nil,
                             userInfo: ["tab": AppTab.lab.rawValue]
                         )
                     }
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
                     .buttonStyle(.plain)
                 }
@@ -13871,17 +13871,17 @@ struct ProcessUsageRow: View {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString("\(snapshot.pid)", forType: .string)
                     }
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
                     .buttonStyle(.plain)
                     Button("Reveal") {
                         ProcessActions.reveal(pid: snapshot.pid)
                     }
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
                     .buttonStyle(.plain)
                     Button("Quit") { confirmQuit = true }
-                        .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                         .foregroundColor(.nRed)
                         .buttonStyle(.plain)
                 }
@@ -13934,20 +13934,20 @@ struct MonitorModernHeaderView: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(m.cpuName)
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .lineLimit(1).truncationMode(.tail)
             Spacer()
             if RNITRO_FEATURE_BETA_UI {
                 Button(action: {
                     NotificationCenter.default.post(
-                        name: .MacBarOpenMainWindow,
+                        name: .rNitroOpenMainWindow,
                         object: nil,
                         userInfo: ["tab": AppTab.lab.rawValue]
                     )
                 }) {
                     Text(DisplayPreferencesStore.shared.tr("lab.open"))
-                        .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                         .foregroundColor(.nOrange)
                 }
                 .buttonStyle(.plain)
@@ -13956,7 +13956,7 @@ struct MonitorModernHeaderView: View {
                 LowPowerModeBadge(compact: true)
             }
             Text(CURRENT_VERSION)
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary.opacity(0.7))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -13996,7 +13996,7 @@ struct MonitorBatterySectionView: View {
             if bat.isPresent {
                 // OS strip — same contract as menu bar / IOPS / pmset
                 Text(bat.osStripText)
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .medium))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 2)
@@ -14049,21 +14049,21 @@ struct MonitorBatterySectionView: View {
                 if !tops.isEmpty, !bat.isOnAC || bat.isCharging {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(display.tr("row.topEnergy"))
-                            .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                             .foregroundColor(.secondary)
                         ForEach(Array(tops.enumerated()), id: \.offset) { _, p in
                             HStack {
                                 Text(p.name)
-                                    .font(MacBarFont(.caption, metrics: metrics))
+                                    .font(rNitroFont(.caption, metrics: metrics))
                                     .lineLimit(1)
                                 Spacer(minLength: 6)
                                 Text(String(format: "%.0f%% CPU", p.cpuPercent))
-                                    .font(MacBarFont(.caption, metrics: metrics, weight: .medium))
+                                    .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
                                     .foregroundColor(Color.usage(min(p.cpuPercent, 100)))
                             }
                         }
                         Text(display.tr("row.topEnergy.hint"))
-                            .font(MacBarFont(.micro, metrics: metrics))
+                            .font(rNitroFont(.micro, metrics: metrics))
                             .foregroundColor(.secondary.opacity(0.8))
                     }
                     .padding(.vertical, 4)
@@ -14076,14 +14076,14 @@ struct MonitorBatterySectionView: View {
                             Image(systemName: bat.parityRunning ? "hourglass" : "checkmark.shield")
                                 .font(.system(size: 11, weight: .semibold))
                             Text(bat.parityRunning ? "Comparing…" : "Compare with macOS")
-                                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         }
                         .foregroundColor(.accent)
                         .padding(.vertical, 6)
                     }
                     .buttonStyle(.plain)
                     .disabled(bat.parityRunning)
-                    .help("One-shot IOPS + pmset + system_profiler vs MacBar UI.")
+                    .help("One-shot IOPS + pmset + system_profiler vs rNitro UI.")
                     Button {
                         bat.copyDiagnosticsToPasteboard()
                     } label: {
@@ -14091,7 +14091,7 @@ struct MonitorBatterySectionView: View {
                             Image(systemName: "doc.on.clipboard")
                                 .font(.system(size: 11, weight: .semibold))
                             Text(display.tr("battery.copyDiag"))
-                                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         }
                         .foregroundColor(.accent)
                         .padding(.vertical, 6)
@@ -14107,29 +14107,29 @@ struct MonitorBatterySectionView: View {
                                 .foregroundColor(rep.percentOK && rep.remainingOK ? .nGreen : .nOrange)
                                 .font(.system(size: 12, weight: .semibold))
                             Text(rep.summary)
-                                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                                 .foregroundColor(rep.percentOK && rep.remainingOK ? .nGreen : .nOrange)
                             Text(parityAgeLabel(rep.checkedAt))
-                                .font(MacBarFont(.micro, metrics: metrics))
+                                .font(rNitroFont(.micro, metrics: metrics))
                                 .foregroundColor(.secondary)
                         }
-                        Text("IOPS \(rep.iopsPercent.map { "\($0)%" } ?? "—") · pmset \(rep.pmsetPercent.map { "\($0)%" } ?? "—") · profiler \(rep.profilerSoC.map { "\($0)%" } ?? "—") · MacBar \(rep.rnitroPercent)%")
-                            .font(MacBarFont(.micro, metrics: metrics))
+                        Text("IOPS \(rep.iopsPercent.map { "\($0)%" } ?? "—") · pmset \(rep.pmsetPercent.map { "\($0)%" } ?? "—") · profiler \(rep.profilerSoC.map { "\($0)%" } ?? "—") · rNitro \(rep.rnitroPercent)%")
+                            .font(rNitroFont(.micro, metrics: metrics))
                             .foregroundColor(.secondary)
-                        let remLine = "rem IOPS \(rep.iopsRemainingMin.map(String.init) ?? "—") · pmset \(rep.pmsetRemainingMin.map(String.init) ?? "—") · MacBar \(rep.rnitroRemainingMin.map(String.init) ?? "—") min"
+                        let remLine = "rem IOPS \(rep.iopsRemainingMin.map(String.init) ?? "—") · pmset \(rep.pmsetRemainingMin.map(String.init) ?? "—") · rNitro \(rep.rnitroRemainingMin.map(String.init) ?? "—") min"
                         Text(remLine)
-                            .font(MacBarFont(.micro, metrics: metrics))
+                            .font(rNitroFont(.micro, metrics: metrics))
                             .foregroundColor(.secondary)
                         if let h = rep.profilerHealth {
                             Text("System Settings max capacity: \(h)%")
-                                .font(MacBarFont(.micro, metrics: metrics))
+                                .font(rNitroFont(.micro, metrics: metrics))
                                 .foregroundColor(.secondary)
                         }
                         Button {
                             bat.copyParityReportToPasteboard()
                         } label: {
                             Text("Copy parity report")
-                                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                                 .foregroundColor(.accent)
                         }
                         .buttonStyle(.plain)
@@ -14148,7 +14148,7 @@ struct MonitorBatterySectionView: View {
                         Text(FathomLink.isInstalled
                              ? display.tr("fathom.open")
                              : display.tr("fathom.discover"))
-                            .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                            .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                         Spacer(minLength: 0)
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 10, weight: .semibold))
@@ -14164,7 +14164,7 @@ struct MonitorBatterySectionView: View {
             if !bat.powerHistory1h.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(display.tr("row.packDrain"))
-                        .font(MacBarFont(.caption, metrics: metrics))
+                        .font(rNitroFont(.caption, metrics: metrics))
                         .foregroundColor(.secondary)
                     PowerGraphView(
                         history: bat.powerHistory1h,
@@ -14218,7 +14218,7 @@ struct MonitorCPUSectionView: View {
             }
             if UICustomizationStore.shared.showProcesses {
                 Text(display.tr("processes.topCpu"))
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                     .foregroundColor(.secondary)
                     .padding(.top, 6)
                 if proc.topByCPU.isEmpty {
@@ -14281,7 +14281,7 @@ struct MonitorMemorySectionView: View {
             MonitorRow(label: display.tr("row.swap"), value: String(format: "%.1f GB", m.memorySwapGB))
             if UICustomizationStore.shared.showProcesses {
                 Text(display.tr("processes.topRam"))
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                     .foregroundColor(.secondary)
                     .padding(.top, 6)
                 if proc.topByMemory.isEmpty {
@@ -14354,12 +14354,12 @@ struct MonitorNetworkSectionView: View {
             }
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(display.tr("row.download")).font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("row.download")).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                     MiniGraphView(history: net.downloadHistory, color: .accent, maxValue: max(net.downloadHistory.max() ?? 1, 100))
                         .frame(height: 24)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(display.tr("row.upload")).font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("row.upload")).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                     MiniGraphView(history: net.uploadHistory, color: .nGreen, maxValue: max(net.uploadHistory.max() ?? 1, 100))
                         .frame(height: 24)
                 }
@@ -14401,13 +14401,13 @@ struct MonitorSensorsSectionView: View {
                 let showRaw = dev.isEnabled && dev.showRawSensors
                 ForEach(["Temperatures", "Fans"], id: \.self) { group in
                     if let items = groups[group] {
-                        Text(group).font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                        Text(group).font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                         ForEach(items) { entry in
                             VStack(alignment: .leading, spacing: 0) {
                                 MonitorRow(label: entry.name, value: "\(entry.value) \(entry.unit)")
                                 if showRaw {
                                     Text(entry.rawKey)
-                                        .font(MacBarFont(.micro, metrics: metrics))
+                                        .font(rNitroFont(.micro, metrics: metrics))
                                         .foregroundColor(.secondary.opacity(0.75))
                                         .textSelection(.enabled)
                                 }
@@ -14438,7 +14438,7 @@ struct MonitorToolsSectionView: View {
                 MonitorRow(label: display.tr("row.bitcoin"), value: String(format: "$%.0f", price))
             }
             HStack {
-                Text(display.tr("row.stress")).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                Text(display.tr("row.stress")).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                 Spacer()
                 MinimalButton(
                     title: stress.isRunning ? display.tr("btn.stop") : (
@@ -14451,9 +14451,9 @@ struct MonitorToolsSectionView: View {
             }
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(display.tr("row.benchmark")).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                    Text(display.tr("row.benchmark")).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                     Text("1-core \(bench.singleCoreScore.map { String(format: "%.0f", $0) } ?? "—") · multi \(bench.multiCoreScore.map { String(format: "%.0f", $0) } ?? "—")")
-                        .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 }
                 Spacer()
                 MinimalButton(
@@ -14621,7 +14621,7 @@ struct MonitorOptiMacTabView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("MacBar")
+                        Text("rNitro")
                             .font(.system(.title2, design: .rounded, weight: .heavy))
                             .foregroundStyle(
                                 LinearGradient(
@@ -14825,10 +14825,10 @@ struct MonitorTabContent: View {
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("MacBar").font(MacBarFont(.title, metrics: metrics, weight: .semibold))
-                        Text(m.cpuName).font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                        Text("rNitro").font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+                        Text(m.cpuName).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                             .lineLimit(1).truncationMode(.tail)
-                        Text(CURRENT_VERSION).font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary.opacity(0.75))
+                        Text(CURRENT_VERSION).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary.opacity(0.75))
                     }
                     Spacer()
                     HStack(spacing: 6) {
@@ -14836,7 +14836,7 @@ struct MonitorTabContent: View {
                             LowPowerModeBadge(compact: true)
                         }
                         Circle().fill(Color.nGreen).frame(width: 5, height: 5)
-                        Text("Live").font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        Text("Live").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                     }
                 }
                 .padding(.horizontal, metrics.hPad).padding(.top, 12).padding(.bottom, 14)
@@ -14870,10 +14870,10 @@ struct MonitorTabContent: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("CPU").font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                        Text("CPU").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                         Spacer()
                         Text(String(format: "%.1f%%", m.totalUsage))
-                            .font(MacBarFont(.headline, metrics: metrics, weight: .semibold))
+                            .font(rNitroFont(.headline, metrics: metrics, weight: .semibold))
                             .foregroundColor(Color.usage(m.totalUsage))
                     }
                     GraphView(history: m.usageHistory, color: Color.usage(m.totalUsage))
@@ -14897,10 +14897,10 @@ struct MonitorTabContent: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Cores").font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                        Text("Cores").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                         Spacer()
                         Text("\(m.physicalCores)P / \(m.logicalCores)L")
-                            .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                            .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                     }
                     VStack(spacing: 6) {
                         ForEach(Array(m.cores.enumerated()), id: \.offset) { i, core in
@@ -14914,10 +14914,10 @@ struct MonitorTabContent: View {
                     MinimalDivider().padding(.horizontal, 16)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Stress").font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                            Text("Stress").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                             if stress.isRunning {
                                 Text(String(format: "%02d:%02d", stress.elapsedSeconds / 60, stress.elapsedSeconds % 60))
-                                    .font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                             }
                         }
                         Spacer()
@@ -14935,22 +14935,22 @@ struct MonitorTabContent: View {
                     MinimalDivider().padding(.horizontal, 16)
                     VStack(spacing: 10) {
                         HStack {
-                            Text("Benchmark").font(MacBarFont(.label, metrics: metrics)).foregroundColor(.secondary)
+                            Text("Benchmark").font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                             Spacer()
                             if bench.isRunning {
-                                Text(bench.stage).font(MacBarFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                                Text(bench.stage).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                             }
                         }
                         HStack(spacing: 0) {
                             VStack(spacing: 2) {
-                                Text("1-core").font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                                Text("1-core").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                                 Text(bench.singleCoreScore.map { String(format: "%.0f", $0) } ?? "—")
-                                    .font(MacBarFont(.headline, metrics: metrics, weight: .semibold)).foregroundColor(.accent)
+                                    .font(rNitroFont(.headline, metrics: metrics, weight: .semibold)).foregroundColor(.accent)
                             }.frame(maxWidth: .infinity)
                             VStack(spacing: 2) {
-                                Text("Multi").font(MacBarFont(.micro, metrics: metrics)).foregroundColor(.secondary)
+                                Text("Multi").font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
                                 Text(bench.multiCoreScore.map { String(format: "%.0f", $0) } ?? "—")
-                                    .font(MacBarFont(.headline, metrics: metrics, weight: .semibold)).foregroundColor(.nGreen)
+                                    .font(rNitroFont(.headline, metrics: metrics, weight: .semibold)).foregroundColor(.nGreen)
                             }.frame(maxWidth: .infinity)
                             MinimalButton(
                                 title: bench.isRunning ? "Running…" : "Run",
@@ -15121,7 +15121,7 @@ final class PowerReceiptStore: ObservableObject {
         df.dateStyle = .medium
         df.timeStyle = .short
         var lines = [
-            "# MacBar power receipt",
+            "# rNitro power receipt",
             "Session since: \(df.string(from: sessionStart))",
             String(format: "Estimated energy: **%.2f Wh** (package power est.)", wattHours),
             String(format: "On battery: %.0f min · On AC: %.0f min", onBatterySeconds / 60, onACSeconds / 60),
@@ -15278,7 +15278,7 @@ enum LabAlibi {
     ) -> String {
         let df = ISO8601DateFormatter()
         var lines = [
-            "# MacBar process alibi",
+            "# rNitro process alibi",
             "Time: \(df.string(from: Date()))",
             "Version: \(CURRENT_VERSION)",
             "Weather: \(report.weather.label)",
@@ -15500,7 +15500,7 @@ enum RnitroSnapshotCard {
             thermalState: CPUMonitor.thermalLabel(cpu.thermalState),
             batteryPercent: bat.isPresent ? bat.levelPercent : nil,
             topProcesses: Array(tops),
-            notes: "Local MacBar snapshot — share via AirDrop. No cloud."
+            notes: "Local rNitro snapshot — share via AirDrop. No cloud."
         )
     }
 
@@ -15509,7 +15509,7 @@ enum RnitroSnapshotCard {
         let payload = make()
         guard let data = try? JSONEncoder().encode(payload) else { return nil }
         let dir = FileManager.default.temporaryDirectory
-        let name = "MacBar-\(payload.host.replacingOccurrences(of: " ", with: "-"))-\(Int(Date().timeIntervalSince1970)).rnitrocard"
+        let name = "rNitro-\(payload.host.replacingOccurrences(of: " ", with: "-"))-\(Int(Date().timeIntervalSince1970)).rnitrocard"
         let url = dir.appendingPathComponent(name)
         do {
             try data.write(to: url, options: .atomic)
@@ -15921,7 +15921,7 @@ final class LabDesktopWidgetController: NSObject {
                 backing: .buffered,
                 defer: false
             )
-            p.title = "MacBar"
+            p.title = "rNitro"
             p.titleVisibility = .hidden
             p.titlebarAppearsTransparent = true
             p.isFloatingPanel = true
@@ -15962,7 +15962,7 @@ struct LabDesktopWidgetView: View {
         let wx = ThermalWeather.current()
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("MacBar").font(.system(size: 10, weight: .bold))
+                Text("rNitro").font(.system(size: 10, weight: .bold))
                     .foregroundColor(.orange)
                 Spacer()
                 Text(wx.emoji + " " + wx.label)
@@ -15984,7 +15984,7 @@ struct LabDesktopWidgetView: View {
 enum LabStatusFile {
     static var url: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = base.appendingPathComponent("MacBar", isDirectory: true)
+        let dir = base.appendingPathComponent("rNitro", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("lab-status.json")
     }
@@ -16175,7 +16175,7 @@ final class SpeedTestService: ObservableObject {
             var req = URLRequest(url: url)
             req.httpMethod = "GET"
             req.cachePolicy = .reloadIgnoringLocalCacheData
-            req.setValue("MacBar/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
+            req.setValue("rNitro/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
             let t0 = CFAbsoluteTimeGetCurrent()
             let sem = DispatchSemaphore(value: 0)
             var ok = false
@@ -16222,7 +16222,7 @@ final class SpeedTestService: ObservableObject {
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
         req.cachePolicy = .reloadIgnoringLocalCacheData
-        req.setValue("MacBar/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
+        req.setValue("rNitro/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
 
         let sem = DispatchSemaphore(value: 0)
         var resultError: Error?
@@ -16285,7 +16285,7 @@ final class SpeedTestService: ObservableObject {
         req.httpMethod = "POST"
         req.cachePolicy = .reloadIgnoringLocalCacheData
         req.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
-        req.setValue("MacBar/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
+        req.setValue("rNitro/\(CURRENT_VERSION)", forHTTPHeaderField: "User-Agent")
         // Deterministic payload without huge stack alloc
         let chunk = Data(repeating: 0x5A, count: 64 * 1024)
         var body = Data()
@@ -16445,7 +16445,7 @@ struct LabTabView: View {
                     }
                     if !toast.isEmpty {
                         Text(toast)
-                            .font(MacBarFont(.micro, metrics: metrics))
+                            .font(rNitroFont(.micro, metrics: metrics))
                             .foregroundColor(.nOrange)
                     }
                 }
@@ -16478,14 +16478,14 @@ struct LabTabView: View {
     private func tocBar(proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(display.tr("lab.jump"))
-                .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                 .foregroundColor(.secondary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(coreToc, id: \.0) { item in
                         Button(action: { jumpTarget = item.0 }) {
                             Text(display.tr(item.1))
-                                .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                                .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                                 .foregroundColor(.nOrange)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -16499,7 +16499,7 @@ struct LabTabView: View {
                 Button(action: { withAnimation { toysExpanded.toggle() } }) {
                     HStack(spacing: 6) {
                         Text(toysExpanded ? "Hide experimental toys" : "Show experimental toys (\(toyToc.count))")
-                            .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                            .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                             .foregroundColor(.nPurple)
                         Image(systemName: toysExpanded ? "chevron.up" : "chevron.down")
                             .font(.system(size: 10, weight: .semibold))
@@ -16513,7 +16513,7 @@ struct LabTabView: View {
                             ForEach(toyToc, id: \.0) { item in
                                 Button(action: { jumpTarget = item.0 }) {
                                     Text(display.tr(item.1))
-                                        .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                                        .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                                         .foregroundColor(.nPurple)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
@@ -16534,20 +16534,20 @@ struct LabTabView: View {
                 Image(systemName: "flask")
                     .foregroundColor(.nOrange)
                 Text(display.tr("lab.title"))
-                    .font(MacBarFont(.title, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
                 Text(RNITRO_FEATURE_EXPERIMENTAL_UI ? "EXPERIMENTAL" : "BETA")
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .bold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Capsule().fill(RNITRO_FEATURE_EXPERIMENTAL_UI ? Color.nPurple : Color.nOrange))
                 Spacer()
                 Text(CURRENT_VERSION)
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
             }
             Text(display.tr("lab.subtitle"))
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -16558,33 +16558,33 @@ struct LabTabView: View {
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Text("\(wx.emoji) \(wx.label)")
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 Text("·").foregroundColor(.secondary)
                 Text(whisperOn ? (whisperStatus.contains("quiet") ? "Whisper quiet" : "Whisper live") : "Whisper off")
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
                 Text("·").foregroundColor(.secondary)
                 Text(farm.isBuilding ? "Build" : (farm.isCoolingDown ? "Cool" : "Farm idle"))
-                    .font(MacBarFont(.micro, metrics: metrics, weight: farm.isBuilding ? .semibold : .regular))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: farm.isBuilding ? .semibold : .regular))
                     .foregroundColor(farm.isBuilding ? .nOrange : .secondary)
                 Spacer()
                 Text(String(format: "%.0f° · %.0f%%", m.temperature, m.totalUsage))
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
             }
             if cloak.shouldHushMenubar {
                 Text("Meeting hush active")
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
             }
             if peer.shouldEaseSampling {
                 Text(display.tr("lab.peer.active") + (peer.peerName.isEmpty ? "" : " (\(peer.peerName))"))
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
             }
             if wx == .heatwave || wx == .storm || farm.isBuilding {
                 Text(farm.isBuilding ? "Urgency: compile farm running" : "Urgency: thermal weather elevated")
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.nOrange)
             }
         }
@@ -16599,7 +16599,7 @@ struct LabTabView: View {
     private var presetsRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(display.tr("lab.presets"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             HStack(spacing: 8) {
                 MinimalButton(title: display.tr("lab.preset.quiet"), action: applyQuietDay)
                 MinimalButton(title: display.tr("lab.preset.build"), action: applyBuildDay)
@@ -16612,23 +16612,23 @@ struct LabTabView: View {
         let wx = ThermalWeather.current()
         return labCard {
             Text(display.tr("lab.weather"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("\(wx.emoji) \(wx.label)")
-                    .font(MacBarFont(.headline, metrics: metrics, weight: .bold))
+                    .font(rNitroFont(.headline, metrics: metrics, weight: .bold))
                     .foregroundColor(wx == .heatwave || wx == .storm ? .nOrange : .primary)
                 Text(String(format: "%.0f°C · CPU %.0f%% · %@", m.temperature, m.totalUsage, CPUMonitor.thermalLabel(m.thermalState)))
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
             Text(display.tr("lab.weather.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Toggle(isOn: Binding(
                 get: { MenuBarConfig.isSlotEnabled(.weather) },
                 set: { MenuBarConfig.setSlot(.weather, enabled: $0) }
             )) {
-                Text(display.tr("lab.weather.menubar")).font(MacBarFont(.caption, metrics: metrics))
+                Text(display.tr("lab.weather.menubar")).font(rNitroFont(.caption, metrics: metrics))
             }
             .toggleStyle(.switch)
         }
@@ -16638,16 +16638,16 @@ struct LabTabView: View {
         labCard {
             HStack {
                 Text(display.tr("lab.scrub"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Spacer()
                 MinimalButton(title: display.tr("lab.scrub.now"), action: { scrub.jumpToNow() })
             }
             Text(display.tr("lab.scrub.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             if scrub.samples.isEmpty {
                 Text("Collecting samples…")
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             } else {
                 // Mini filmstrip
@@ -16677,13 +16677,13 @@ struct LabTabView: View {
                     )
                 } else {
                     Text("Need a few more seconds of history to scrub…")
-                        .font(MacBarFont(.micro, metrics: metrics))
+                        .font(rNitroFont(.micro, metrics: metrics))
                         .foregroundColor(.secondary)
                 }
                 if let s = scrub.scrubbed {
                     Text(String(format: "t−%ds · CPU %.0f%% · %.0f°C · %.1f W",
                                 max(0, Int(Date().timeIntervalSince(s.t))), s.cpu, s.temp, s.watts))
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 }
             }
         }
@@ -16693,24 +16693,24 @@ struct LabTabView: View {
         labCard {
             HStack {
                 Text(display.tr("lab.detective"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Spacer()
                 MinimalButton(title: display.tr("lab.detective.refresh"), action: refreshDetective)
                 MinimalButton(title: display.tr("lab.detective.copy"), action: copyDetective)
             }
             Text(report.headline)
-                .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
                 .foregroundColor(.nOrange)
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(report.bullets.enumerated()), id: \.offset) { _, line in
                     HStack(alignment: .top, spacing: 6) {
                         Text("•").foregroundColor(.secondary)
-                        Text(line).font(MacBarFont(.caption, metrics: metrics))
+                        Text(line).font(rNitroFont(.caption, metrics: metrics))
                     }
                 }
             }
             Text(report.suggestion)
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
         }
@@ -16720,17 +16720,17 @@ struct LabTabView: View {
         labCard {
             HStack {
                 Text(display.tr("lab.speedtest"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Spacer()
                 Text("EXP")
-                    .font(MacBarFont(.micro, metrics: metrics, weight: .bold))
+                    .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Capsule().fill(Color.nPurple))
             }
             Text(display.tr("lab.speedtest.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             SpeedTestPanel()
@@ -16741,7 +16741,7 @@ struct LabTabView: View {
         labCard {
             HStack {
                 Text(display.tr("lab.ghost"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Spacer()
                 MinimalButton(title: display.tr("lab.detective.refresh"), action: {
                     ProcessMonitor.shared.start()
@@ -16749,21 +16749,21 @@ struct LabTabView: View {
                 })
             }
             Text(display.tr("lab.ghost.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             if ghost.rows.isEmpty {
                 Text("Sampling… leave Lab open a minute while apps run.")
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             } else {
                 ForEach(ghost.rows) { row in
                     HStack {
                         Text(row.name)
-                            .font(MacBarFont(.caption, metrics: metrics))
+                            .font(rNitroFont(.caption, metrics: metrics))
                             .lineLimit(1)
                         Spacer()
                         Text(String(format: "%.2f min · now %.0f%%", row.cpuMinutes, row.lastPercent))
-                            .font(MacBarFont(.micro, metrics: metrics))
+                            .font(rNitroFont(.micro, metrics: metrics))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -16775,7 +16775,7 @@ struct LabTabView: View {
         labCard {
             HStack {
                 Text(display.tr("lab.receipt"))
-                    .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                 Spacer()
                 MinimalButton(title: display.tr("lab.receipt.copy"), action: {
                     copyText(receipt.markdown(ghost: ghost.rows))
@@ -16783,12 +16783,12 @@ struct LabTabView: View {
                 MinimalButton(title: display.tr("lab.receipt.reset"), action: { receipt.reset(); flashCopied("Session reset") })
             }
             Text(display.tr("lab.receipt.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Text(String(format: "%.2f Wh est. · batt %.0f min · AC %.0f min", receipt.wattHours, receipt.onBatterySeconds / 60, receipt.onACSeconds / 60))
-                .font(MacBarFont(.body, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.body, metrics: metrics, weight: .semibold))
             Text(String(format: "Live package power: %.1f W", m.packagePowerWatts))
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
         }
     }
@@ -16796,12 +16796,12 @@ struct LabTabView: View {
     private var whisperCard: some View {
         labCard {
             Text(display.tr("lab.whisper"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.whisper.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Toggle(isOn: $whisperOn) {
-                Text(display.tr("menubar.whisper.toggle")).font(MacBarFont(.caption, metrics: metrics))
+                Text(display.tr("menubar.whisper.toggle")).font(rNitroFont(.caption, metrics: metrics))
             }
             .toggleStyle(.switch)
             .onChange(of: whisperOn) { _, _ in
@@ -16821,7 +16821,7 @@ struct LabTabView: View {
             }
             .pickerStyle(.segmented)
             Text(whisperStatus)
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
         }
     }
@@ -16829,12 +16829,12 @@ struct LabTabView: View {
     private var cloakCard: some View {
         labCard {
             Text(display.tr("lab.cloak"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.cloak.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Toggle(isOn: $meetingCloakOn) {
-                Text(display.tr("lab.cloak")).font(MacBarFont(.caption, metrics: metrics))
+                Text(display.tr("lab.cloak")).font(rNitroFont(.caption, metrics: metrics))
             }
             .toggleStyle(.switch)
             .onChange(of: meetingCloakOn) { _, _ in
@@ -16842,11 +16842,11 @@ struct LabTabView: View {
             }
             if cloak.isMeetingActive {
                 Text("Active: \(cloak.matchedApp) — menubar hushed")
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
             } else {
                 Text(meetingCloakOn ? "No meeting app detected" : "Off")
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
         }
@@ -16855,13 +16855,13 @@ struct LabTabView: View {
     private var budgetCard: some View {
         labCard {
             Text(display.tr("lab.budget"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.budget.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             HStack {
                 Text(display.tr("lab.budget.goal"))
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                 Spacer()
                 Slider(value: Binding(
                     get: { min(80, max(5, budget.goalWh)) },
@@ -16869,13 +16869,13 @@ struct LabTabView: View {
                 ), in: 5.0...80.0, step: 1)
                 .frame(maxWidth: 160)
                 Text(String(format: "%.0f Wh", budget.goalWh))
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                     .frame(width: 48, alignment: .trailing)
             }
             ProgressView(value: min(1.0, budget.progress))
                 .tint(budget.progress > 1.0 ? Color.nRed : Color.nOrange)
             Text(String(format: "%.2f / %.0f Wh est. · heat-min %.1f", budget.usedWh, budget.goalWh, budget.heatMinutes))
-                .font(MacBarFont(.caption, metrics: metrics))
+                .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(budget.progress > 1.0 ? .nRed : .secondary)
         }
     }
@@ -16883,9 +16883,9 @@ struct LabTabView: View {
     private var snapshotCard: some View {
         labCard {
             Text(display.tr("lab.snapshot"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.snapshot.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             MinimalButton(title: display.tr("lab.snapshot.export"), action: {
                 ProcessMonitor.shared.start()
@@ -16898,9 +16898,9 @@ struct LabTabView: View {
     private var confessCard: some View {
         labCard {
             Text(display.tr("lab.confess"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.confess.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             if let c = confess.active {
                 HStack(alignment: .top, spacing: 8) {
@@ -16911,7 +16911,7 @@ struct LabTabView: View {
                 MinimalButton(title: display.tr("lab.confess.dismiss"), action: { confess.dismiss() })
             } else {
                 Text("No recent cool-down story yet. Create some heat, then chill.")
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
         }
@@ -16920,10 +16920,10 @@ struct LabTabView: View {
     private func confessPanel(_ n: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Panel \(n)")
-                .font(MacBarFont(.micro, metrics: metrics, weight: .bold))
+                .font(rNitroFont(.micro, metrics: metrics, weight: .bold))
                 .foregroundColor(.nOrange)
             Text(text)
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(8)
@@ -16934,9 +16934,9 @@ struct LabTabView: View {
     private var widgetCard: some View {
         labCard {
             Text(display.tr("lab.widget"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.widget.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             MinimalButton(
                 title: LabDesktopWidgetController.shared.isVisible
@@ -16953,9 +16953,9 @@ struct LabTabView: View {
     private var peerCard: some View {
         labCard {
             Text(display.tr("lab.peer"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.peer.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Toggle(isOn: Binding(
                 get: {
@@ -16967,16 +16967,16 @@ struct LabTabView: View {
                     PolitePeer.shared.applyPreferenceChange()
                 }
             )) {
-                Text(display.tr("lab.peer")).font(MacBarFont(.caption, metrics: metrics))
+                Text(display.tr("lab.peer")).font(rNitroFont(.caption, metrics: metrics))
             }
             .toggleStyle(.switch)
             if peer.isPeerActive {
                 Text(display.tr("lab.peer.active") + (peer.peerName.isEmpty ? "" : " — \(peer.peerName)"))
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
             } else {
                 Text(display.tr("lab.peer.idle"))
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
         }
@@ -16985,9 +16985,9 @@ struct LabTabView: View {
     private var farmCard: some View {
         labCard {
             Text(display.tr("lab.farm"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.farm.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Toggle(isOn: Binding(
                 get: {
@@ -16999,30 +16999,30 @@ struct LabTabView: View {
                     CompileFarmDetector.shared.applyPreferenceChange()
                 }
             )) {
-                Text(display.tr("general.compileFarm")).font(MacBarFont(.caption, metrics: metrics))
+                Text(display.tr("general.compileFarm")).font(rNitroFont(.caption, metrics: metrics))
             }
             .toggleStyle(.switch)
             Text(farmStatusLine)
-                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 .foregroundColor(farm.isBuilding ? .nOrange : .secondary)
             Divider().opacity(0.4)
             HStack {
                 Text(display.tr("lab.ledger"))
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                 Spacer()
                 Text(String(format: "Today %.0f min", ledger.todayMinutes))
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
                 MinimalButton(title: display.tr("lab.ledger.clear"), action: { ledger.clear() })
             }
             if ledger.entries.isEmpty {
                 Text("No finished builds recorded yet.")
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
             } else {
                 ForEach(ledger.entries.prefix(5)) { e in
                     Text(String(format: "%.1f min · peak %.0f° · %@", e.durationMinutes, e.peakTemp, e.tools.joined(separator: ", ")))
-                        .font(MacBarFont(.micro, metrics: metrics))
+                        .font(rNitroFont(.micro, metrics: metrics))
                         .foregroundColor(.secondary)
                 }
             }
@@ -17032,9 +17032,9 @@ struct LabTabView: View {
     private var alibiCard: some View {
         labCard {
             Text(display.tr("lab.alibi"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.alibi.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             MinimalButton(title: display.tr("lab.alibi.copy"), action: {
                 report = ThermalDetective.analyze()
@@ -17048,7 +17048,7 @@ struct LabTabView: View {
             Button(action: { withAnimation { showDuel.toggle() } }) {
                 HStack {
                     Text(display.tr("lab.duel"))
-                        .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                        .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer()
                     Image(systemName: showDuel ? "chevron.up" : "chevron.down")
@@ -17060,7 +17060,7 @@ struct LabTabView: View {
                 StressDuelPanel()
             } else {
                 Text("Expand for LAN host/join duel (no cloud).")
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
             }
         }
@@ -17069,18 +17069,18 @@ struct LabTabView: View {
     private var forecastCard: some View {
         labCard {
             Text(display.tr("lab.forecast"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.forecast.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Text("\(forecast.outlookEmoji)  \(forecast.outlook)")
-                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
             Text(String(format: "Slope ~%.2f °C/min · now %.0f°", forecast.slopePerMin, m.temperature))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             HStack {
                 Text("Horizon (min)")
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                 Slider(value: Binding(
                     get: {
                         UserDefaults.standard.object(forKey: MonitorPreferences.forecastHorizonKey) as? Double ?? 30
@@ -17094,13 +17094,13 @@ struct LabTabView: View {
     private var haikuCard: some View {
         labCard {
             Text(display.tr("lab.haiku"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.haiku.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             if !haikuText.isEmpty {
                 Text(haikuText)
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.nPurple)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -17122,12 +17122,12 @@ struct LabTabView: View {
     private var cosplayCard: some View {
         labCard {
             Text(display.tr("lab.cosplay"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.cosplay.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Toggle(isOn: $throttleCosplayOn) {
-                Text("Enable menubar flair").font(MacBarFont(.caption, metrics: metrics))
+                Text("Enable menubar flair").font(rNitroFont(.caption, metrics: metrics))
             }
             .toggleStyle(.switch)
             .onChange(of: throttleCosplayOn) { _, v in
@@ -17135,11 +17135,11 @@ struct LabTabView: View {
             }
             if let p = ThrottleCosplay.menubarPrefix() {
                 Text("Active prefix: \(p)")
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                     .foregroundColor(.nOrange)
             } else {
                 Text("Idle — fires when temp/CPU get spicy")
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
             }
         }
@@ -17148,14 +17148,14 @@ struct LabTabView: View {
     private var overnightCard: some View {
         labCard {
             Text(display.tr("lab.overnight"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.overnight.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             Text(String(format: "Max temp %.1f°C · max CPU %.0f%%", overnight.maxTemp, overnight.maxCPU))
-                .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
             Text(String(format: "Minutes ≥ 80°C: %.0f · samples: %d · day %@", overnight.minutesAboveWarn, overnight.samples, overnight.dayKey))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             MinimalButton(title: "Copy morning report", action: {
                 NSPasteboard.general.clearContents()
@@ -17168,18 +17168,18 @@ struct LabTabView: View {
     private var rouletteCard: some View {
         labCard {
             Text(display.tr("lab.roulette"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.roulette.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary)
             if let idx = roulette.selectedIndex, idx < m.cores.count {
                 let c = m.cores[idx]
                 Text(String(format: "Core %d · %.0f%% · %.0f MHz", idx, c.usage, c.clockMHz))
-                    .font(MacBarFont(.caption, metrics: metrics, weight: .semibold))
+                    .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
                     .foregroundColor(roulette.spinning ? .nPurple : .accent)
             } else {
                 Text("Spin to pick a core")
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                     .foregroundColor(.secondary)
             }
             MinimalButton(title: roulette.spinning ? "Spinning…" : "Spin", action: { roulette.spin() })
@@ -17189,13 +17189,13 @@ struct LabTabView: View {
     private var chaosCard: some View {
         labCard {
             Text(display.tr("lab.chaos"))
-                .font(MacBarFont(.label, metrics: metrics, weight: .semibold))
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
             Text(display.tr("lab.chaos.hint"))
-                .font(MacBarFont(.micro, metrics: metrics))
+                .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.nOrange)
             HStack {
                 Text(String(format: "%.1fs", chaosSeconds))
-                    .font(MacBarFont(.caption, metrics: metrics))
+                    .font(rNitroFont(.caption, metrics: metrics))
                 Slider(value: $chaosSeconds, in: 0.5...2.0, step: 0.25)
             }
             MinimalButton(
@@ -17204,7 +17204,7 @@ struct LabTabView: View {
             )
             if !chaos.lastNote.isEmpty {
                 Text(chaos.lastNote)
-                    .font(MacBarFont(.micro, metrics: metrics))
+                    .font(rNitroFont(.micro, metrics: metrics))
                     .foregroundColor(.secondary)
             }
         }
@@ -17267,7 +17267,7 @@ struct LabTabView: View {
     private func copyDetective() {
         var md = "# \(report.headline)\n\n"
         for b in report.bullets { md += "- \(b)\n" }
-        md += "\n**Suggestion:** \(report.suggestion)\n\n_MacBar \(CURRENT_VERSION)_\n"
+        md += "\n**Suggestion:** \(report.suggestion)\n\n_rNitro \(CURRENT_VERSION)_\n"
         copyText(md)
     }
 
@@ -17372,7 +17372,7 @@ struct ContentView: View {
             .onChange(of: showFirstLaunchTips) { _, showing in
                 if !showing { FirstLaunchTips.markSeen() }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .MacBarOpenMainWindow)) { note in
+            .onReceive(NotificationCenter.default.publisher(for: .rNitroOpenMainWindow)) { note in
                 guard layout == .window else { return }
                 if let raw = note.userInfo?["tab"] as? String, let t = AppTab(rawValue: raw) {
                     tab = t
@@ -17432,13 +17432,13 @@ struct ContentView: View {
         VStack(spacing: 0) {
             MinimalDivider()
             Button(action: {
-                NotificationCenter.default.post(name: .MacBarOpenMainWindow, object: nil, userInfo: ["tab": AppTab.monitor.rawValue])
+                NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: ["tab": AppTab.monitor.rawValue])
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: "macwindow")
                         .font(.system(size: 12, weight: .semibold))
                     Text(display.tr("openMainWindow"))
-                        .font(MacBarFont(.caption, metrics: metrics, weight: .medium))
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .medium))
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
@@ -17485,7 +17485,7 @@ struct ContentView: View {
 // in-game overlay — showing live CPU%, GPU%, temp, and RAM while a fullscreen
 // game is running. FPS is intentionally NOT faked here: macOS has no public
 // API to hook another process's renderer (unlike RTSS on Windows), so instead
-// MacBar can launch a Metal game with Apple's own native Metal HUD enabled
+// rNitro can launch a Metal game with Apple's own native Metal HUD enabled
 // (MTL_HUD_ENABLED), which shows real engine-reported FPS/frame time.
 struct OverlayHUDView: View {
     @Environment(\.uiMetrics) private var metrics
@@ -17505,8 +17505,8 @@ struct OverlayHUDView: View {
     }
     private func hudStat(_ label:String,_ value:String,_ color:Color) -> some View {
         VStack(spacing:1) {
-            Text(value).font(MacBarFont(.headline, metrics: metrics, weight: .bold)).foregroundColor(color)
-            Text(label).font(MacBarFont(.micro, metrics: metrics, weight: .semibold)).foregroundColor(.white.opacity(0.6)).tracking(1)
+            Text(value).font(rNitroFont(.headline, metrics: metrics, weight: .bold)).foregroundColor(color)
+            Text(label).font(rNitroFont(.micro, metrics: metrics, weight: .semibold)).foregroundColor(.white.opacity(0.6)).tracking(1)
         }
     }
 }
@@ -17535,10 +17535,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
                 backing: .buffered,
                 defer: false
             )
-            w.title = "MacBar"
+            w.title = "rNitro"
             w.contentViewController = host
             w.center()
-            w.setFrameAutosaveName("MacBarMainWindow")
+            w.setFrameAutosaveName("rNitroMainWindow")
             w.delegate = self
             w.isReleasedWhenClosed = false
             window = w
@@ -17552,7 +17552,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window?.makeKeyAndOrderFront(nil)
         if let userInfo, !userInfo.isEmpty {
             DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .MacBarOpenMainWindow, object: Self.shared, userInfo: userInfo)
+                NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: Self.shared, userInfo: userInfo)
             }
         }
     }
@@ -17793,7 +17793,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
 
         NotificationCenter.default.addObserver(
-            forName: .MacBarOpenMainWindow, object: nil, queue: .main
+            forName: .rNitroOpenMainWindow, object: nil, queue: .main
         ) { note in
             guard note.object == nil else { return }
             MainWindowController.shared.show(userInfo: note.userInfo)
@@ -17818,9 +17818,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem()
         mainMenu.addItem(appMenuItem)
-        let appMenu = NSMenu(title: "MacBar")
+        let appMenu = NSMenu(title: "rNitro")
         let quitItem = NSMenuItem(
-            title: "Quit MacBar",
+            title: "Quit rNitro",
             action: #selector(quitApp(_:)),
             keyEquivalent: "q"
         )
@@ -17904,7 +17904,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             menu.addItem(NSMenuItem.separator())
             // Do NOT set quit.target = self with NSApplication.terminate — AppDelegate has no terminate:.
             let quitItem = menu.addItem(
-                withTitle: "Quit MacBar",
+                withTitle: "Quit rNitro",
                 action: #selector(quitApp(_:)),
                 keyEquivalent: "q"
             )
@@ -18084,7 +18084,7 @@ SWIFTEOF
 # ── Compile directly with swiftc (no SPM) ────────────────────────────────────
 echo "🔨 Compiling (this takes ~30 seconds)..."
 swiftc "$WORK_DIR/main.swift" \
-    -o "$WORK_DIR/MacBar" \
+    -o "$WORK_DIR/rNitro" \
     -framework SwiftUI \
     -framework Cocoa \
     -framework IOKit \
@@ -18095,19 +18095,19 @@ swiftc "$WORK_DIR/main.swift" \
     -parse-as-library \
     -O
 
-strip -x "$WORK_DIR/MacBar" 2>/dev/null || true
+strip -x "$WORK_DIR/rNitro" 2>/dev/null || true
 
 # ── Security: make sure compilation actually produced a real, executable
 #    regular file before we go any further (defends against a compromised
 #    toolchain or a race that swaps the output path with a symlink).
-if [[ ! -f "$WORK_DIR/MacBar" || -L "$WORK_DIR/MacBar" ]]; then
+if [[ ! -f "$WORK_DIR/rNitro" || -L "$WORK_DIR/rNitro" ]]; then
   echo "❌ Compiled binary missing or unexpected (symlink). Aborting."
   exit 1
 fi
-chmod 700 "$WORK_DIR/MacBar"
+chmod 700 "$WORK_DIR/rNitro"
 
 # ── Assemble .app bundle ──────────────────────────────────────────────────────
-echo "📦 Building MacBar.app..."
+echo "📦 Building rNitro.app..."
 mkdir -p "$HOME/Applications"
 
 # ── Security: don't blindly rm -rf a path that might have been replaced by a
@@ -18125,8 +18125,8 @@ rm -rf -- "$APP_DEST"
 mkdir -p "$APP_DEST/Contents/MacOS"
 mkdir -p "$APP_DEST/Contents/Resources"
 
-cp "$WORK_DIR/MacBar" "$APP_DEST/Contents/MacOS/MacBar"
-chmod 755 "$APP_DEST/Contents/MacOS/MacBar"
+cp "$WORK_DIR/rNitro" "$APP_DEST/Contents/MacOS/rNitro"
+chmod 755 "$APP_DEST/Contents/MacOS/rNitro"
 
 INSTALLER_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -18135,20 +18135,20 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleExecutable</key><string>MacBar</string>
+    <key>CFBundleExecutable</key><string>rNitro</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
-    <key>CFBundleName</key><string>MacBar</string>
-    <key>CFBundleDisplayName</key><string>MacBar</string>
-    <key>CFBundleVersion</key><string>v1.3.25-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.25-Experimental</string>
+    <key>CFBundleName</key><string>rNitro</string>
+    <key>CFBundleDisplayName</key><string>rNitro</string>
+    <key>CFBundleVersion</key><string>v1.3.26-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.26-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>LSMinimumSystemVersion</key><string>12.0</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>MacBar uses the local network only for optional Stress Duel between Macs on your LAN. No data leaves your network.</string>
+    <string>rNitro uses the local network only for optional Stress Duel between Macs on your LAN. No data leaves your network.</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_rnitro-duel._tcp</string>
@@ -18176,7 +18176,7 @@ FONT_SRC_DIRS=(
   "$INSTALLER_DIR/fonts/ui"
   "$INSTALLER_DIR/../fonts/ui"
   "$HOME/rnitro-site-work/rnitro-site/fonts/ui"
-  "$HOME/Applications/MacBar.app/Contents/Resources/Fonts"
+  "$HOME/Applications/rNitro.app/Contents/Resources/Fonts"
 )
 COPIED=0
 for dir in "${FONT_SRC_DIRS[@]}"; do
@@ -18253,7 +18253,7 @@ ctx.setLineWidth(size * 0.006)
 ctx.strokePath()
 ctx.restoreGState()
 
-// Lightning-bolt mark, cyan → green gradient (matches the MacBar brand)
+// Lightning-bolt mark, cyan → green gradient (matches the rNitro brand)
 let bolt = CGMutablePath()
 bolt.move(to: CGPoint(x: size * 0.58, y: size * 0.86))
 bolt.addLine(to: CGPoint(x: size * 0.40, y: size * 0.50))
@@ -18322,10 +18322,10 @@ if [[ -f "$ICON_MASTER" && ! -L "$ICON_MASTER" ]]; then
     chmod 644 "$APP_DEST/Contents/Resources/AppIcon.icns"
     echo "✅ App icon generated."
   else
-    echo "⚠️  Icon conversion failed (non-fatal); MacBar will use the default app icon."
+    echo "⚠️  Icon conversion failed (non-fatal); rNitro will use the default app icon."
   fi
 else
-  echo "⚠️  Icon rendering failed (non-fatal); MacBar will use the default app icon."
+  echo "⚠️  Icon rendering failed (non-fatal); rNitro will use the default app icon."
 fi
 
 # ── Menu bar icons (light/dark for appearance switching) ─────────────────────
@@ -18406,11 +18406,11 @@ else
 fi
 
 xattr -cr "$APP_DEST" 2>/dev/null || true
-BINARY_HASH="$(shasum -a 256 "$APP_DEST/Contents/MacOS/MacBar" | awk '{print $1}')"
+BINARY_HASH="$(shasum -a 256 "$APP_DEST/Contents/MacOS/rNitro" | awk '{print $1}')"
 echo "🔒 Binary SHA-256 (reference): $BINARY_HASH"
 
 echo ""
-echo "✅ MacBar installed to $APP_DEST"
+echo "✅ rNitro installed to $APP_DEST"
 # Packaging sets RNITRO_NO_LAUNCH=1 so multi-channel builds don't steal focus.
 _no_launch="$(printf '%s' "${RNITRO_NO_LAUNCH:-}" | tr '[:upper:]' '[:lower:]')"
 if [[ "$_no_launch" == "1" || "$_no_launch" == "true" || "$_no_launch" == "yes" ]]; then

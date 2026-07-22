@@ -1,6 +1,14 @@
 {
   "whats_new": [
     {
+      "version": "v1.3.26-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Product name restored to **rNitro** (MacBar rebrand reverted).",
+        "Canonical site path again **chopstickshq.com/rnitro**."
+      ]
+    },
+    {
       "version": "v1.3.25-Experimental",
       "channel": "experimental",
       "highlights": [
