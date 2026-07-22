@@ -43,18 +43,12 @@ def sized_label(text: str, filename: str | None) -> str:
 
 
 def zip_terminal_install_cmd(zip_name: str) -> str:
-    """Terminal install of pre-built App ZIP — no Xcode / swiftc."""
-    # ditto + xattr are stock macOS; unzip is present on all modern Macs.
+    """Short Terminal install of pre-built App ZIP — no Xcode."""
     return (
-        f'curl -fsSL {SITE_URL}/{zip_name} -o /tmp/rnitro-app.zip && '
-        f'rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && '
-        f'unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && '
-        f'APP=$(find /tmp/rnitro-extract -name "rNitro.app" -type d | head -1) && '
-        f'test -n "$APP" && mkdir -p "$HOME/Applications" && '
-        f'rm -rf "$HOME/Applications/rNitro.app" && '
-        f'ditto "$APP" "$HOME/Applications/rNitro.app" && '
-        f'xattr -cr "$HOME/Applications/rNitro.app" && '
-        f'echo "Installed ~/Applications/rNitro.app — right-click Open if Gatekeeper blocks."'
+        f'curl -fsSL {SITE_URL}/{zip_name} -o /tmp/rnitro.zip && '
+        f'unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && '
+        f'ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && '
+        f'xattr -cr ~/Applications/rNitro.app'
     )
 
 
@@ -69,18 +63,13 @@ def recommended_zip_block(
     size = file_size_label(zip_file)
     term_cmd = zip_terminal_install_cmd(zip_file)
     return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.4);">
-        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.45); background:rgba({accent_rgb},0.1);">Recommended · no Xcode</div>
-        <div class="dl-recommended-title" style="color:{accent};">App ZIP (pre-built)</div>
-        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Browser download or Terminal install — both use the pre-built app.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="requestDownload('{zip_file}')">⬇ Download App ZIP{size}</button>
-        <div style="margin-top:14px; text-align:left;">
-          <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:{accent}; margin-bottom:6px;">Terminal · no Xcode</div>
-          <p class="dl-recommended-steps" style="margin-bottom:8px;">Downloads the App ZIP and installs to <code>~/Applications</code>. Needs only <code>curl</code> + <code>unzip</code> (built into macOS).</p>
-          <div style="background:var(--card2); border:1px solid rgba({accent_rgb},0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:11px; color:{accent}; word-break:break-all; line-height:1.45; margin-bottom:10px;">
-            {term_cmd}
-          </div>
-          <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('{which}_zip')">⎘ Copy Terminal install (no Xcode)</button>
-        </div>
+        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.45); background:rgba({accent_rgb},0.1);">No Xcode</div>
+        <div class="dl-recommended-title" style="color:{accent};">App ZIP</div>
+        <p class="dl-recommended-steps">Unzip → Applications → right-click <strong>Open</strong> if blocked.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="requestDownload('{zip_file}')">⬇ App ZIP{size}</button>
+        <p class="dl-recommended-steps" style="margin:12px 0 6px;"><strong>Terminal</strong> (no Xcode):</p>
+        <div style="background:var(--card2); border:1px solid rgba({accent_rgb},0.3); border-radius:8px; padding:10px 12px; font-family:var(--mono); font-size:11px; color:{accent}; word-break:break-all; line-height:1.4; margin-bottom:8px;">{term_cmd}</div>
+        <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('{which}_zip')">⎘ Copy Terminal install</button>
       </div>"""
 
 
@@ -474,14 +463,12 @@ def hero_curl_recommended_block(
     btn_style: str = "",
 ) -> str:
     cmd = curl_install_cmd(sh_name)
-    return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.35); margin-top:12px;">
-        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.4); background:rgba({accent_rgb},0.08);">Optional · needs Xcode</div>
-        <div class="dl-recommended-title" style="color:{accent};">Terminal one-liner (compile from source)</div>
-        <p class="dl-recommended-steps">Only if you prefer building from source. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a> (~30s compile). Most people should use the <strong>App ZIP</strong> above instead.</p>
-        <div style="background:var(--card2); border:1px solid rgba({accent_rgb},0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:{accent}; word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
-          {cmd}
-        </div>
-        <button type="button" class="btn btn-secondary" style="{btn_style}" onclick="copyCurlCmd('{which}')">⎘ Copy curl one-liner</button>
+    return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.3); margin-top:10px;">
+        <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.35); background:rgba({accent_rgb},0.06);">Optional · Xcode</div>
+        <div class="dl-recommended-title" style="color:{accent};">Compile from source</div>
+        <p class="dl-recommended-steps">Needs <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode CLT</a>. Prefer App ZIP above.</p>
+        <div style="background:var(--card2); border:1px solid rgba({accent_rgb},0.25); border-radius:8px; padding:10px 12px; font-family:var(--mono); font-size:11px; color:{accent}; word-break:break-all; line-height:1.4; margin-bottom:8px;">{cmd}</div>
+        <button type="button" class="btn btn-secondary" style="{btn_style}" onclick="copyCurlCmd('{which}')">⎘ Copy compile install</button>
       </div>"""
 
 
