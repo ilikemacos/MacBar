@@ -20,14 +20,14 @@ Open source · no account · no telemetry · no subscription.
 
 1. Download the **App ZIP** from [Releases](https://github.com/ilikemacos/rNitro/releases) or the [website](https://chopstickshq.com/rnitro/) (accept Terms when prompted on the site).
 2. Unzip → drag **rNitro.app** to **Applications**.
-3. First launch: if macOS blocks it, **right-click → Open → Open**.
+3. First launch: if macOS blocks it, **right-click rNitro.app → Open → Open**.
 
-Also available: **PKG**, **DMG**, or **`.sh`** (compiles on your Mac with Xcode CLT).
+Also available: **Terminal install (no Xcode)** on the website, or **PKG** / **DMG** / **`.sh`** (compile needs Xcode CLT).
 
 **Latest Experimental ZIP:**  
 [rNitro-v1.3.26-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.26-Experimental/rNitro-v1.3.26-Experimental.zip)
 
-> Builds are ad-hoc signed. Apple notarization is planned. Prefer GitHub Releases or chopstickshq.com for downloads.
+> **First open on macOS:** builds are ad-hoc signed (not notarized yet). Prefer App ZIP or Terminal install (no Xcode) from [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/).
 
 ---
 

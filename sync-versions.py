@@ -620,6 +620,21 @@ def hero_copy(data: dict) -> str:
   <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>{stable["label"]}</strong> for daily use · <strong>{beta["label"]}</strong> for every AI provider. Choose <strong>Apple Silicon</strong> or <strong>Intel</strong> below. Free · no account · no telemetry.</p>"""
 
 
+def trust_strip() -> str:
+    """Short Gatekeeper / ad-hoc signing strip (under hero, before downloads)."""
+    return f"""  <div id="trust-strip" style="width:100%; max-width:640px; margin:0 auto 16px; padding:12px 14px; border-radius:10px; border:1px solid rgba(0,217,255,0.35); background:rgba(0,217,255,0.07); text-align:left;">
+    <div style="font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.05em; color:var(--cyan); margin-bottom:6px;">First open on macOS</div>
+    <p style="margin:0; font-size:14px; color:var(--text); line-height:1.5;">
+      Builds are ad-hoc signed (not Apple-notarized yet). If macOS blocks the app: <strong>right-click rNitro.app → Open → Open</strong>. Prefer the <strong>App ZIP</strong> or <strong>Terminal install (no Xcode)</strong> from this site.
+    </p>
+    <p style="margin:8px 0 0; font-size:12px; color:var(--muted); line-height:1.45;">
+      <a href="privacy.html" style="color:var(--cyan);">Privacy</a>
+      · <a href="terms.html" style="color:var(--cyan);">Terms</a>
+      · <a href="{GITHUB_URL}/releases" style="color:var(--cyan);">GitHub Releases</a>
+    </p>
+  </div>"""
+
+
 def platform_tabs() -> str:
     """Platform switcher — macOS stays on home; others have dedicated pages."""
     return """  <div role="navigation" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
@@ -1828,6 +1843,7 @@ def sync_index(data: dict) -> None:
         "hero-copy": hero_copy(data),
         "hero-curl-install": hero_curl_install(data),
         "platform-tabs": platform_tabs(),
+        "trust-strip": trust_strip(),
         "mac-arch-tabs": mac_arch_subtabs(),
         "mac-silicon-wrap-open": '    <div id="mac-silicon-panel" style="display:flex; width:100%; flex-direction:column; gap:16px;">',
         "mac-silicon-wrap-close": "    </div>",
