@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="d7d78fcc96c5846649c63d110581e3f20e5caed792b43552e549b6c56523598e"
+EXPECTED_HASH="1e016273f5c19918ea76fe12d6972f229441e4664fdbfc79eaba07f1d29eab28"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -4181,7 +4181,7 @@ class BatteryMonitor: ObservableObject {
         if let bd = ioProperty(service, "BatteryData") {
             let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
                 ?? (bd as? NSDictionary)?["StateOfCharge"]
-            if let soc = (socValue as? NSNumber)?.intValue ?? cfInt(socValue as? CFTypeRef),
+            if let soc = (socValue as? NSNumber)?.intValue ?? socValue.flatMap({ cfInt($0 as AnyObject as CFTypeRef) }),
                soc >= 0, soc <= 100 {
                 snap.chemicalSoC = soc
             }
@@ -4268,7 +4268,7 @@ class BatteryMonitor: ObservableObject {
         if let bd = ioProperty(service, "BatteryData") {
             let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
                 ?? (bd as? NSDictionary)?["StateOfCharge"]
-            if let soc = (socValue as? NSNumber)?.intValue ?? cfInt(socValue as? CFTypeRef),
+            if let soc = (socValue as? NSNumber)?.intValue ?? socValue.flatMap({ cfInt($0 as AnyObject as CFTypeRef) }),
                soc >= 0, soc <= 100 {
                 return soc
             }

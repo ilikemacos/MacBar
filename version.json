@@ -65,13 +65,13 @@
   },
   "hashes": {
     "stable_sh": "6bc8ec614c6d558ebd9e6a9a9096bfc2b229cdf2dcdd0f328d8c22b442367e44",
-    "beta_sh": "ac26d2ff5ddcee11687a528be84c3ee03af989ad5d82610820229007de15a082",
+    "beta_sh": "16810e7d07d28c3c80dabbb491c47e651fbf2ab1723aca3bd207574837276410",
     "intel_beta_sh": "",
     "intel_stable_sh": "",
     "stable_zip": "1e05f5d3cee6c94105c291c0fe1bad339277636becf439d2fab89bbbacd4d803",
     "beta_zip": "cc22f0a56429f3af9a3b6fed86518ce00654e240a4017224eea66752b8694bec",
     "experimental_zip": "bc0440555a82a12a15d9f2515b584084d20dcfc04760150dcd039b4620d91808",
-    "experimental_sh": "1c909e0b60f7f8deaa5e57a08c3f03f19a325ae94b6a00905302147b875aecfe"
+    "experimental_sh": "16a66e52181dc63142b54977bb7b5601214022f61835335648ecda89c757a5a6"
   },
   "archive": [
     {
