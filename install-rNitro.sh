@@ -1051,7 +1051,7 @@ enum UpdateInstaller {
             URL(string: "\(UPDATE_CDN_ORIGIN)/\(encoded)")!,
         ]
         if !ver.isEmpty {
-            urls.append(URL(string: "https://github.com/ilikemacos/rNitro/releases/download/\(ver)/\(encoded)")!)
+            urls.append(URL(string: "https://github.com/ilikemacos/MacBar/releases/download/\(ver)/\(encoded)")!)
         }
         urls.append(URL(string: "\(UPDATE_CDN_ORIGIN_LEGACY)/\(encoded)")!)
         return urls

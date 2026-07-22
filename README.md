@@ -91,7 +91,7 @@ Hub: [chopstickshq.com](https://chopstickshq.com/)
 
 ## Support
 
-- Issues: [github.com/ilikemacos/rNitro/issues](https://github.com/ilikemacos/MacBar/issues)  
+- Issues: [github.com/ilikemacos/MacBar/issues](https://github.com/ilikemacos/MacBar/issues)  
 - FAQ: [faq.html](https://getrnitro.netlify.app/faq.html)
 
 ---
