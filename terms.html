@@ -54,13 +54,28 @@
 html { color-scheme: dark; }
 html[data-theme="light"] {
   color-scheme: light;
-  --bg: #F4F5FA !important;
-  --bg2: #ECEEF6 !important;
-  --card: #FFFFFF !important;
-  --card2: #F0F1F8 !important;
-  --border: #D0D4E4 !important;
-  --text: #14141F !important;
-  --muted: #5A5A78 !important;
+  --bg: #F4F5FA !important; --bg2: #ECEEF6 !important; --card: #FFFFFF !important;
+  --card2: #F0F1F8 !important; --border: #D0D4E4 !important; --text: #14141F !important; --muted: #5A5A78 !important;
+}
+html[data-theme="oled"] {
+  color-scheme: dark;
+  --bg: #000 !important; --bg2: #050505 !important; --card: #0A0A0A !important;
+  --card2: #111 !important; --border: #222 !important; --text: #F2F2F2 !important; --muted: #7A7A8A !important;
+}
+html[data-theme="ips"] {
+  color-scheme: dark;
+  --bg: #0A0C14 !important; --bg2: #10141F !important; --card: #141A28 !important;
+  --card2: #1C2436 !important; --border: #2E3A52 !important; --text: #EAF0FF !important; --muted: #7A88A8 !important;
+}
+html[data-theme="lcd"] {
+  color-scheme: dark;
+  --bg: #16161C !important; --bg2: #1C1C24 !important; --card: #22222C !important;
+  --card2: #2A2A36 !important; --border: #3A3A48 !important; --text: #E4E4EC !important; --muted: #8888A0 !important;
+}
+html[data-theme="miniled"] {
+  color-scheme: dark;
+  --bg: #04050A !important; --bg2: #080A12 !important; --card: #0E1018 !important;
+  --card2: #161A28 !important; --border: #2A3450 !important; --text: #F0F4FF !important; --muted: #7080A0 !important;
 }
 .theme-toggle {
   appearance: none; border: 1px solid var(--border); background: var(--card);
@@ -70,7 +85,7 @@ html[data-theme="light"] {
 </style>
 </head>
 <body>
-<button type="button" class="theme-toggle" id="theme-toggle" style="position:fixed;top:12px;right:12px;z-index:9999">◐ Theme</button>
+<button type="button" class="theme-toggle" id="theme-toggle" style="position:fixed;top:12px;right:12px;z-index:9999">◐ Mode</button>
   <div class="wrap">
     <a class="back" href="/">← rNitro home</a>
     <h1><span>Terms</span> &amp; Conditions</h1>
@@ -168,14 +183,23 @@ html[data-theme="light"] {
 <script>
 (function(){
   var KEY='rnitro.siteTheme';
+  var MODES=['light','dark','oled','ips','lcd','miniled'];
+  var LABELS={light:'Light',dark:'Dark',oled:'OLED',ips:'IPS',lcd:'LCD',miniled:'Mini LED'};
   function sys(){return matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}
-  function apply(t){if(t==='system')t=sys();document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');
-    var b=document.getElementById('theme-toggle'); if(b) b.textContent=t==='light'?'☾ Dark':'☀ Light';}
+  function apply(t){
+    if(t==='system') t=sys();
+    if(MODES.indexOf(t)<0) t='dark';
+    document.documentElement.setAttribute('data-theme',t);
+    var b=document.getElementById('theme-toggle'); if(b) b.textContent='◐ '+(LABELS[t]||t);
+  }
   var s=localStorage.getItem(KEY)||'system'; apply(s);
   document.addEventListener('DOMContentLoaded',function(){
     var b=document.getElementById('theme-toggle');
-    if(b) b.onclick=function(){var c=document.documentElement.getAttribute('data-theme')||'dark';
-      var n=c==='dark'?'light':'dark'; localStorage.setItem(KEY,n); apply(n);};
+    if(b) b.onclick=function(){
+      var c=document.documentElement.getAttribute('data-theme')||'dark';
+      var i=MODES.indexOf(c); var n=MODES[(i+1)%MODES.length];
+      localStorage.setItem(KEY,n); apply(n);
+    };
   });
 })();
 </script>

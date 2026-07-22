@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="00354010b0817fdaf2af8a1e9cd5407967248285e194f5ba608344e4a272cdf4"
+EXPECTED_HASH="66fb5d414d4d57dce883ca9b0efabd67aa229fb9feb15623b60892787f4d662b"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -377,7 +377,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.17-Experimental"
+let CURRENT_VERSION = "v1.3.23-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -1712,13 +1712,35 @@ fileprivate final class SMCReader {
                                              UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,
                                              UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8),
                                    dataType: UInt32) -> Double? {
+        // Fixed-point SMC types (big-endian Int16). Common on Apple Silicon + Intel.
         if dataType == fourCharCode("sp78") {
+            // 7.8 fixed → °C
             let raw = Int16(bitPattern: (UInt16(b.0) << 8) | UInt16(b.1))
             return Double(raw) / 256.0
+        }
+        if dataType == fourCharCode("sp87") {
+            // 8.7 fixed → °C (was accepted during key scan but not decoded — under-read risk)
+            let raw = Int16(bitPattern: (UInt16(b.0) << 8) | UInt16(b.1))
+            return Double(raw) / 128.0
+        }
+        if dataType == fourCharCode("sp5a") {
+            let raw = Int16(bitPattern: (UInt16(b.0) << 8) | UInt16(b.1))
+            return Double(raw) / 1024.0
+        }
+        if dataType == fourCharCode("fp1f") {
+            // Unsigned 1.15 fixed
+            let raw = UInt16(b.0) << 8 | UInt16(b.1)
+            return Double(raw) / 32768.0
         }
         if dataType == fourCharCode("flt ") {
             let bits = UInt32(b.0) | (UInt32(b.1) << 8) | (UInt32(b.2) << 16) | (UInt32(b.3) << 24)
             return Double(Float(bitPattern: bits))
+        }
+        // Some keys expose centi-°C as ui16 / ui32
+        if dataType == fourCharCode("ui16") || dataType == fourCharCode("ui8 ") {
+            let raw = UInt16(b.0) << 8 | UInt16(b.1)
+            if raw > 200, raw < 12_000 { return Double(raw) / 100.0 } // centi-°C
+            if raw >= 12, raw <= 115 { return Double(raw) }
         }
         return nil
     }
@@ -1752,18 +1774,29 @@ fileprivate final class SMCReader {
         return decodeTemperature(bytes: readOutput.bytes, dataType: infoOutput.keyInfo.dataType)
     }
 
-    /// Weight die/package keys higher than ambient/skin for accurate "CPU temp".
+    /// CPU die / package keys only — never ambient, skin, NAND, fan, or GPU.
+    /// Mixing cool peripherals into the pool was pulling the gauge 5–20°C low.
     static func isDieAdjacentTempKey(_ key: String) -> Bool {
         let k = key
-        // Performance / efficiency clusters, package, GPU die, ANE-adjacent
-        if k.hasPrefix("Tp") || k.hasPrefix("Te") || k.hasPrefix("Tg") { return true }
-        if k.hasPrefix("TC") || k.hasPrefix("TG") || k.hasPrefix("Tm") { return true }
-        if k == "TCPU" || k == "TCGC" || k == "TACC" { return true }
-        // Explicit ambient / weather-ish — deprioritize for package gauge
-        if k.hasPrefix("TA") || k.hasPrefix("Ta") || k.hasPrefix("TW") || k.hasPrefix("TH") { return false }
-        if k.hasPrefix("Ts") || k.hasPrefix("TS") { return false } // skin
-        // Default: treat as useful if it's a T* temperature key
-        return k.hasPrefix("T")
+        // Apple Silicon: Tp* = performance cluster, Te* = efficiency cluster
+        if k.hasPrefix("Tp") || k.hasPrefix("Te") { return true }
+        // Classic Intel / package package labels
+        if k.hasPrefix("TC") { return true } // TC0P, TC0D, TC0C, …
+        if k == "TCPU" || k == "TACC" { return true }
+        return false
+    }
+
+    /// Sensors that must never drive the primary CPU °C gauge.
+    static func isPeripheralTempKey(_ key: String) -> Bool {
+        let k = key
+        if k.hasPrefix("TA") || k.hasPrefix("Ta") || k.hasPrefix("TW") { return true } // ambient
+        if k.hasPrefix("Ts") || k.hasPrefix("TS") { return true } // skin
+        if k.hasPrefix("TH") || k.hasPrefix("Th") { return true } // NAND / HDD
+        if k.hasPrefix("Tf") || k.hasPrefix("TF") { return true } // fan path
+        if k.hasPrefix("Tg") || k.hasPrefix("TG") { return true } // GPU (separate metric)
+        if k.hasPrefix("Tm") || k.hasPrefix("TM") { return true } // memory
+        if k == "TCGC" { return true }
+        return false
     }
 
     private func fourCharFromUInt32(_ code: UInt32) -> String {
@@ -1884,20 +1917,32 @@ fileprivate final class SMCReader {
         return readings.max()
     }
 
-    /// Weighted readings: die-adjacent sensors first, ambient last (for blending).
+    /// Die/package SMC readings only when preferDie is true (no ambient padding).
     func smcReadings(preferDie: Bool = true) -> [Double] {
         let entries = temperatureEntriesCached()
         if entries.isEmpty { return [] }
         if preferDie {
-            let die = entries.filter { Self.isDieAdjacentTempKey($0.key) }.map(\.value)
-            if die.count >= 2 { return die }
-            if !die.isEmpty {
-                // Pad with a couple non-die if we only got one die key
-                let other = entries.filter { !Self.isDieAdjacentTempKey($0.key) }.map(\.value)
-                return die + other.prefix(3)
-            }
+            let die = entries
+                .filter { Self.isDieAdjacentTempKey($0.key) && !Self.isPeripheralTempKey($0.key) }
+                .map(\.value)
+                .filter { $0 >= 15 && $0 <= 115 }
+            if !die.isEmpty { return die }
+            // Fallback: any non-peripheral T* key (still better than ambient-only)
+            let nonPeriph = entries
+                .filter { !Self.isPeripheralTempKey($0.key) }
+                .map(\.value)
+                .filter { $0 >= 15 && $0 <= 115 }
+            if !nonPeriph.isEmpty { return nonPeriph }
         }
-        return entries.map(\.value)
+        return entries.map(\.value).filter { $0 >= 15 && $0 <= 115 }
+    }
+
+    /// Keyed die readings for diagnostics / robust peak.
+    func smcDieEntries() -> [(key: String, value: Double)] {
+        temperatureEntriesCached().filter {
+            Self.isDieAdjacentTempKey($0.key) && !Self.isPeripheralTempKey($0.key)
+                && $0.value >= 15 && $0.value <= 115
+        }
     }
 
     private func temperatureEntriesCached() -> [(key: String, value: Double)] {
@@ -1972,18 +2017,20 @@ fileprivate final class SMCReader {
 // than package SMC keys on newer chips.
 @_silgen_name("IOHIDEventSystemClientCreate")
 private func IOHIDEventSystemClientCreate(_ allocator: CFAllocator?) -> UnsafeMutableRawPointer?
+// IMPORTANT: Apple declares this as void — a fake Int32 return was garbage and
+// always failed `== 0`, so rNitro never read MTR temps on Apple Silicon.
 @_silgen_name("IOHIDEventSystemClientSetMatching")
-private func IOHIDEventSystemClientSetMatching(_ client: UnsafeMutableRawPointer, _ match: CFDictionary) -> Int32
+private func IOHIDEventSystemClientSetMatching(_ client: UnsafeMutableRawPointer?, _ match: CFDictionary?)
 @_silgen_name("IOHIDEventSystemClientCopyServices")
-private func IOHIDEventSystemClientCopyServices(_ client: UnsafeMutableRawPointer) -> Unmanaged<CFArray>?
+private func IOHIDEventSystemClientCopyServices(_ client: UnsafeMutableRawPointer?) -> Unmanaged<CFArray>?
 @_silgen_name("IOHIDServiceClientCopyEvent")
-private func IOHIDServiceClientCopyEvent(_ client: UnsafeRawPointer, _ type: Int64, _ flags: Int32, _ options: Int64) -> UnsafeMutableRawPointer?
+private func IOHIDServiceClientCopyEvent(_ client: UnsafeRawPointer?, _ type: Int64, _ flags: Int32, _ options: Int64) -> UnsafeMutableRawPointer?
 @_silgen_name("IOHIDEventGetFloatValue")
-private func IOHIDEventGetFloatValue(_ event: UnsafeRawPointer, _ field: Int64) -> Double
+private func IOHIDEventGetFloatValue(_ event: UnsafeRawPointer?, _ field: Int32) -> Double
 
 fileprivate final class IOHIDTempReader {
     static let shared = IOHIDTempReader()
-    private let eventType: Int64 = 15 // temperature
+    private let eventType: Int64 = 15 // kIOHIDEventTypeTemperature
     private var lastReadings: [Double] = []
     private var lastSampleTime = Date.distantPast
     private let lock = NSLock()
@@ -2011,29 +2058,48 @@ fileprivate final class IOHIDTempReader {
         guard let client = IOHIDEventSystemClientCreate(kCFAllocatorDefault) else { return [] }
         defer { Unmanaged<CFTypeRef>.fromOpaque(client).release() }
 
-        // Apple Silicon MTR / thermal zones (PrimaryUsage 5) + broader page match.
+        // Apple Silicon MTR thermal zones (PrimaryUsage 5) + broader page match.
         let matchSets: [[String: Int]] = [
             ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 0x0005],
             ["PrimaryUsagePage": 0xff00, "PrimaryUsage": 0x0001],
+            ["PrimaryUsagePage": 0xff00],
         ]
         var temps: [Double] = []
-        let field = eventType << 16
+        let field: Int32 = Int32(eventType << 16)
         for matchDict in matchSets {
-            let match = matchDict as CFDictionary
-            guard IOHIDEventSystemClientSetMatching(client, match) == 0,
-                  let services = IOHIDEventSystemClientCopyServices(client)?.takeRetainedValue() else { continue }
+            IOHIDEventSystemClientSetMatching(client, matchDict as CFDictionary)
+            guard let services = IOHIDEventSystemClientCopyServices(client)?.takeRetainedValue() else { continue }
             let count = CFArrayGetCount(services)
-            // Cap services to stay light if a machine exposes dozens of nodes.
-            let limit = min(count, 48)
+            let limit = min(count, 120)
             for i in 0..<limit {
                 guard let ptr = CFArrayGetValueAtIndex(services, i) else { continue }
                 guard let event = IOHIDServiceClientCopyEvent(ptr, eventType, 0, 0) else { continue }
                 let t = IOHIDEventGetFloatValue(event, field)
                 Unmanaged<CFTypeRef>.fromOpaque(event).release()
-                if t >= 12, t <= 115 { temps.append(t) }
+                // Drop calibration offsets (~-22°C) and non-physical spikes
+                guard t.isFinite, t >= 15, t <= 115 else { continue }
+                temps.append(t)
             }
+            // First match that yields sensors is enough (avoid triple-counting)
+            if temps.count >= 4 { break }
         }
         return temps
+    }
+
+    /// Prefer hotter MTR cluster (pACC/eACC die path) — drop cool skin / ambient HID.
+    func dieLikelyReadings() -> [Double] {
+        let all = readings()
+        guard !all.isEmpty else { return [] }
+        let sorted = all.sorted()
+        if sorted.count == 1 { return sorted }
+        let peak = sorted.last!
+        // Same thermal domain as peak (die cluster often 15–20°C above skin)
+        let nearPeak = sorted.filter { peak - $0 <= 18 && $0 >= 25 }
+        if nearPeak.count >= 2 { return nearPeak }
+        if !nearPeak.isEmpty { return nearPeak }
+        // Idle / cold room: upper third of sensors
+        let from = (sorted.count * 2) / 3
+        return Array(sorted[from...])
     }
 }
 
@@ -2410,59 +2476,72 @@ class CPUMonitor: ObservableObject {
 
     private static func plausibleSensorTemps(_ readings: [Double]) -> [Double] {
         // M-series die can exceed 100°C under sustained load; keep 115 as sanity ceiling.
-        readings.filter { $0 >= 12 && $0 <= 115 }
+        readings.filter { $0 >= 15 && $0 <= 115 }
     }
 
-    /// Robust package/die temperature from multi-sensor samples.
-    /// Uses trimmed mean of upper half under load; median at idle — more sensors = stabler.
+    /// Reject cold outliers that pull the peak down (stuck ambient mixed in).
+    private static func rejectColdOutliers(_ readings: [Double]) -> [Double] {
+        let sorted = readings.sorted()
+        guard sorted.count >= 3 else { return sorted }
+        let peak = sorted.last!
+        // Drop readings more than 18°C below peak (different thermal domain)
+        let kept = sorted.filter { peak - $0 <= 18 }
+        return kept.isEmpty ? sorted : kept
+    }
+
+    /// Robust CPU package/die temperature.
+    /// Prefer the **hot die peak** (what users expect vs iStat/TG Pro), not a cool-sensor average.
+    /// Thermal-state estimates are last-resort only — blending them diluted real SMC/HID.
     static func resolveTemperature(state: ProcessInfo.ThermalState, usage: Double, smcReadings: [Double]) -> (temp: Double, source: String) {
         let estimate = thermalDisplayValue(state, usage: usage)
-        let plausible = plausibleSensorTemps(smcReadings)
+        let plausible = rejectColdOutliers(plausibleSensorTemps(smcReadings))
         guard !plausible.isEmpty else {
             return (estimate, "macOS thermalState + load estimate")
         }
 
         let sorted = plausible.sorted()
         let n = sorted.count
+        let peak = sorted[n - 1]
+        let p90 = sorted[min(n - 1, max(0, (n * 9) / 10))]
         let median = sorted[n / 2]
-        let p75 = sorted[min(n - 1, (n * 3) / 4)]
-        let p90 = sorted[min(n - 1, (n * 9) / 10)]
-        // Trimmed mean of upper half (die sensors often sit high in the distribution)
-        let upper = Array(sorted[(n / 2)..<n])
-        let upperMean = upper.reduce(0, +) / Double(upper.count)
+        // Mean of the hottest up-to-3 die samples (stable peak, resists single glitch)
+        let hotN = min(3, n)
+        let hotMean = sorted.suffix(hotN).reduce(0, +) / Double(hotN)
 
-        // Ignore absurd stuck highs when the Mac is truly idle.
-        if median >= 100 && usage < 12 && state == .nominal {
+        // Stuck-high at true idle (bad key / unit glitch)
+        if median >= 100 && usage < 10 && state == .nominal {
             return (estimate, "Load estimate (sensor \(Int(median.rounded()))°C ignored — idle)")
         }
+        if peak >= 112 && usage < 15 && state == .nominal {
+            // Single runaway key — use median of remaining
+            let body = n >= 2 ? sorted[n - 2] : median
+            return (min(110, max(15, body)), "Die sensors (\(n), clipped peak)")
+        }
 
-        let heavy = usage >= 45 || state == .serious || state == .critical
-        let moderate = usage >= 22 || state == .fair
+        let heavy = usage >= 40 || state == .serious || state == .critical
+        let moderate = usage >= 18 || state == .fair
 
         let sensor: Double
         let tag: String
         if heavy {
-            // Track hot path: blend p90 with upper-half mean
-            sensor = 0.55 * p90 + 0.45 * upperMean
-            tag = "Hot cluster (\(n) sensors)"
+            // Track true hot path: mostly peak, slight pull to hot mean for stability
+            sensor = 0.72 * peak + 0.28 * hotMean
+            tag = "Die peak (\(n) sensors)"
         } else if moderate {
-            sensor = 0.5 * p75 + 0.3 * upperMean + 0.2 * median
-            tag = "Upper sensors (\(n))"
+            sensor = 0.45 * peak + 0.40 * hotMean + 0.15 * p90
+            tag = "Die sensors (\(n))"
         } else {
-            // Idle: median resists noisy keys; slight pull toward upper mean
-            sensor = 0.7 * median + 0.3 * upperMean
-            tag = "Sensor blend (\(n))"
+            // Idle: hot mean of die keys (not cool-skin median)
+            sensor = 0.55 * hotMean + 0.30 * p90 + 0.15 * median
+            tag = "Die idle (\(n))"
         }
 
-        // If sensors lag a hard load spike, lift slightly toward thermal estimate.
-        if heavy && sensor + 8 < estimate {
-            let blended = 0.65 * sensor + 0.35 * estimate
-            return (min(110, blended), "\(tag) + thermal blend")
+        // Only nudge toward thermal estimate if sensors look frozen far below load.
+        if heavy && n >= 2 && sensor + 18 < estimate && usage > 70 {
+            let blended = 0.85 * sensor + 0.15 * estimate
+            return (min(112, blended), "\(tag) + light thermal")
         }
-        if sensor < 50 && usage > 50 {
-            return (max(sensor, estimate), "Blended (\(n) sensors + load)")
-        }
-        return (min(110, max(15, sensor)), tag)
+        return (min(112, max(15, sensor)), tag)
     }
 
     static func thermalLabel(_ state: ProcessInfo.ThermalState) -> String {
@@ -2838,9 +2917,19 @@ class CPUMonitor: ObservableObject {
     private func sampleDerived() -> DerivedSample {
         var sensors: [Double] = []
         if MonitorActivity.includeSmcSample {
-            // Die-preferring SMC + IOHID MTR temps (many sensors, single cached pass).
-            sensors.append(contentsOf: SMCReader.shared.smcReadings(preferDie: true))
-            sensors.append(contentsOf: IOHIDTempReader.shared.readings())
+            // Apple Silicon: MTR via IOHID is the reliable die path (SMC often empty/locked).
+            // Prefer HID die cluster; merge SMC only when it sits in the same domain.
+            let hid = IOHIDTempReader.shared.dieLikelyReadings()
+            let smcDie = SMCReader.shared.smcReadings(preferDie: true)
+            if !hid.isEmpty {
+                sensors.append(contentsOf: hid)
+                if let hidPeak = hid.max(), !smcDie.isEmpty {
+                    let agree = smcDie.filter { abs($0 - hidPeak) <= 20 }
+                    sensors.append(contentsOf: agree)
+                }
+            } else {
+                sensors.append(contentsOf: smcDie)
+            }
         }
         return DerivedSample(
             lpm: Self.readLowPowerModeEnabled(),
@@ -2853,15 +2942,25 @@ class CPUMonitor: ObservableObject {
     private func applyDerived(_ sample: DerivedSample) {
         let usage = totalUsage
         let resolved = CPUMonitor.resolveTemperature(state: sample.state, usage: usage, smcReadings: sample.sensorReadings)
-        // Faster track-up under load, slower track-down — feels accurate without jitter.
-        let tempAlpha = usage >= 40 ? 0.42 : 0.28
+        // Track-up fast under load so the gauge matches real die heat; slower cool-down.
+        let rising = resolved.temp > smoothedTemperature + 0.4
+        let tempAlpha: Double
+        if !hasSmoothedSamples {
+            tempAlpha = 1.0
+        } else if usage >= 50 || rising {
+            tempAlpha = 0.62
+        } else if usage >= 25 {
+            tempAlpha = 0.40
+        } else {
+            tempAlpha = 0.30
+        }
         let nextTemp: Double
         if hasSmoothedSamples {
             nextTemp = smoothedTemperature * (1 - tempAlpha) + resolved.temp * tempAlpha
         } else {
             nextTemp = resolved.temp
         }
-        smoothedTemperature = min(110, max(15, nextTemp))
+        smoothedTemperature = min(112, max(15, nextTemp))
         let boost = baseClock + (baseClock * 0.28) * (usage / 100.0)
         let estimate = Self.estimatePackagePowerWatts(
             usage: usage, baseClock: baseClock, boostClock: boost,
@@ -4965,15 +5064,20 @@ extension Color {
     private static func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> NSColor {
         NSColor(calibratedRed: r, green: g, blue: b, alpha: 1)
     }
-    static let bg = adaptive(
+    /// Surfaces follow Appearance → Display mode (light / dark / OLED / IPS / LCD / Mini LED).
+    static var bg: Color { DisplayPreferencesStore.shared.appearanceMode.surfaceBg }
+    static var card: Color { DisplayPreferencesStore.shared.appearanceMode.surfaceCard }
+    static var border: Color { DisplayPreferencesStore.shared.appearanceMode.surfaceBorder }
+    /// Fallback adaptive surfaces (used by AppAppearanceMode.system).
+    static let systemBg = adaptive(
         light: rgb(0.96, 0.96, 0.98),
         dark: rgb(0.05, 0.05, 0.08)
     )
-    static let card = adaptive(
+    static let systemCard = adaptive(
         light: rgb(1.0, 1.0, 1.0),
         dark: rgb(0.10, 0.10, 0.14)
     )
-    static let border = adaptive(
+    static let systemBorder = adaptive(
         light: rgb(0.82, 0.84, 0.90),
         dark: rgb(0.20, 0.20, 0.28)
     )
@@ -5484,8 +5588,8 @@ enum MonitorActivity {
     static var includePowerSample: Bool {
         popoverOpen || enabledSlots.contains(.power)
     }
-    /// Sensor cache: short when UI open; slightly longer when idle (still fresh enough).
-    static var smcCacheTTL: TimeInterval { popoverOpen ? 0.85 : 2.2 }
+    /// Sensor cache: short when UI open; still snappy when only menubar shows temp.
+    static var smcCacheTTL: TimeInterval { popoverOpen ? 0.40 : 1.0 }
     static var includeSmcSample: Bool {
         // Always sample temps lightly when power slot is on (package heat correlates).
         popoverOpen
@@ -7602,7 +7706,7 @@ struct SettingsAppearanceSection: View {
                         Text(mode.label).tag(mode)
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
                 Text(display.tr("appearance.theme.hint"))
                     .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
                 Text(display.tr("appearance.fontSize"))
@@ -7663,7 +7767,7 @@ struct SettingsAppearanceSection: View {
                         Text(style.label).tag(style.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
                 Text(display.tr("appearance.sections"))
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 6)
@@ -9791,7 +9895,13 @@ enum UIFontCatalog {
 }
 
 enum AppAppearanceMode: String, CaseIterable, Identifiable {
-    case system, dark, light
+    /// System chrome + adaptive surfaces.
+    case system
+    /// Classic light / dark UI.
+    case light, dark
+    /// Panel-tuned dark profiles (display modes).
+    case oled, ips, lcd, miniLED
+
     var id: String { rawValue }
     var label: String {
         let d = DisplayPreferencesStore.shared
@@ -9799,23 +9909,66 @@ enum AppAppearanceMode: String, CaseIterable, Identifiable {
         case .system: return d.tr("appearance.theme.system")
         case .dark: return d.tr("appearance.theme.dark")
         case .light: return d.tr("appearance.theme.light")
+        case .oled: return d.tr("appearance.theme.oled")
+        case .ips: return d.tr("appearance.theme.ips")
+        case .lcd: return d.tr("appearance.theme.lcd")
+        case .miniLED: return d.tr("appearance.theme.miniled")
         }
     }
     var preferredColorScheme: ColorScheme? {
         switch self {
         case .system: return nil
-        case .dark: return .dark
         case .light: return .light
+        case .dark, .oled, .ips, .lcd, .miniLED: return .dark
         }
     }
     func applyToApp() {
         switch self {
         case .system:
             NSApp.appearance = nil
-        case .dark:
-            NSApp.appearance = NSAppearance(named: .darkAqua)
         case .light:
             NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark, .oled, .ips, .lcd, .miniLED:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+
+    private static func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> Color {
+        Color(red: Double(r), green: Double(g), blue: Double(b))
+    }
+
+    /// Background tuned per display mode (OLED = true black, LCD = elevated black, etc.).
+    var surfaceBg: Color {
+        switch self {
+        case .system: return .systemBg
+        case .light: return Self.rgb(0.96, 0.96, 0.98)
+        case .dark: return Self.rgb(0.05, 0.05, 0.08)
+        case .oled: return Self.rgb(0.0, 0.0, 0.0)           // pure black — AMOLED power/contrast
+        case .ips: return Self.rgb(0.05, 0.06, 0.09)         // deep navy-black, wide midtones
+        case .lcd: return Self.rgb(0.11, 0.11, 0.13)         // elevated black (panel glow)
+        case .miniLED: return Self.rgb(0.02, 0.02, 0.04)     // near-black, high contrast
+        }
+    }
+    var surfaceCard: Color {
+        switch self {
+        case .system: return .systemCard
+        case .light: return Self.rgb(1.0, 1.0, 1.0)
+        case .dark: return Self.rgb(0.10, 0.10, 0.14)
+        case .oled: return Self.rgb(0.04, 0.04, 0.05)
+        case .ips: return Self.rgb(0.09, 0.10, 0.15)
+        case .lcd: return Self.rgb(0.15, 0.15, 0.18)
+        case .miniLED: return Self.rgb(0.07, 0.07, 0.11)
+        }
+    }
+    var surfaceBorder: Color {
+        switch self {
+        case .system: return .systemBorder
+        case .light: return Self.rgb(0.82, 0.84, 0.90)
+        case .dark: return Self.rgb(0.20, 0.20, 0.28)
+        case .oled: return Self.rgb(0.14, 0.14, 0.16)
+        case .ips: return Self.rgb(0.18, 0.22, 0.32)
+        case .lcd: return Self.rgb(0.26, 0.26, 0.30)
+        case .miniLED: return Self.rgb(0.16, 0.20, 0.30)
         }
     }
 }
@@ -9956,7 +10109,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.fontSize": "Font size",
         "appearance.language": "Language",
         "appearance.monitorUI": "Monitor UI",
-        "appearance.monitorUI.hint": "Modern uses iStats-style accordion sections. Legacy is the compact classic layout.",
+        "appearance.monitorUI.hint": "Modern = iStats-style sections. Legacy = compact classic. New style = glass dashboard layout.",
         "appearance.pangram": "The quick brown fox — 0123456789",
         "appearance.reset": "Reset appearance defaults",
         "appearance.sections": "Monitor sections",
@@ -9964,11 +10117,15 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.showPerCore": "Show per-core bars",
         "appearance.showProcesses": "Show top processes",
         "appearance.subtitle": "Theme, UI font, size, language, and monitor layout.",
-        "appearance.theme": "Theme",
+        "appearance.theme": "Display mode",
         "appearance.theme.dark": "Dark",
-        "appearance.theme.hint": "System follows macOS. Light & Dark force the app chrome.",
+        "appearance.theme.hint": "Light & Dark are classic chrome. OLED / IPS / LCD / Mini LED tune blacks, contrast, and panel character. System follows macOS.",
         "appearance.theme.light": "Light",
         "appearance.theme.system": "System",
+        "appearance.theme.oled": "OLED",
+        "appearance.theme.ips": "IPS",
+        "appearance.theme.lcd": "LCD",
+        "appearance.theme.miniled": "Mini LED",
         "appearance.title": "Display",
         "btn.run": "Run",
         "btn.running": "Running…",
@@ -10322,6 +10479,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tips.title": "Welcome to rNitro",
         "ui.legacy": "Legacy",
         "ui.modern": "Modern (iStats-style)",
+        "ui.optimac": "New style",
     ]
 
     private static let zhStrings: [String: String] = [
@@ -10371,7 +10529,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.fontSize": "字體大小",
         "appearance.language": "語言",
         "appearance.monitorUI": "監控介面",
-        "appearance.monitorUI.hint": "現代模式使用 iStats 風格摺疊分區；經典模式為緊湊版面。",
+        "appearance.monitorUI.hint": "現代＝iStats 分區；經典＝緊湊；新風格＝玻璃儀表板。",
         "appearance.pangram": "The quick brown fox — 0123456789",
         "appearance.reset": "重設外觀預設",
         "appearance.sections": "監控區塊",
@@ -10379,11 +10537,15 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.showPerCore": "顯示每核心長條",
         "appearance.showProcesses": "顯示最佔資源行程",
         "appearance.subtitle": "主題、介面字型、大小、語言與監控版面。",
-        "appearance.theme": "主題",
+        "appearance.theme": "顯示模式",
         "appearance.theme.dark": "深色",
-        "appearance.theme.hint": "系統跟隨 macOS；淺色／深色強制套用介面。",
+        "appearance.theme.hint": "淺色／深色為經典介面；OLED／IPS／LCD／Mini LED 調整黑階與對比。系統跟隨 macOS。",
         "appearance.theme.light": "淺色",
         "appearance.theme.system": "系統",
+        "appearance.theme.oled": "OLED",
+        "appearance.theme.ips": "IPS",
+        "appearance.theme.lcd": "LCD",
+        "appearance.theme.miniled": "Mini LED",
         "appearance.title": "顯示",
         "btn.run": "執行",
         "btn.running": "執行中…",
@@ -10708,6 +10870,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tips.title": "歡迎使用 rNitro",
         "ui.legacy": "經典",
         "ui.modern": "現代 (iStats 風格)",
+        "ui.optimac": "新風格",
     ]
 
     private static let esStrings: [String: String] = [
@@ -10757,7 +10920,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.fontSize": "Tamaño de fuente",
         "appearance.language": "Idioma",
         "appearance.monitorUI": "Interfaz del monitor",
-        "appearance.monitorUI.hint": "Moderno usa secciones plegables estilo iStats. Clásico es el diseño compacto.",
+        "appearance.monitorUI.hint": "Moderno = iStats. Clásico = compacto. Nuevo estilo = panel de cristal.",
         "appearance.pangram": "The quick brown fox — 0123456789",
         "appearance.reset": "Restablecer apariencia",
         "appearance.sections": "Secciones del monitor",
@@ -10765,11 +10928,15 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.showPerCore": "Barras por núcleo",
         "appearance.showProcesses": "Procesos principales",
         "appearance.subtitle": "Tema, fuente de UI, tamaño, idioma y diseño.",
-        "appearance.theme": "Tema",
+        "appearance.theme": "Modo de pantalla",
         "appearance.theme.dark": "Oscuro",
-        "appearance.theme.hint": "Sistema sigue a macOS.",
+        "appearance.theme.hint": "Claro/Oscuro clásico. OLED/IPS/LCD/Mini LED ajustan negros y contraste. Sistema sigue a macOS.",
         "appearance.theme.light": "Claro",
         "appearance.theme.system": "Sistema",
+        "appearance.theme.oled": "OLED",
+        "appearance.theme.ips": "IPS",
+        "appearance.theme.lcd": "LCD",
+        "appearance.theme.miniled": "Mini LED",
         "appearance.title": "Pantalla",
         "btn.run": "Ejecutar",
         "btn.running": "Ejecutando…",
@@ -11094,6 +11261,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tips.title": "Bienvenido a rNitro",
         "ui.legacy": "Clásico",
         "ui.modern": "Moderno (estilo iStats)",
+        "ui.optimac": "Nuevo estilo",
     ]
 
     private static let deStrings: [String: String] = [
@@ -11143,7 +11311,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.fontSize": "Schriftgröße",
         "appearance.language": "Sprache",
         "appearance.monitorUI": "Monitor-Oberfläche",
-        "appearance.monitorUI.hint": "Modern nutzt iStats-ähnliche Abschnitte. Legacy ist das kompakte Layout.",
+        "appearance.monitorUI.hint": "Modern = iStats. Legacy = kompakt. Neuer Stil = Glas-Dashboard.",
         "appearance.pangram": "The quick brown fox — 0123456789",
         "appearance.reset": "Darstellung zurücksetzen",
         "appearance.sections": "Monitor-Bereiche",
@@ -11151,11 +11319,15 @@ final class DisplayPreferencesStore: ObservableObject {
         "appearance.showPerCore": "Balken pro Kern",
         "appearance.showProcesses": "Top-Prozesse",
         "appearance.subtitle": "Design, UI-Schrift, Größe, Sprache und Layout.",
-        "appearance.theme": "Design",
+        "appearance.theme": "Anzeigemodus",
         "appearance.theme.dark": "Dunkel",
-        "appearance.theme.hint": "System folgt macOS. Hell/Dunkel erzwingen die UI.",
+        "appearance.theme.hint": "Hell/Dunkel klassisch. OLED/IPS/LCD/Mini LED passen Schwarz und Kontrast an. System folgt macOS.",
         "appearance.theme.light": "Hell",
         "appearance.theme.system": "System",
+        "appearance.theme.oled": "OLED",
+        "appearance.theme.ips": "IPS",
+        "appearance.theme.lcd": "LCD",
+        "appearance.theme.miniled": "Mini LED",
         "appearance.title": "Anzeige",
         "btn.run": "Ausführen",
         "btn.running": "Läuft…",
@@ -11480,6 +11652,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "tips.title": "Willkommen bei rNitro",
         "ui.legacy": "Legacy",
         "ui.modern": "Modern (iStats-Stil)",
+        "ui.optimac": "Neuer Stil",
     ]
 }
 
@@ -11488,7 +11661,18 @@ enum FirstLaunchTips {
         !UserDefaults.standard.bool(forKey: MonitorPreferences.firstLaunchTipsKey)
     }
 
+    /// Apply laptop menubar once if user never customized slots.
+    static func applyDefaultMenubarIfNeeded() {
+        let key = MonitorPreferences.menuBarSlotsKey
+        if UserDefaults.standard.stringArray(forKey: key) == nil {
+            MenuBarConfig.setEnabledSlots(MenuBarPreset.laptop.slots)
+            MenuBarConfig.setLayout(MenuBarPreset.laptop.layout)
+            UserDefaults.standard.set(MenuBarPreset.laptop.rawValue, forKey: "rnitro.menubar.lastPreset")
+        }
+    }
+
     static func markSeen() {
+        applyDefaultMenubarIfNeeded()
         UserDefaults.standard.set(true, forKey: MonitorPreferences.firstLaunchTipsKey)
     }
 }
@@ -11496,6 +11680,7 @@ enum FirstLaunchTips {
 struct FirstLaunchTipsSheet: View {
     @Environment(\.uiMetrics) private var metrics
     @Binding var isPresented: Bool
+    @State private var chosenPreset: MenuBarPreset = .laptop
 
     private func tipRow(_ n: String, _ title: String, _ detail: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
@@ -11516,16 +11701,33 @@ struct FirstLaunchTipsSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Welcome to rNitro")
                 .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
-            Text("Quick start — takes 10 seconds.")
+            Text("Quick start — pick a menubar layout, then open the monitor.")
                 .font(rNitroFont(.caption, metrics: metrics))
                 .foregroundColor(.secondary)
             VStack(alignment: .leading, spacing: 12) {
-                tipRow("1", "Find the menubar icon", "rNitro lives in the top-right menu bar. Click it anytime for live CPU, temp, and per-core stats.")
-                tipRow("2", "First launch on macOS", "If Gatekeeper blocks the app: right-click rNitro.app → Open → Open once. No admin password needed for the App ZIP.")
-                tipRow("3", "Customize anytime", "Settings → Menubar / Appearance for density, slots, accents. Developer Mode is optional (Beta).")
-                tipRow("4", "Recommended install", "App ZIP from getrnitro.netlify.app or chopstickshq.com/rnitro — or the Terminal one-liner to skip most Gatekeeper prompts.")
+                tipRow("1", "Find the menubar icon", "rNitro lives in the top-right menu bar. Click it for live CPU, temp, and battery.")
+                tipRow("2", "First launch on macOS", "If Gatekeeper blocks the app: right-click rNitro.app → Open → Open once.")
+                tipRow("3", "Menubar layout", "Choose a preset once. Change slots anytime in Settings → Menubar.")
             }
+            Text("Start with")
+                .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+            HStack(spacing: 8) {
+                ForEach(MenuBarPreset.allCases) { preset in
+                    let on = chosenPreset == preset
+                    Button(preset.label) { chosenPreset = preset }
+                        .font(rNitroFont(.caption, metrics: metrics, weight: .semibold))
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(on ? .accentColor : nil)
+                        .background(on ? Color.accentColor.opacity(0.18) : Color.clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+            }
+            Text(MenuBarConfig.presetHint(chosenPreset))
+                .font(rNitroFont(.micro, metrics: metrics))
+                .foregroundColor(.secondary)
             Button(action: {
+                MenuBarConfig.applyPreset(chosenPreset)
                 FirstLaunchTips.markSeen()
                 isPresented = false
             }) {
@@ -11539,13 +11741,14 @@ struct FirstLaunchTipsSheet: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .padding(20)
-        .frame(maxWidth: 360)
+        .frame(maxWidth: 380)
         .background(Color.bg)
+        .onAppear { FirstLaunchTips.applyDefaultMenubarIfNeeded() }
     }
 }
 
 enum MonitorUIStyle: String, CaseIterable, Identifiable {
-    case modern, legacy
+    case modern, legacy, optimac
 
     var id: String { rawValue }
 
@@ -11553,6 +11756,15 @@ enum MonitorUIStyle: String, CaseIterable, Identifiable {
         switch self {
         case .modern: return DisplayPreferencesStore.shared.tr("ui.modern")
         case .legacy: return DisplayPreferencesStore.shared.tr("ui.legacy")
+        case .optimac: return DisplayPreferencesStore.shared.tr("ui.optimac")
+        }
+    }
+
+    var blurb: String {
+        switch self {
+        case .modern: return DisplayPreferencesStore.shared.tr("ui.modern.blurb")
+        case .legacy: return DisplayPreferencesStore.shared.tr("ui.legacy.blurb")
+        case .optimac: return DisplayPreferencesStore.shared.tr("ui.optimac.blurb")
         }
     }
 }
@@ -11708,7 +11920,7 @@ enum FathomLink {
 }
 
 enum MenuBarConfig {
-    static let defaultSlots: [MenuBarSlot] = [.cpu, .temp, .power]
+    static let defaultSlots: [MenuBarSlot] = [.cpu, .temp, .battery, .power]
 
     static var layout: MenuBarLayout {
         MenuBarLayout(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.menuBarLayoutKey) ?? "") ?? .inline
@@ -11809,7 +12021,23 @@ enum MenuBarConfig {
     static func resetToDefaults() {
         UserDefaults.standard.set(defaultSlots.map(\.rawValue), forKey: MonitorPreferences.menuBarSlotsKey)
         setLayout(.inline)
+        UserDefaults.standard.set(MenuBarPreset.laptop.rawValue, forKey: lastPresetKey)
         NotificationCenter.default.post(name: .menuBarModeChanged, object: nil)
+    }
+
+    static func presetHint(_ preset: MenuBarPreset) -> String {
+        switch preset {
+        case .laptop: return "Laptop: CPU · Temp · Battery · Power"
+        case .desktop: return "Desktop: CPU · Temp · RAM · Power · Network"
+        case .minimal: return "Minimal: CPU only"
+        }
+    }
+
+    /// Live preview string for Settings (same labels as the real menubar).
+    static func livePreviewText() -> String {
+        let parts = enabledSlots.map { MenuBarStatusFormatter.slotLabel($0) }
+        if parts.isEmpty { return "CPU" }
+        return parts.joined(separator: "  ·  ")
     }
 }
 
@@ -14276,6 +14504,291 @@ struct MonitorModernTabView: View {
     }
 }
 
+// MARK: - New style glass dashboard
+struct OptiGlassCard<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        content()
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.28), lineWidth: 1.1)
+                    )
+                    .shadow(color: Color.black.opacity(0.28), radius: 12, y: 6)
+            )
+    }
+}
+
+struct OptiMetricTile: View {
+    let title: String
+    let value: String
+    let unit: String
+    let color: Color
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundColor(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(colors: [.white, color.opacity(0.9)], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(color.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(color.opacity(0.35), lineWidth: 1)
+                )
+        )
+    }
+}
+
+struct OptiBar: View {
+    let fraction: Double
+    let color: Color
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.08))
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.85), color],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(4, geo.size.width * CGFloat(min(1, max(0, fraction)))))
+            }
+        }
+        .frame(height: 8)
+    }
+}
+
+struct MonitorOptiMacTabView: View {
+    @Environment(\.uiMetrics) private var metrics
+    @Binding var statDetail: StatDetailKind?
+    @AppStorage(MonitorPreferences.networkKey) private var showNetworkUI = true
+    @ObservedObject private var m = CPUMonitor.shared
+    @ObservedObject private var bat = BatteryMonitor.shared
+    @ObservedObject private var net = NetworkMonitor.shared
+    @ObservedObject private var proc = ProcessMonitor.shared
+    @ObservedObject private var gpu = GPUMonitor.shared
+    @ObservedObject private var ui = UICustomizationStore.shared
+
+    private func toggle(_ kind: StatDetailKind) {
+        statDetail = statDetail == kind ? nil : kind
+    }
+
+    private let processColors: [Color] = [
+        Color(red: 0.20, green: 0.60, blue: 1.00),
+        Color(red: 0.20, green: 0.85, blue: 0.50),
+        Color(red: 1.00, green: 0.55, blue: 0.00),
+        Color(red: 0.60, green: 0.40, blue: 1.00),
+        Color(red: 1.00, green: 0.22, blue: 0.30),
+        Color(red: 0.10, green: 0.80, blue: 0.90),
+    ]
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.05, blue: 0.16),
+                    Color(red: 0.10, green: 0.05, blue: 0.22),
+                    Color(red: 0.18, green: 0.12, blue: 0.28),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("rNitro")
+                            .font(.system(.title2, design: .rounded, weight: .heavy))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.white, Color(red: 0.80, green: 0.92, blue: 1.00)],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
+                            )
+                        Text("New style · glass dashboard")
+                            .font(.system(.caption, design: .rounded, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text(CURRENT_VERSION)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(.secondary.opacity(0.75))
+                    }
+                    .padding(.horizontal, 4)
+
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        Button { toggle(.cpuPower) } label: {
+                            OptiMetricTile(
+                                title: "CPU",
+                                value: String(format: "%.0f", m.totalUsage),
+                                unit: "%",
+                                color: Color.usage(m.totalUsage)
+                            )
+                        }.buttonStyle(.plain)
+                        Button { toggle(.temperature) } label: {
+                            OptiMetricTile(
+                                title: "Temp",
+                                value: String(format: "%.0f", m.temperature),
+                                unit: "°C",
+                                color: Color.temp(m.temperature)
+                            )
+                        }.buttonStyle(.plain)
+                        Button { toggle(.memory) } label: {
+                            OptiMetricTile(
+                                title: "RAM",
+                                value: String(format: "%.0f", m.memoryUsedPercent),
+                                unit: "%",
+                                color: .nPurple
+                            )
+                        }.buttonStyle(.plain)
+                        if bat.isPresent {
+                            Button { toggle(.battery) } label: {
+                                OptiMetricTile(
+                                    title: "Battery",
+                                    value: "\(bat.levelPercent)",
+                                    unit: "%",
+                                    color: bat.isCharging ? .nGreen : .accent
+                                )
+                            }.buttonStyle(.plain)
+                        } else {
+                            OptiMetricTile(
+                                title: "GPU",
+                                value: String(format: "%.0f", gpu.usage),
+                                unit: "%",
+                                color: .nGreen
+                            )
+                        }
+                    }
+
+                    OptiGlassCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("CPU load")
+                                    .font(.system(.headline, design: .rounded, weight: .bold))
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text(String(format: "%.1f%%", m.totalUsage))
+                                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                                    .foregroundColor(Color.usage(m.totalUsage))
+                            }
+                            OptiBar(fraction: m.totalUsage / 100.0, color: Color.usage(m.totalUsage))
+                            GraphView(history: m.usageHistory, color: Color.usage(m.totalUsage))
+                                .frame(height: max(36, metrics.graphHeight * 0.85))
+                            MonitorRow(label: "Load avg", value: String(format: "%.2f · %.2f · %.2f", m.loadAverage1, m.loadAverage5, m.loadAverage15))
+                            MonitorRow(label: "Power", value: String(format: "%.1f W", m.packagePowerWatts))
+                        }
+                    }
+
+                    OptiGlassCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("Memory")
+                                    .font(.system(.headline, design: .rounded, weight: .bold))
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text(String(format: "%.1f / %.0f GB", m.memoryUsedGB, m.memoryTotalGB))
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
+                            OptiBar(fraction: m.memoryUsedPercent / 100.0, color: .nPurple)
+                            MonitorRow(label: "Pressure", value: m.memoryPressure, valueColor: Color.pressure(m.memoryPressure))
+                            MonitorRow(label: "Wired", value: String(format: "%.1f GB", m.memoryWiredGB))
+                            MonitorRow(label: "Swap", value: String(format: "%.1f GB", m.memorySwapGB))
+                        }
+                    }
+
+                    if showNetworkUI {
+                        OptiGlassCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Network")
+                                    .font(.system(.headline, design: .rounded, weight: .bold))
+                                    .foregroundColor(.white)
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("↓ Down").font(.system(.caption2, design: .rounded)).foregroundColor(.secondary)
+                                        Text(NetworkMonitor.formatSpeed(net.downloadMbps))
+                                            .font(.system(.body, design: .rounded, weight: .semibold))
+                                            .foregroundColor(.nGreen)
+                                    }
+                                    Spacer()
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text("↑ Up").font(.system(.caption2, design: .rounded)).foregroundColor(.secondary)
+                                        Text(NetworkMonitor.formatSpeed(net.uploadMbps))
+                                            .font(.system(.body, design: .rounded, weight: .semibold))
+                                            .foregroundColor(.accent)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if ui.showProcesses {
+                        OptiGlassCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Top processes")
+                                    .font(.system(.headline, design: .rounded, weight: .bold))
+                                    .foregroundColor(.white)
+                                if proc.topByCPU.isEmpty {
+                                    Text("Collecting…").foregroundColor(.secondary).font(.caption)
+                                } else {
+                                    ForEach(Array(proc.topByCPU.prefix(6).enumerated()), id: \.element.id) { idx, p in
+                                        HStack(spacing: 8) {
+                                            Circle()
+                                                .fill(processColors[idx % processColors.count])
+                                                .frame(width: 7, height: 7)
+                                            Text(p.name)
+                                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                                .lineLimit(1)
+                                            Spacer(minLength: 4)
+                                            Text(String(format: "%.1f%%", p.cpuPercent))
+                                                .font(.system(.caption, design: .monospaced, weight: .semibold))
+                                                .foregroundColor(Color.usage(min(100, p.cpuPercent)))
+                                            Text(String(format: "%.0f MB", p.memoryMB))
+                                                .font(.system(size: 10, design: .monospaced))
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 52, alignment: .trailing)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text("New style layout — glass cards and metric tiles.")
+                        .font(.system(size: 10, design: .rounded))
+                        .foregroundColor(.secondary.opacity(0.8))
+                        .padding(.top, 2)
+                        .padding(.bottom, 10)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+            }
+        }
+    }
+}
+
 struct MonitorTabContent: View {
     @Environment(\.uiMetrics) private var metrics
     let layout: ContentLayout
@@ -14299,6 +14812,8 @@ struct MonitorTabContent: View {
         Group {
             if uiStyleRaw == MonitorUIStyle.legacy.rawValue {
                 legacyMonitorTab
+            } else if uiStyleRaw == MonitorUIStyle.optimac.rawValue {
+                MonitorOptiMacTabView(statDetail: $statDetail)
             } else {
                 MonitorModernTabView(statDetail: $statDetail)
             }
@@ -17625,8 +18140,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.17-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.17-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.23-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.23-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

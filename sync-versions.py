@@ -482,15 +482,22 @@ def hero_head(data: dict) -> str:
     beta = v.beta_release(data)
     linux = v.linux_release(data)
     desc = (
-        f"rNitro — free open source macOS menu bar CPU monitor "
-        f"({stable['short']} Stable / {beta['short']} Beta). Real-time CPU, temperature, "
-        f"MacBook battery %, GPU, RAM, network. rNitro CLI (btop-style). Linux {linux['short']} "
-        f"pre-release. No account, no telemetry. Apple Silicon &amp; Intel."
+        f"rNitro — free open-source macOS menu bar system monitor "
+        f"({stable['short']} Stable / {beta['short']} Beta). Live CPU, temperature, "
+        f"MacBook battery %, GPU, RAM, network. Free iStat/Stats alternative · btop-style CLI. "
+        f"Linux {linux['short']} pre-release. No account, no telemetry. Apple Silicon &amp; Intel."
     )
+    # High-intent discovery phrases (honest alternatives; no trademark-as-product claims).
     keywords = (
-        "rNitro, rnitro, open source macos cpu monitor, free mac menu bar monitor, "
-        "macOS system monitor, Apple Silicon temperature monitor, mac activity menu bar, "
-        "cpu temp mac free, open source menu bar app, btop mac alternative, iStat alternative free"
+        "rNitro, rnitro, getrnitro, chopsticks hq rnitro, "
+        "free macOS menu bar monitor, free mac system monitor, open source mac monitor, "
+        "macOS system monitor, mac menu bar CPU monitor, Apple Silicon system monitor, "
+        "M1 M2 M3 M4 CPU monitor, MacBook battery monitor, menu bar CPU temperature, "
+        "mac GPU monitor, live cpu usage menubar, mac temp sensor app free, "
+        "battery percent menu bar, mac thermal monitor, free istat alternative, "
+        "stats app alternative mac, btop menu bar, activity monitor menu bar, "
+        "open source menu bar app, no telemetry mac app, no account system monitor, "
+        "offline sensors mac, arm64 mac monitor, intel mac monitor, macos 12 monitor"
     )
     og_image = f"{SITE_URL}/screenshots/hero-monitor.png"
     public = PUBLIC_SITE_URL.rstrip("/") + "/"
@@ -499,10 +506,18 @@ def hero_head(data: dict) -> str:
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
             "name": "rNitro",
-            "alternateName": ["r Nitro", "getrnitro", "rNitro Monitor"],
+            "alternateName": [
+                "r Nitro",
+                "getrnitro",
+                "rNitro Monitor",
+                "rNitro macOS",
+                "Chopsticks rNitro",
+            ],
             "description": (
                 "Free open-source menu bar system monitor for macOS (Apple Silicon & Intel). "
-                "Live CPU, temperature, GPU, RAM, battery, and network. Optional CLI and Linux builds."
+                "Live CPU, temperature, GPU, RAM, battery, and network. "
+                "Free alternative to paid menubar monitors. Optional CLI and Linux builds. "
+                "No account, no product telemetry."
             ),
             "operatingSystem": "macOS 12+, Linux, Windows",
             "applicationCategory": "UtilitiesApplication",
