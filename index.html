@@ -1566,20 +1566,20 @@
     <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">v1.2.9-Final</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
-      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.45);">
-        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.5); background:rgba(0,255,136,0.12);">Best first launch</div>
-        <div class="dl-recommended-title" style="color:var(--green);">Terminal one-liner</div>
-        <p class="dl-recommended-steps">Paste in Terminal — compiles on your Mac (~30s). Usually <strong>does not</strong> trigger Gatekeeper like ZIP, PKG, or DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
+        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended · no Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--green);">App ZIP (pre-built)</div>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.9-Final.zip')">⬇ Download App ZIP · 3.5 MB</button>
+      </div>
+      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.35); margin-top:12px;">
+        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.4); background:rgba(0,255,136,0.08);">Optional · needs Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--green);">Terminal one-liner (compile from source)</div>
+        <p class="dl-recommended-steps">Only if you prefer building from source. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a> (~30s compile). Most people should use the <strong>App ZIP</strong> above instead.</p>
         <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--green); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
           curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
-        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="copyCurlCmd('stable')">⎘ Copy curl one-liner</button>
-      </div>
-      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
-        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Served from <strong>GitHub Releases</strong> + chopstickshq.com (HTTPS). Verify SHA-256 on this page if Chrome marks the file uncommon.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.9-Final.zip')">⬇ Download App ZIP · 3.5 MB</button>
+        <button type="button" class="btn btn-secondary" style="" onclick="copyCurlCmd('stable')">⎘ Copy curl one-liner</button>
       </div>
       <div id="hero-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-stable-other')" aria-expanded="false">
@@ -1606,20 +1606,20 @@
       <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Beta notice:</strong> Power-user channel without the playground toys. Terms required before download.
       </p>
-      <div class="dl-recommended" style="border-color:rgba(255,140,26,0.45);">
-        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.5); background:rgba(255,140,26,0.12);">Best first launch</div>
-        <div class="dl-recommended-title" style="color:var(--orange);">Terminal one-liner</div>
-        <p class="dl-recommended-steps">Paste in Terminal — compiles on your Mac (~30s). Usually <strong>does not</strong> trigger Gatekeeper like ZIP, PKG, or DMG. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>.</p>
+      <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
+        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended · no Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--orange);">App ZIP (pre-built)</div>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.14.zip')">⬇ Download App ZIP · 3.6 MB</button>
+      </div>
+      <div class="dl-recommended" style="border-color:rgba(255,140,26,0.35); margin-top:12px;">
+        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.4); background:rgba(255,140,26,0.08);">Optional · needs Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--orange);">Terminal one-liner (compile from source)</div>
+        <p class="dl-recommended-steps">Only if you prefer building from source. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a> (~30s compile). Most people should use the <strong>App ZIP</strong> above instead.</p>
         <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--orange); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
           curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.14.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="copyCurlCmd('beta')">⎘ Copy curl one-liner</button>
-      </div>
-      <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
-        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Served from <strong>GitHub Releases</strong> + chopstickshq.com (HTTPS). Verify SHA-256 on this page if Chrome marks the file uncommon.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.14.zip')">⬇ Download App ZIP · 3.6 MB</button>
+        <button type="button" class="btn btn-secondary" style="" onclick="copyCurlCmd('beta')">⎘ Copy curl one-liner</button>
       </div>
       <div id="hero-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-beta-other')" aria-expanded="false">
@@ -1646,19 +1646,20 @@
       <p style="font-size:14px; color:#b8a0ff; background:rgba(155,123,255,0.1); border:1px solid rgba(155,123,255,0.4); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Unstable playground.</strong> Prefer Beta for daily use. Terms required before download. Apple Silicon recommended.
       </p>
-      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.45);">
-        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.5); background:rgba(155,123,255,0.12);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:#b8a0ff;">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag to Applications → right-click <strong>Open</strong> once if blocked.</p>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-v1.3.26-Experimental.zip')">⬇ Download App ZIP</button>
+      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.4);">
+        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.45); background:rgba(155,123,255,0.1);">Recommended · no Xcode</div>
+        <div class="dl-recommended-title" style="color:#b8a0ff;">App ZIP (pre-built)</div>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-v1.3.26-Experimental.zip')">⬇ Download App ZIP · 3.7 MB</button>
       </div>
-      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.4); margin-top:12px;">
-        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.45); background:rgba(155,123,255,0.1);">Terminal</div>
-        <div class="dl-recommended-title" style="color:#b8a0ff;">curl one-liner</div>
+      <div class="dl-recommended" style="border-color:rgba(155,123,255,0.35); margin-top:12px;">
+        <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.4); background:rgba(155,123,255,0.08);">Optional · needs Xcode</div>
+        <div class="dl-recommended-title" style="color:#b8a0ff;">Terminal one-liner (compile from source)</div>
+        <p class="dl-recommended-steps">Only if you prefer building from source. Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a> (~30s compile). Most people should use the <strong>App ZIP</strong> above instead.</p>
         <div style="background:var(--card2); border:1px solid rgba(155,123,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:#b8a0ff; word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
           curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.3.26-Experimental.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh
         </div>
-        <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="copyCurlCmd('experimental')">⎘ Copy curl one-liner</button>
+        <button type="button" class="btn btn-secondary" style="" onclick="copyCurlCmd('experimental')">⎘ Copy curl one-liner</button>
       </div>
       <div id="hero-exp-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-exp-other')" aria-expanded="false">
@@ -2559,9 +2560,9 @@
       </div>
     </div>
       <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
-        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Served from <strong>GitHub Releases</strong> + chopstickshq.com (HTTPS). Verify SHA-256 on this page if Chrome marks the file uncommon.</p>
+        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended · no Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--green);">App ZIP (pre-built)</div>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.9-Final.zip')">⬇ Download App ZIP · 3.5 MB</button>
       </div>
       <div id="dl-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
@@ -2602,9 +2603,9 @@
       </div>
     </div>
       <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
-        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended Download</div>
-        <div class="dl-recommended-title" style="color:var(--orange);">App ZIP</div>
-        <p class="dl-recommended-steps">Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Served from <strong>GitHub Releases</strong> + chopstickshq.com (HTTPS). Verify SHA-256 on this page if Chrome marks the file uncommon.</p>
+        <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended · no Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--orange);">App ZIP (pre-built)</div>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.14.zip')">⬇ Download App ZIP · 3.6 MB</button>
       </div>
       <div id="dl-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
@@ -3117,28 +3118,40 @@
       alert('Downloads only work after you double-click OPEN-WEBSITE.command in this folder (not index.html).');
       return;
     }
-    // Prefer GitHub Releases for known artifacts (reduces Chrome "suspicious/uncommon" flags).
-    let fileRef = String(url || '');
+    let fileRef = String(url || '').trim();
+    if (!fileRef) return;
+    const bare = fileRef.split('/').pop().split('?')[0];
+    const gh = githubReleaseDownloadUrl(bare);
+
+    // Prefer same-site / HQ mirror first (reliable Content-Disposition + no cross-origin a.download issues).
     if (!/^https?:\/\//i.test(fileRef)) {
-      const gh = githubReleaseDownloadUrl(fileRef);
-      if (gh) {
-        fileRef = gh;
-      } else if (window.__RNITRO_ASSET_ORIGIN__
-          && !fileRef.startsWith('data:') && !fileRef.startsWith('blob:')) {
-        fileRef = window.__RNITRO_ASSET_ORIGIN__.replace(/\/$/, '') + '/' + fileRef.replace(/^\//, '');
+      if (window.__RNITRO_ASSET_ORIGIN__) {
+        fileRef = window.__RNITRO_ASSET_ORIGIN__.replace(/\/$/, '') + '/' + bare;
+      } else {
+        fileRef = assetUrl(bare);
       }
     }
-    const basename = fileRef.split('/').pop();
-    if (RNITRO_FILES && !RNITRO_FILES.has(url) && !RNITRO_FILES.has(basename) && !RNITRO_FILES.has(fileRef)) {
-      alert('That file is not available on the site right now. Try the Terminal one-liner, or refresh and try again.');
+
+    // Soft allowlist: only block unknown *relative* names when set does not include them
+    // and there is no GitHub release mapping.
+    if (RNITRO_FILES && bare && !RNITRO_FILES.has(bare) && !RNITRO_FILES.has(url) && !gh) {
+      // Fall back to GitHub Releases page rather than a hard error.
+      window.open('https://github.com/ilikemacos/rNitro/releases', '_blank', 'noopener');
+      alert('That package is not on this mirror. Opening GitHub Releases — download the App ZIP there (no Xcode needed).');
       return;
     }
-    const href = assetUrl(fileRef);
-    const name = basename || 'download';
+
     const a = document.createElement('a');
-    a.href = href;
-    a.download = name;
+    a.href = fileRef;
     a.rel = 'noopener';
+    // download= only works same-origin; for GitHub/CDN just navigate so the browser saves the file.
+    try {
+      const u = new URL(fileRef, location.href);
+      if (u.origin === location.origin) a.download = bare || 'download';
+      else a.target = '_blank';
+    } catch (e) {
+      a.target = '_blank';
+    }
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
