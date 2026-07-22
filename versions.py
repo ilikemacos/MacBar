@@ -9,7 +9,7 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent
 VERSION_FILE = SITE / "version.json"
-GITHUB_REPO = "https://github.com/ilikemacos/rNitro"
+GITHUB_REPO = "https://github.com/ilikemacos/MacBar"
 
 
 def github_release_tag(rel_id: str) -> str:

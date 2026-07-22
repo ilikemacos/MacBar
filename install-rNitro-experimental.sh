@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="38a150af03e3cfb5190ad137dc7cc39a1e6f2ea1a134faf6506300f81d699987"
+EXPECTED_HASH="0f1515d74702a42678ff24eea585dcb6acd78f555a61e7db8ec2dabf3a6a3bff"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -1093,7 +1093,7 @@ enum UpdateInstaller {
             URL(string: "\(UPDATE_CDN_ORIGIN)/\(encoded)")!,
         ]
         if !ver.isEmpty {
-            urls.append(URL(string: "https://github.com/ilikemacos/rNitro/releases/download/\(ver)/\(encoded)")!)
+            urls.append(URL(string: "https://github.com/ilikemacos/MacBar/releases/download/\(ver)/\(encoded)")!)
         }
         urls.append(URL(string: "\(UPDATE_CDN_ORIGIN_LEGACY)/\(encoded)")!)
         return urls

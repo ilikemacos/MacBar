@@ -347,7 +347,7 @@
         },
         {
           "strong": "GitHub",
-          "text": " \u2014 releases on github.com/ilikemacos/rNitro with App ZIP, PKG, DMG, and .sh."
+          "text": " \u2014 releases on github.com/ilikemacos/MacBar with App ZIP, PKG, DMG, and .sh."
         },
         {
           "strong": "Privacy",
@@ -379,7 +379,7 @@
     },
     {
       "title": "v1.2.0 Final (Stable)",
-      "body_html": "<strong style=\"color:var(--green);\">Stable catch-up</strong> \u2014 customizable UI + \u2318Q from modern builds; OpenAI/OpenRouter only; no Lab. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.0-Final\" style=\"color:var(--cyan);\">GitHub</a>."
+      "body_html": "<strong style=\"color:var(--green);\">Stable catch-up</strong> \u2014 customizable UI + \u2318Q from modern builds; OpenAI/OpenRouter only; no Lab. <a href=\"https://github.com/ilikemacos/MacBar/releases/tag/v1.2.0-Final\" style=\"color:var(--cyan);\">GitHub</a>."
     },
     {
       "title": "v1.2.6 Experimental",
@@ -387,7 +387,7 @@
     },
     {
       "title": "v1.2.5 Beta / Experimental",
-      "body_html": "<strong style=\"color:var(--orange);\">Customizable UI + Developer Mode</strong> \u2014 menubar builder, density, accents, thresholds for everyone; optional Dev tools for sampling/logs/dumps. <a href=\"https://github.com/ilikemacos/rNitro/releases/tag/v1.2.5\" style=\"color:var(--cyan);\">GitHub</a>."
+      "body_html": "<strong style=\"color:var(--orange);\">Customizable UI + Developer Mode</strong> \u2014 menubar builder, density, accents, thresholds for everyone; optional Dev tools for sampling/logs/dumps. <a href=\"https://github.com/ilikemacos/MacBar/releases/tag/v1.2.5\" style=\"color:var(--cyan);\">GitHub</a>."
     },
     {
       "title": "v1.2.4 Beta / Experimental",

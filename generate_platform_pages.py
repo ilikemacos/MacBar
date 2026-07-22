@@ -161,7 +161,7 @@ def _site_footer() -> str:
       <a href="/faq.html">FAQ</a>
       <a href="/privacy.html">Privacy</a>
       <a href="/terms.html">Terms</a>
-      <a href="https://github.com/ilikemacos/rNitro">GitHub</a>
+      <a href="https://github.com/ilikemacos/MacBar">GitHub</a>
     </div>"""
 
 

@@ -440,7 +440,7 @@ SITE_URL = "https://chopstickshq.com/rnitro"
 # Legacy CDN (still mirrored when available)
 LEGACY_CDN_URL = "https://getrnitro.netlify.app"
 PUBLIC_SITE_URL = SITE_URL
-GITHUB_URL = "https://github.com/ilikemacos/rNitro"
+GITHUB_URL = "https://github.com/ilikemacos/MacBar"
 
 
 def curl_install_cmd(sh_name: str) -> str:
@@ -2033,7 +2033,7 @@ def generate_archives_html(data: dict) -> str:
       </tbody>
     </table>
   </div>
-  <p class="note">Current releases: {stable["label"]} (stable) · {beta["label"]} (beta). GitHub: <a href="{v.github_releases_url()}" style="color:var(--cyan);">ilikemacos/rNitro</a></p>
+  <p class="note">Current releases: {stable["label"]} (stable) · {beta["label"]} (beta). GitHub: <a href="{v.github_releases_url()}" style="color:var(--cyan);">ilikemacos/MacBar</a></p>
 </div>
 <script>
 function requestDownload(filename) {{
