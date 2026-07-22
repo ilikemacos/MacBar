@@ -10,7 +10,7 @@ from pathlib import Path
 import versions as v
 
 SITE = Path(__file__).resolve().parent
-REPO = "ilikemacos/MacBar"
+REPO = "ilikemacos/rNitro"
 BUNDLE_TAG = "v8.3.0-Beta"  # old single-bundle release to remove
 
 

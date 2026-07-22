@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve app bundles for release packaging (MacBar Experimental / rNitro Stable·Beta)."""
+"""Resolve rNitro.app bundles for release packaging."""
 from __future__ import annotations
 
 import shutil
@@ -10,15 +10,14 @@ from pathlib import Path
 import versions as v
 
 SITE = v.SITE
-# Preferred install locations (Experimental = MacBar; Stable/Beta still rNitro).
 APP_CANDIDATES = [
-    Path.home() / "Applications/MacBar.app",
     Path.home() / "Applications/rNitro.app",
+    Path.home() / "Applications/MacBar.app",  # transitional
 ]
 
 
 def _executable(app: Path) -> Path | None:
-    for name in ("MacBar", "rNitro"):
+    for name in ("rNitro", "MacBar"):
         exe = app / "Contents/MacOS" / name
         if exe.is_file() and exe.stat().st_mode & 0o111:
             return exe
@@ -52,9 +51,7 @@ def run_installer(script_name: str) -> None:
         raise SystemExit(f"Missing installer: {script}")
     print(f"Building from {script_name}...")
     import os
-
     env = os.environ.copy()
-    # Quiet packaging: installers open the app by default; skip during release builds.
     env["RNITRO_NO_LAUNCH"] = "1"
     subprocess.run(["bash", str(script)], cwd=SITE, check=True, env=env)
 
@@ -69,7 +66,7 @@ def app_from_legacy_zip(artifact_name: str, work: Path) -> Path | None:
     extract.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(legacy) as zf:
         zf.extractall(extract)
-    for name in ("MacBar.app", "rNitro.app", "rNitro-Stable.app", "rNitro-Beta.app"):
+    for name in ("rNitro.app", "MacBar.app", "rNitro-Stable.app", "rNitro-Beta.app"):
         app = extract / name
         if app.is_dir():
             return app
@@ -89,7 +86,7 @@ def app_from_pkg(pkg_name: str, work: Path) -> Path | None:
         check=True,
         capture_output=True,
     )
-    for pattern in ("MacBar.app", "rNitro.app"):
+    for pattern in ("rNitro.app", "MacBar.app"):
         for app in expand.rglob(pattern):
             if app.is_dir():
                 return app
@@ -103,11 +100,9 @@ def stage_app_copy(app_src: Path, dest: Path) -> None:
 
 
 def bundle_folder_name(app_src: Path) -> str:
-    """Name inside the distribution ZIP (MacBar.app vs rNitro.app)."""
-    if app_src.name == "MacBar.app":
-        return "MacBar.app"
-    if (app_src / "Contents/MacOS/MacBar").is_file():
-        return "MacBar.app"
+    if app_src.name == "MacBar.app" or (app_src / "Contents/MacOS/MacBar").is_file():
+        # package as rNitro.app for distribution after rebrand revert
+        return "rNitro.app"
     return "rNitro.app"
 
 
@@ -132,11 +127,14 @@ def resolve_app(
         run_installer(installer_script)
         app_src = installed_app()
         if app_src is None:
-            raise SystemExit(
-                "Installer finished but no MacBar.app or rNitro.app found in ~/Applications"
-            )
+            raise SystemExit("Installer finished but no rNitro.app found in ~/Applications")
         validate_app(app_src)
 
-    staged = work / bundle_folder_name(app_src)
+    staged = work / "rNitro.app"
     stage_app_copy(app_src, staged)
+    # If source was MacBar binary layout, rename binary if needed after copy
+    mac_exe = staged / "Contents/MacOS/MacBar"
+    r_exe = staged / "Contents/MacOS/rNitro"
+    if mac_exe.is_file() and not r_exe.is_file():
+        mac_exe.rename(r_exe)
     return staged
