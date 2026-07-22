@@ -218,7 +218,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="030d6c619fb8b97c987fb4c2ffd12a3c588fca8b9d3ce3c2072c8c030cdb8ae0"
+EXPECTED_HASH="0c867a4f5976260ac677f7c593c1f5c27c0559d05fc0bf30d9e00dbcfe78e581"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -3422,7 +3422,7 @@ class BatteryMonitor: ObservableObject {
         if menuBarPct == nil, let bd = ioProperty(service, "BatteryData") {
             let socValue: Any? = (bd as? [String: Any])?["StateOfCharge"]
                 ?? (bd as? NSDictionary)?["StateOfCharge"]
-            if let soc = (socValue as? NSNumber)?.intValue ?? cfInt(socValue as? CFTypeRef),
+            if let soc = (socValue as? NSNumber)?.intValue ?? socValue.flatMap({ cfInt($0 as AnyObject as CFTypeRef) }),
                soc >= 0, soc <= 100 {
                 menuBarPct = soc
             }
