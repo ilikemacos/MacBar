@@ -20,8 +20,8 @@ def sign_app_bundle(app: Path) -> None:
     sig.sign_app_bundle(app)
 
 
-def write_install_command(stage: Path, installer_name: str) -> None:
-    cmd = stage / "Install rNitro.command"
+def write_install_command(stage: Path, installer_name: str, *, product: str = "MacBar") -> None:
+    cmd = stage / f"Install {product}.command"
     cmd.write_text(
         f"""#!/bin/bash
 cd "$(dirname "$0")"
@@ -34,20 +34,20 @@ chmod +x "{installer_name}"
     cmd.chmod(0o755)
 
 
-def write_fix_open_command(stage: Path) -> None:
-    cmd = stage / "Fix and Open rNitro.command"
+def write_fix_open_command(stage: Path, *, bundle: str = "MacBar.app", exe: str = "MacBar") -> None:
+    cmd = stage / f"Fix and Open {bundle.replace('.app', '')}.command"
     cmd.write_text(
-        """#!/bin/bash
+        f"""#!/bin/bash
 cd "$(dirname "$0")"
-xattr -cr "rNitro.app" 2>/dev/null
-if [[ ! -d "$HOME/Applications/rNitro.app" ]]; then
-  ditto --noqtn "rNitro.app" "$HOME/Applications/rNitro.app"
-  xattr -cr "$HOME/Applications/rNitro.app" 2>/dev/null
-  /usr/bin/codesign --force --sign - --timestamp=none "$HOME/Applications/rNitro.app/Contents/MacOS/rNitro" 2>/dev/null || true
-  /usr/bin/codesign --force --sign - --timestamp=none "$HOME/Applications/rNitro.app" 2>/dev/null || true
+xattr -cr "{bundle}" 2>/dev/null
+if [[ ! -d "$HOME/Applications/{bundle}" ]]; then
+  ditto --noqtn "{bundle}" "$HOME/Applications/{bundle}"
+  xattr -cr "$HOME/Applications/{bundle}" 2>/dev/null
+  /usr/bin/codesign --force --sign - --timestamp=none "$HOME/Applications/{bundle}/Contents/MacOS/{exe}" 2>/dev/null || true
+  /usr/bin/codesign --force --sign - --timestamp=none "$HOME/Applications/{bundle}" 2>/dev/null || true
 fi
-xattr -cr "$HOME/Applications/rNitro.app" 2>/dev/null
-open "$HOME/Applications/rNitro.app"
+xattr -cr "$HOME/Applications/{bundle}" 2>/dev/null
+open "$HOME/Applications/{bundle}"
 """,
         encoding="utf-8",
     )
@@ -74,10 +74,12 @@ def create_dmg(
             work=work,
             quick=quick,
         )
-        shutil.move(str(app_stage), str(stage / "rNitro.app"))
-        sign_app_bundle(stage / "rNitro.app")
+        bundle = apps.bundle_folder_name(app_stage)
+        dest = stage / bundle
+        shutil.move(str(app_stage), str(dest))
+        sign_app_bundle(dest)
         subprocess.run(
-            ["codesign", "--verify", "--deep", "--strict", str(stage / "rNitro.app")],
+            ["codesign", "--verify", "--deep", "--strict", str(dest)],
             check=True,
         )
 
@@ -95,8 +97,10 @@ def create_dmg(
             if man.is_file():
                 shutil.copy2(man, dest_fonts / "manifest.json")
         (stage / "Applications").symlink_to("/Applications")
-        write_install_command(stage, sh_name)
-        write_fix_open_command(stage)
+        product = "MacBar" if bundle == "MacBar.app" else "rNitro"
+        exe = "MacBar" if bundle == "MacBar.app" else "rNitro"
+        write_install_command(stage, sh_name, product=product)
+        write_fix_open_command(stage, bundle=bundle, exe=exe)
 
         if out_dmg.exists():
             out_dmg.unlink()

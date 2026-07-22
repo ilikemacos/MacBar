@@ -13,10 +13,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import full_release as fr
+import release_apps as apps
 import signing as sig
 import versions as v
 
-APP_PATH = Path.home() / "Applications/rNitro.app"
 INSTALL_LOCATION = "/Applications"
 PKG_IDS = {
     "stable": "com.rnitro.cpumonitor",
@@ -25,53 +25,29 @@ PKG_IDS = {
 }
 
 
-def run_installer(script_name: str) -> None:
-    script = SCRIPT_DIR / script_name
-    if not script.is_file():
-        raise SystemExit(f"Missing installer: {script}")
-    print(f"Building from {script_name}...")
-    subprocess.run(["bash", str(script)], cwd=SCRIPT_DIR, check=True)
-
-
-def validate_app(app: Path) -> None:
-    if not app.is_dir():
-        raise SystemExit(f"App bundle missing: {app}")
-    exe = app / "Contents/MacOS/rNitro"
-    if not exe.is_file() or not exe.stat().st_mode & 0o111:
-        raise SystemExit(f"Executable missing or not runnable: {exe}")
-
-
-def app_from_legacy_zip(zip_name: str, work: Path) -> Path | None:
-    legacy = SCRIPT_DIR / zip_name.replace(".pkg", ".zip")
-    if not legacy.is_file():
-        return None
-    extract = work / "extracted"
-    extract.mkdir()
-    with zipfile.ZipFile(legacy) as zf:
-        zf.extractall(extract)
-    app = extract / "rNitro.app"
-    return app if app.is_dir() else None
-
-
 def stage_app(app_src: Path, stage: Path) -> None:
     if stage.exists():
         shutil.rmtree(stage)
-    shutil.copytree(app_src, stage / "rNitro.app")
-    sig.sign_app_bundle(stage / "rNitro.app")
+    name = apps.bundle_folder_name(app_src)
+    shutil.copytree(app_src, stage / name)
+    sig.sign_app_bundle(stage / name)
 
 
 def write_postinstall(scripts_dir: Path) -> None:
     postinstall = scripts_dir / "postinstall"
     postinstall.write_text(
         """#!/bin/bash
-APP="/Applications/rNitro.app"
-if [[ -d "$APP" ]]; then
-  /usr/bin/xattr -cr "$APP" 2>/dev/null || true
-  if [[ -f "$APP/Contents/MacOS/rNitro" ]]; then
-    /usr/bin/codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/rNitro" 2>/dev/null || true
-    /usr/bin/codesign --force --sign - --timestamp=none "$APP" 2>/dev/null || true
+for APP in /Applications/MacBar.app /Applications/rNitro.app; do
+  if [[ -d "$APP" ]]; then
+    /usr/bin/xattr -cr "$APP" 2>/dev/null || true
+    for EXE in MacBar rNitro; do
+      if [[ -f "$APP/Contents/MacOS/$EXE" ]]; then
+        /usr/bin/codesign --force --sign - --timestamp=none "$APP/Contents/MacOS/$EXE" 2>/dev/null || true
+        /usr/bin/codesign --force --sign - --timestamp=none "$APP" 2>/dev/null || true
+      fi
+    done
   fi
-fi
+done
 exit 0
 """,
         encoding="utf-8",
@@ -149,15 +125,12 @@ def create_pkg(
         stage = work / "root"
         stage.mkdir()
 
-        app_src: Path | None = None
-        if quick:
-            app_src = app_from_legacy_zip(pkg_name, work)
-
-        if app_src is None:
-            run_installer(installer_script)
-            validate_app(APP_PATH)
-            app_src = APP_PATH
-
+        app_src = apps.resolve_app(
+            installer_script=installer_script,
+            artifact_name=pkg_name,
+            work=work,
+            quick=quick,
+        )
         stage_app(app_src, stage)
         build_pkg(stage, pkg_id, version, out_pkg)
 

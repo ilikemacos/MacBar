@@ -1,28 +1,49 @@
 #!/usr/bin/env python3
-"""Resolve rNitro.app bundles for release packaging."""
+"""Resolve app bundles for release packaging (MacBar Experimental / rNitro Stable·Beta)."""
 from __future__ import annotations
 
 import shutil
 import subprocess
-import tempfile
 import zipfile
 from pathlib import Path
 
 import versions as v
 
 SITE = v.SITE
-APP_PATH = Path.home() / "Applications/rNitro.app"
+# Preferred install locations (Experimental = MacBar; Stable/Beta still rNitro).
+APP_CANDIDATES = [
+    Path.home() / "Applications/MacBar.app",
+    Path.home() / "Applications/rNitro.app",
+]
+
+
+def _executable(app: Path) -> Path | None:
+    for name in ("MacBar", "rNitro"):
+        exe = app / "Contents/MacOS" / name
+        if exe.is_file() and exe.stat().st_mode & 0o111:
+            return exe
+    return None
 
 
 def validate_app(app: Path) -> None:
     if not app.is_dir():
         raise SystemExit(f"App bundle missing: {app}")
-    exe = app / "Contents/MacOS/rNitro"
-    if not exe.is_file() or not exe.stat().st_mode & 0o111:
-        raise SystemExit(f"Executable missing or not runnable: {exe}")
+    if _executable(app) is None:
+        raise SystemExit(f"Executable missing or not runnable under {app}/Contents/MacOS/")
     plist = app / "Contents/Info.plist"
     if not plist.is_file():
         raise SystemExit(f"Info.plist missing: {plist}")
+
+
+def installed_app() -> Path | None:
+    for path in APP_CANDIDATES:
+        if path.is_dir():
+            try:
+                validate_app(path)
+                return path
+            except SystemExit:
+                continue
+    return None
 
 
 def run_installer(script_name: str) -> None:
@@ -48,7 +69,7 @@ def app_from_legacy_zip(artifact_name: str, work: Path) -> Path | None:
     extract.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(legacy) as zf:
         zf.extractall(extract)
-    for name in ("rNitro.app", "rNitro-Stable.app", "rNitro-Beta.app"):
+    for name in ("MacBar.app", "rNitro.app", "rNitro-Stable.app", "rNitro-Beta.app"):
         app = extract / name
         if app.is_dir():
             return app
@@ -68,9 +89,10 @@ def app_from_pkg(pkg_name: str, work: Path) -> Path | None:
         check=True,
         capture_output=True,
     )
-    for app in expand.rglob("rNitro.app"):
-        if app.is_dir():
-            return app
+    for pattern in ("MacBar.app", "rNitro.app"):
+        for app in expand.rglob(pattern):
+            if app.is_dir():
+                return app
     return None
 
 
@@ -78,6 +100,15 @@ def stage_app_copy(app_src: Path, dest: Path) -> None:
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(app_src, dest)
+
+
+def bundle_folder_name(app_src: Path) -> str:
+    """Name inside the distribution ZIP (MacBar.app vs rNitro.app)."""
+    if app_src.name == "MacBar.app":
+        return "MacBar.app"
+    if (app_src / "Contents/MacOS/MacBar").is_file():
+        return "MacBar.app"
+    return "rNitro.app"
 
 
 def resolve_app(
@@ -91,16 +122,21 @@ def resolve_app(
     if quick:
         app_src = app_from_legacy_zip(artifact_name, work)
         if app_src is None:
-            app_src = app_from_pkg(artifact_name.replace(".zip", ".pkg").replace(".dmg", ".pkg"), work)
-        if app_src is None and APP_PATH.is_dir():
-            validate_app(APP_PATH)
-            app_src = APP_PATH
+            app_src = app_from_pkg(
+                artifact_name.replace(".zip", ".pkg").replace(".dmg", ".pkg"), work
+            )
+        if app_src is None:
+            app_src = installed_app()
 
     if app_src is None:
         run_installer(installer_script)
-        validate_app(APP_PATH)
-        app_src = APP_PATH
+        app_src = installed_app()
+        if app_src is None:
+            raise SystemExit(
+                "Installer finished but no MacBar.app or rNitro.app found in ~/Applications"
+            )
+        validate_app(app_src)
 
-    staged = work / "rNitro.app"
+    staged = work / bundle_folder_name(app_src)
     stage_app_copy(app_src, staged)
     return staged
