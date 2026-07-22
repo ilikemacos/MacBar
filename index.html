@@ -1535,29 +1535,19 @@
     Older Intel Macs → <strong style="color:var(--cyan);">Intel</strong> (compiles on your Mac · last updates through v1.2.5-Beta).
   </p>
 <!-- @end:mac-arch-tabs -->
-  <div id="gatekeeper-card" style="width:100%; max-width:640px; margin:0 auto 16px; padding:14px 16px; border-radius:12px; border:1px solid rgba(0,217,255,0.35); background:rgba(0,217,255,0.07); text-align:left;">
-    <div style="font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--cyan); margin-bottom:6px;">FIRST LAUNCH · GATEKEEPER</div>
-    <ol style="margin:0; padding-left:18px; color:var(--text); font-size:14px; line-height:1.55;">
-      <li>Unzip the App ZIP (or open the DMG).</li>
-      <li>Drag <code>rNitro.app</code> into <strong>Applications</strong>.</li>
-      <li>If macOS says it “can’t be opened”: <strong>right-click → Open → Open</strong> (once only).</li>
-      <li>Or use the <strong>Terminal one-liner</strong> below — compile-on-install usually skips the ZIP/DMG Gatekeeper dance.</li>
-    </ol>
-    <p style="margin:10px 0 0; font-size:12px; color:var(--muted); line-height:1.45;">
-      Builds are ad-hoc signed (no Apple notarization on this machine yet). Checklist: <a href="https://github.com/ilikemacos/rNitro/blob/main/docs/NOTARIZATION.md" style="color:var(--cyan);">docs/NOTARIZATION.md</a>.
+<!-- @sync:trust-strip -->
+  <div id="trust-strip" style="width:100%; max-width:640px; margin:0 auto 16px; padding:12px 14px; border-radius:10px; border:1px solid rgba(0,217,255,0.35); background:rgba(0,217,255,0.07); text-align:left;">
+    <div style="font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.05em; color:var(--cyan); margin-bottom:6px;">First open on macOS</div>
+    <p style="margin:0; font-size:14px; color:var(--text); line-height:1.5;">
+      Builds are ad-hoc signed (not Apple-notarized yet). If macOS blocks the app: <strong>right-click rNitro.app → Open → Open</strong>. Prefer the <strong>App ZIP</strong> or <strong>Terminal install (no Xcode)</strong> from this site.
+    </p>
+    <p style="margin:8px 0 0; font-size:12px; color:var(--muted); line-height:1.45;">
+      <a href="privacy.html" style="color:var(--cyan);">Privacy</a>
+      · <a href="terms.html" style="color:var(--cyan);">Terms</a>
+      · <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a>
     </p>
   </div>
-
-  <div id="download-trust-card" style="width:100%; max-width:640px; margin:0 auto 16px; padding:14px 16px; border-radius:12px; border:1px solid rgba(0,255,128,0.3); background:rgba(0,255,128,0.06); text-align:left;">
-    <div style="font-family:var(--mono); font-size:13px; font-weight:600; color:var(--green); margin-bottom:6px;">Safe download tips (Chrome / Google)</div>
-    <ul style="margin:0; padding-left:18px; color:var(--muted); font-size:13px; line-height:1.55;">
-      <li>App packages are served from <strong style="color:var(--text);">GitHub Releases</strong> (<code>github.com/ilikemacos/rNitro</code>) — a trusted host — and mirrored on chopstickshq.com.</li>
-      <li>Chrome may still say <em>“not commonly downloaded”</em> for small indie apps. That is a reputation warning, not a virus scan result. Use <strong>Keep</strong> / open the file if you started the download from this site.</li>
-      <li>Verify integrity: compare the SHA-256 next to each build with <code>shasum -a 256 ~/Downloads/file.zip</code>.</li>
-      <li>macOS Gatekeeper: right-click <strong>Open</strong> once (builds are ad-hoc signed until Apple notarization).</li>
-      <li>False positive? Report to <a href="https://safebrowsing.google.com/safebrowsing/report_error/" style="color:var(--cyan);" target="_blank" rel="noopener">Google Safe Browsing</a>.</li>
-    </ul>
-  </div>
+<!-- @end:trust-strip -->
 
 <!-- @sync:mac-silicon-wrap-open -->
     <div id="mac-silicon-panel" style="display:flex; width:100%; flex-direction:column; gap:16px;">
@@ -2604,7 +2594,7 @@
       </div>
       <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
         SHA-256 (.sh):
-        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">fd0b18b17a47cbed728c875dc7035429cdabee37d1ef1df76c11072171ebf92f</span>
+        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">16810e7d07d28c3c80dabbb491c47e651fbf2ab1723aca3bd207574837276410</span>
         <button onclick="copyHash('beta')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
       </div>
     </div>
@@ -2941,7 +2931,7 @@
       "pkg": "rNitro-v1.2.14.pkg",
       "dmg": "rNitro-v1.2.14.dmg",
       "zip": "rNitro-v1.2.14.zip",
-      "hash": "fd0b18b17a47cbed728c875dc7035429cdabee37d1ef1df76c11072171ebf92f",
+      "hash": "16810e7d07d28c3c80dabbb491c47e651fbf2ab1723aca3bd207574837276410",
       "curlInstall": "printf \"\\n[########------------] 1/2 Download installer\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.14.sh -o /tmp/rnitro-install.sh && printf \"\\n[####################] 2/2 Compile & install (Xcode CLT)\\n\" && bash /tmp/rnitro-install.sh",
       "curlZipInstall": "printf \"\\n[######--------------] 1/3 Download\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.14.zip -o /tmp/rnitro.zip && printf \"\\n[############--------] 2/3 Unzip\\n\" && rm -rf /tmp/rnitro-app && mkdir -p /tmp/rnitro-app && unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && printf \"[####################] 3/3 Install\\n\" && mkdir -p ~/Applications && rm -rf ~/Applications/rNitro.app && ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && xattr -cr ~/Applications/rNitro.app && printf \"\u2713 Done \u2192 ~/Applications/rNitro.app\\n\""
     },
@@ -2994,7 +2984,7 @@
       "pkg": "rNitro-v1.3.26-Experimental.pkg",
       "dmg": "rNitro-v1.3.26-Experimental.dmg",
       "zip": "rNitro-v1.3.26-Experimental.zip",
-      "hash": "1e5aaa4adaf713a4ebc445f13cdfc73dc0c94b7f17358130d79ae1283b7ca23b",
+      "hash": "16a66e52181dc63142b54977bb7b5601214022f61835335648ecda89c757a5a6",
       "curlInstall": "printf \"\\n[########------------] 1/2 Download installer\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.3.26-Experimental.sh -o /tmp/rnitro-install.sh && printf \"\\n[####################] 2/2 Compile & install (Xcode CLT)\\n\" && bash /tmp/rnitro-install.sh",
       "curlZipInstall": "printf \"\\n[######--------------] 1/3 Download\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.3.26-Experimental.zip -o /tmp/rnitro.zip && printf \"\\n[############--------] 2/3 Unzip\\n\" && rm -rf /tmp/rnitro-app && mkdir -p /tmp/rnitro-app && unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && printf \"[####################] 3/3 Install\\n\" && mkdir -p ~/Applications && rm -rf ~/Applications/rNitro.app && ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && xattr -cr ~/Applications/rNitro.app && printf \"\u2713 Done \u2192 ~/Applications/rNitro.app\\n\""
     }
