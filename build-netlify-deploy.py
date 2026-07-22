@@ -375,6 +375,14 @@ AI support chat (optional):
         shutil.copytree(shots, dest_shots)
         print("  + screenshots/")
 
+    videos = SITE / "videos"
+    if videos.is_dir():
+        dest_videos = OUT_DIR / "videos"
+        if dest_videos.exists():
+            shutil.rmtree(dest_videos)
+        shutil.copytree(videos, dest_videos)
+        print("  + videos/")
+
     _inject_file_manifest(OUT_DIR)
 
     for required in ("cli.html", "linux.html", "windows.html", "privacy.html", "faq.html", "terms.html", "sitemap.xml", "robots.txt"):

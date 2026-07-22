@@ -1,6 +1,47 @@
 {
   "whats_new": [
     {
+      "version": "v1.3.23-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Fix: IOHID temperature sensors were never read (SetMatching void return mis-checked) \u2014 real MTR die temps now drive the gauge.",
+        "Prefer Apple Silicon HID die cluster over empty/locked SMC; drop calibration-offset sensors."
+      ]
+    },
+    {
+      "version": "v1.3.22-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "More accurate CPU temperature: die-only SMC keys (no ambient/GPU/skin mix).",
+        "Prefer die peak + MTR HID; decode sp87/extra SMC types; less thermal-estimate blend.",
+        "Faster temp response under load and fresher sensor cache."
+      ]
+    },
+    {
+      "version": "v1.3.21-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "UX: first-launch menubar presets (Laptop/Desktop/Minimal) with laptop defaults.",
+        "UX: monitor layout blurbs (Modern / Legacy / New style).",
+        "UX: process list density (top 5) and menubar live preview helpers."
+      ]
+    },
+    {
+      "version": "v1.3.20-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Monitor UI: renamed glass dashboard option to \u201cNew style\u201d (was OptiMac)."
+      ]
+    },
+    {
+      "version": "v1.3.19-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Monitor UI: New style dashboard option \u2014 purple gradient, glass cards, metric tiles (look only; no optimizers).",
+        "Settings \u2192 Appearance \u2192 Monitor UI \u2192 New style."
+      ]
+    },
+    {
       "channel": "beta",
       "title": "v1.2.14 Beta",
       "accent": "orange",

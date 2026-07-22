@@ -3,13 +3,15 @@
 **Free menu bar system monitor for macOS** — CPU, temperature, battery, GPU, RAM, network.  
 Open source · no account · no telemetry · no subscription.
 
+**Keywords:** free macOS menu bar monitor · Apple Silicon CPU/temp · MacBook battery · open-source iStat/Stats alternative · btop-style CLI · no telemetry
+
 | Download | HQ | Releases |
 |----------|-----|----------|
 | **[getrnitro.netlify.app](https://getrnitro.netlify.app/)** | **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** | **[GitHub Releases](https://github.com/ilikemacos/rNitro/releases)** |
 
 [![Stable](https://img.shields.io/badge/stable-v1.2.9%20Final-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.9-Final)
 [![Beta](https://img.shields.io/badge/beta-v1.2.14-ff8c1a)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.14)
-[![Experimental](https://img.shields.io/badge/experimental-v1.3.20--Exp-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.20-Experimental)
+[![Experimental](https://img.shields.io/badge/experimental-v1.3.23--Exp-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.23-Experimental)
 [![License](https://img.shields.io/badge/license-see%20repo-6b6b8a)](https://github.com/ilikemacos/rNitro)
 
 ---
@@ -23,7 +25,7 @@ Open source · no account · no telemetry · no subscription.
 Also available: **PKG**, **DMG**, or **`.sh`** (compiles on your Mac with Xcode CLT).
 
 **Latest Experimental ZIP:**  
-[rNitro-v1.3.20-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.20-Experimental/rNitro-v1.3.20-Experimental.zip)
+[rNitro-v1.3.23-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.23-Experimental/rNitro-v1.3.23-Experimental.zip)
 
 > Builds are ad-hoc signed. Apple notarization is planned. Prefer GitHub Releases or chopstickshq.com for downloads.
 
@@ -35,7 +37,7 @@ Also available: **PKG**, **DMG**, or **`.sh`** (compiles on your Mac with Xcode 
 |---------|---------|----------|
 | **Stable** | v1.2.9 Final | Daily monitoring; AI: OpenAI + OpenRouter |
 | **Beta** | v1.2.14 | Lab tools + every AI provider |
-| **Experimental** | v1.3.20 Exp | Newest UI/features (may change quickly) |
+| **Experimental** | v1.3.23 Exp | Newest UI/features (may change quickly) |
 
 - **Stable** = boring reliability.  
 - **Beta** = power users.  

@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>rNitro FAQ — Free Open Source Mac Menu Bar System Monitor</title>
-<meta name="description" content="FAQ for rNitro: free open-source macOS menu bar CPU and system monitor. Install, Apple Silicon sensors, privacy, updates, Gatekeeper, and iStat alternatives.">
+<meta name="description" content="FAQ for rNitro: free open-source macOS menu bar system monitor. Install, Apple Silicon temp sensors, MacBook battery %, Gatekeeper, privacy, updates, and free iStat/Stats alternatives.">
+<meta name="keywords" content="rNitro FAQ, free macOS menu bar monitor, Apple Silicon temperature, MacBook battery monitor, Gatekeeper open anyway, free istat alternative, stats app alternative mac, no telemetry, open source mac monitor">
 <link rel="canonical" href="https://chopstickshq.com/rnitro/faq.html">
 <meta property="og:type" content="website">
 <meta property="og:title" content="rNitro FAQ — Free Mac Menu Bar System Monitor">
-<meta property="og:description" content="Install, privacy, sensors, Gatekeeper, and channels for the free open-source rNitro monitor.">
+<meta property="og:description" content="Install, privacy, sensors, Gatekeeper, and channels for the free open-source rNitro menu bar monitor (CPU, temp, battery).">
 <meta property="og:url" content="https://chopstickshq.com/rnitro/faq.html">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="favicon.ico" sizes="any">
@@ -216,8 +217,18 @@
     </article>
 
     <article class="card" id="istat">
-      <h2>Is rNitro a free iStat alternative?</h2>
-      <p>People looking for a <strong>free open-source mac menu bar monitor</strong> or iStat-style glance often try rNitro. It is not affiliated with iStat Menus. Features differ; rNitro prioritizes free, local-first monitoring without a subscription.</p>
+      <h2>Is rNitro a free iStat Menus alternative?</h2>
+      <p>Yes for many people who want a <strong>free open-source Mac menu bar system monitor</strong> (CPU, temperature, battery, GPU, RAM) without a subscription. rNitro is <strong>not affiliated</strong> with iStat Menus. Feature depth differs; rNitro focuses on local-first monitoring, optional AI (Beta/Exp), and open downloads from GitHub and chopstickshq.com.</p>
+    </article>
+
+    <article class="card" id="battery">
+      <h2>Where does battery percentage come from?</h2>
+      <p>rNitro aims to show the <strong>same charge % as the macOS menu bar</strong> using local OS sources (IOPS / pmset / IOKit). Remaining time is an <strong>estimate</strong> and moves with load. A separate chemical SoC can trail the menu by a few points — normal gauge behavior. Use battery diagnostics in the app to compare sources.</p>
+    </article>
+
+    <article class="card" id="chrome">
+      <h2>Chrome says the download is suspicious</h2>
+      <p>Common for small indie apps — it is a reputation warning, not a malware verdict. Prefer App ZIP from this site or <a href="https://github.com/ilikemacos/rNitro/releases">GitHub Releases</a>, verify SHA-256, use Keep if you started the download, and right-click → Open on first launch until notarized.</p>
     </article>
 
     <article class="card" id="updates">
@@ -244,23 +255,6 @@
 
     <p class="muted">Chopsticks HQ · <a href="https://chopstickshq.com/">chopstickshq.com</a> · Canonical product site: <a href="https://chopstickshq.com/rnitro/">/rnitro/</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
   </div>
-
-    <details>
-      <summary>Why might battery % or remaining time look different from other tools?</summary>
-      <p>rNitro shows the <strong>same charge percentage as the macOS menu bar</strong> (CurrentCapacity / pmset). Remaining time is an <strong>estimate</strong> from the system and recent drain — it changes with CPU load. A separate chemical gauge can trail the menu bar by a few points; that is normal. Use <strong>Copy battery diagnostics</strong> in the Battery section to compare pmset / IOPS / IOKit sources.</p>
-    </details>
-
-    <details open>
-      <summary>Chrome / Google says the download is suspicious or “not commonly downloaded”</summary>
-      <p>That warning is common for <strong>small independent apps</strong> and does <strong>not</strong> mean Google found malware. rNitro is open source, ad-hoc signed (not yet Apple-notarized), and has lower download volume than big vendors.</p>
-      <ul>
-        <li>Prefer the <strong>App ZIP from this site</strong> — files are also hosted on <a href="https://github.com/ilikemacos/rNitro/releases">GitHub Releases</a>.</li>
-        <li>In Chrome: open the downloads shelf → <strong>Keep</strong> / <strong>Download anyway</strong> if you initiated it from chopstickshq.com/rnitro.</li>
-        <li>Verify the file: match SHA-256 on the download page with <code>shasum -a 256</code> in Terminal.</li>
-        <li>On Mac: right-click the app → <strong>Open</strong> the first time (Gatekeeper).</li>
-        <li>Report a false positive: <a href="https://safebrowsing.google.com/safebrowsing/report_error/">Google Safe Browsing error report</a>.</li>
-      </ul>
-    </details>
 
 </body>
 </html>
