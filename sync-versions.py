@@ -42,19 +42,45 @@ def sized_label(text: str, filename: str | None) -> str:
     return f"{text}{file_size_label(filename)}"
 
 
+def zip_terminal_install_cmd(zip_name: str) -> str:
+    """Terminal install of pre-built App ZIP — no Xcode / swiftc."""
+    # ditto + xattr are stock macOS; unzip is present on all modern Macs.
+    return (
+        f'curl -fsSL {SITE_URL}/{zip_name} -o /tmp/rnitro-app.zip && '
+        f'rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && '
+        f'unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && '
+        f'APP=$(find /tmp/rnitro-extract -name "rNitro.app" -type d | head -1) && '
+        f'test -n "$APP" && mkdir -p "$HOME/Applications" && '
+        f'rm -rf "$HOME/Applications/rNitro.app" && '
+        f'ditto "$APP" "$HOME/Applications/rNitro.app" && '
+        f'xattr -cr "$HOME/Applications/rNitro.app" && '
+        f'echo "Installed ~/Applications/rNitro.app — right-click Open if Gatekeeper blocks."'
+    )
+
+
 def recommended_zip_block(
     zip_file: str,
     *,
     accent: str,
     accent_rgb: str,
     btn_style: str = "",
+    which: str = "stable",
 ) -> str:
     size = file_size_label(zip_file)
+    term_cmd = zip_terminal_install_cmd(zip_file)
     return f"""      <div class="dl-recommended" style="border-color:rgba({accent_rgb},0.4);">
         <div class="dl-recommended-badge" style="color:{accent}; border-color:rgba({accent_rgb},0.45); background:rgba({accent_rgb},0.1);">Recommended · no Xcode</div>
         <div class="dl-recommended-title" style="color:{accent};">App ZIP (pre-built)</div>
-        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Browser download or Terminal install — both use the pre-built app.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="{btn_style}" onclick="requestDownload('{zip_file}')">⬇ Download App ZIP{size}</button>
+        <div style="margin-top:14px; text-align:left;">
+          <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:{accent}; margin-bottom:6px;">Terminal · no Xcode</div>
+          <p class="dl-recommended-steps" style="margin-bottom:8px;">Downloads the App ZIP and installs to <code>~/Applications</code>. Needs only <code>curl</code> + <code>unzip</code> (built into macOS).</p>
+          <div style="background:var(--card2); border:1px solid rgba({accent_rgb},0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:11px; color:{accent}; word-break:break-all; line-height:1.45; margin-bottom:10px;">
+            {term_cmd}
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('{which}_zip')">⎘ Copy Terminal install (no Xcode)</button>
+        </div>
       </div>"""
 
 
@@ -125,6 +151,7 @@ def js_versions_object(data: dict) -> str:
             "zip": stable["zip"],
             "hash": data["hashes"]["stable_sh"],
             "curlInstall": curl_install_cmd(stable["sh"]),
+            "curlZipInstall": zip_terminal_install_cmd(stable["zip"]),
         },
         "beta": {
             "id": beta["id"],
@@ -136,7 +163,9 @@ def js_versions_object(data: dict) -> str:
             "zip": beta["zip"],
             "hash": data["hashes"]["beta_sh"],
             "curlInstall": curl_install_cmd(beta["sh"]),
+            "curlZipInstall": zip_terminal_install_cmd(beta["zip"]),
         },
+
         "windows": {
             "id": win["id"],
             "exe": win["exe"],
@@ -188,6 +217,9 @@ def js_versions_object(data: dict) -> str:
             "zip": v.experimental_release(data).get("zip", ""),
             "hash": data.get("hashes", {}).get("experimental_sh", ""),
             "curlInstall": curl_install_cmd(v.experimental_release(data).get("sh", "")),
+            "curlZipInstall": zip_terminal_install_cmd(
+                v.experimental_release(data).get("zip", "")
+            ),
         },
     }
     body = json.dumps(payload, indent=2)
@@ -314,7 +346,7 @@ def hero_stable_card(data: dict) -> str:
     return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">{s["id"]}</div>
       <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
-{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136")}
+{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136", which="stable")}
 {curl_block}
 {other}
     </div>"""
@@ -337,7 +369,7 @@ def hero_beta_card(data: dict) -> str:
       <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Beta notice:</strong> Power-user channel without the playground toys. Terms required before download.
       </p>
-{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
+{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;", which="beta")}
 {hero_curl_recommended_block("beta", b["sh"], accent="var(--orange)", accent_rgb="255,140,26")}
 {other}
     </div>"""
@@ -361,7 +393,7 @@ def hero_experimental_card(data: dict) -> str:
       <p style="font-size:14px; color:#b8a0ff; background:rgba(155,123,255,0.1); border:1px solid rgba(155,123,255,0.4); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
         <strong>Unstable playground.</strong> Prefer Beta for daily use. Terms required before download. Apple Silicon recommended.
       </p>
-{recommended_zip_block(e.get("zip") or "", accent="#b8a0ff", accent_rgb="155,123,255", btn_style="background:#9b7bff; color:#000;")}
+{recommended_zip_block(e.get("zip") or "", accent="#b8a0ff", accent_rgb="155,123,255", btn_style="background:#9b7bff; color:#000;", which="experimental")}
 {hero_curl_recommended_block(
         "experimental",
         e.get("sh") or "install-rNitro-experimental.sh",

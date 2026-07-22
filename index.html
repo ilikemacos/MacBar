@@ -1569,8 +1569,16 @@
       <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended · no Xcode</div>
         <div class="dl-recommended-title" style="color:var(--green);">App ZIP (pre-built)</div>
-        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Browser download or Terminal install — both use the pre-built app.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.9-Final.zip')">⬇ Download App ZIP · 3.5 MB</button>
+        <div style="margin-top:14px; text-align:left;">
+          <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--green); margin-bottom:6px;">Terminal · no Xcode</div>
+          <p class="dl-recommended-steps" style="margin-bottom:8px;">Downloads the App ZIP and installs to <code>~/Applications</code>. Needs only <code>curl</code> + <code>unzip</code> (built into macOS).</p>
+          <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:11px; color:var(--green); word-break:break-all; line-height:1.45; margin-bottom:10px;">
+            curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name "rNitro.app" -type d | head -1) && test -n "$APP" && mkdir -p "$HOME/Applications" && rm -rf "$HOME/Applications/rNitro.app" && ditto "$APP" "$HOME/Applications/rNitro.app" && xattr -cr "$HOME/Applications/rNitro.app" && echo "Installed ~/Applications/rNitro.app — right-click Open if Gatekeeper blocks."
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable_zip')">⎘ Copy Terminal install (no Xcode)</button>
+        </div>
       </div>
       <div class="dl-recommended" style="border-color:rgba(0,255,136,0.35); margin-top:12px;">
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.4); background:rgba(0,255,136,0.08);">Optional · needs Xcode</div>
@@ -1609,8 +1617,16 @@
       <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
         <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended · no Xcode</div>
         <div class="dl-recommended-title" style="color:var(--orange);">App ZIP (pre-built)</div>
-        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Browser download or Terminal install — both use the pre-built app.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.14.zip')">⬇ Download App ZIP · 3.6 MB</button>
+        <div style="margin-top:14px; text-align:left;">
+          <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--orange); margin-bottom:6px;">Terminal · no Xcode</div>
+          <p class="dl-recommended-steps" style="margin-bottom:8px;">Downloads the App ZIP and installs to <code>~/Applications</code>. Needs only <code>curl</code> + <code>unzip</code> (built into macOS).</p>
+          <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:11px; color:var(--orange); word-break:break-all; line-height:1.45; margin-bottom:10px;">
+            curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.14.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name "rNitro.app" -type d | head -1) && test -n "$APP" && mkdir -p "$HOME/Applications" && rm -rf "$HOME/Applications/rNitro.app" && ditto "$APP" "$HOME/Applications/rNitro.app" && xattr -cr "$HOME/Applications/rNitro.app" && echo "Installed ~/Applications/rNitro.app — right-click Open if Gatekeeper blocks."
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('beta_zip')">⎘ Copy Terminal install (no Xcode)</button>
+        </div>
       </div>
       <div class="dl-recommended" style="border-color:rgba(255,140,26,0.35); margin-top:12px;">
         <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.4); background:rgba(255,140,26,0.08);">Optional · needs Xcode</div>
@@ -1649,8 +1665,16 @@
       <div class="dl-recommended" style="border-color:rgba(155,123,255,0.4);">
         <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.45); background:rgba(155,123,255,0.1);">Recommended · no Xcode</div>
         <div class="dl-recommended-title" style="color:#b8a0ff;">App ZIP (pre-built)</div>
-        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Browser download or Terminal install — both use the pre-built app.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="background:#9b7bff; color:#000;" onclick="requestDownload('rNitro-v1.3.26-Experimental.zip')">⬇ Download App ZIP · 3.7 MB</button>
+        <div style="margin-top:14px; text-align:left;">
+          <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:#b8a0ff; margin-bottom:6px;">Terminal · no Xcode</div>
+          <p class="dl-recommended-steps" style="margin-bottom:8px;">Downloads the App ZIP and installs to <code>~/Applications</code>. Needs only <code>curl</code> + <code>unzip</code> (built into macOS).</p>
+          <div style="background:var(--card2); border:1px solid rgba(155,123,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:11px; color:#b8a0ff; word-break:break-all; line-height:1.45; margin-bottom:10px;">
+            curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.3.26-Experimental.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name "rNitro.app" -type d | head -1) && test -n "$APP" && mkdir -p "$HOME/Applications" && rm -rf "$HOME/Applications/rNitro.app" && ditto "$APP" "$HOME/Applications/rNitro.app" && xattr -cr "$HOME/Applications/rNitro.app" && echo "Installed ~/Applications/rNitro.app — right-click Open if Gatekeeper blocks."
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('experimental_zip')">⎘ Copy Terminal install (no Xcode)</button>
+        </div>
       </div>
       <div class="dl-recommended" style="border-color:rgba(155,123,255,0.35); margin-top:12px;">
         <div class="dl-recommended-badge" style="color:#b8a0ff; border-color:rgba(155,123,255,0.4); background:rgba(155,123,255,0.08);">Optional · needs Xcode</div>
@@ -2562,8 +2586,16 @@
       <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
         <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">Recommended · no Xcode</div>
         <div class="dl-recommended-title" style="color:var(--green);">App ZIP (pre-built)</div>
-        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Browser download or Terminal install — both use the pre-built app.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.2.9-Final.zip')">⬇ Download App ZIP · 3.5 MB</button>
+        <div style="margin-top:14px; text-align:left;">
+          <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--green); margin-bottom:6px;">Terminal · no Xcode</div>
+          <p class="dl-recommended-steps" style="margin-bottom:8px;">Downloads the App ZIP and installs to <code>~/Applications</code>. Needs only <code>curl</code> + <code>unzip</code> (built into macOS).</p>
+          <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:11px; color:var(--green); word-break:break-all; line-height:1.45; margin-bottom:10px;">
+            curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name "rNitro.app" -type d | head -1) && test -n "$APP" && mkdir -p "$HOME/Applications" && rm -rf "$HOME/Applications/rNitro.app" && ditto "$APP" "$HOME/Applications/rNitro.app" && xattr -cr "$HOME/Applications/rNitro.app" && echo "Installed ~/Applications/rNitro.app — right-click Open if Gatekeeper blocks."
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable_zip')">⎘ Copy Terminal install (no Xcode)</button>
+        </div>
       </div>
       <div id="dl-stable-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-stable-other')" aria-expanded="false">
@@ -2605,8 +2637,16 @@
       <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
         <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended · no Xcode</div>
         <div class="dl-recommended-title" style="color:var(--orange);">App ZIP (pre-built)</div>
-        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Unzip → drag <code>rNitro.app</code> to Applications → right-click <strong>Open</strong> once if macOS blocks it. Hosted on this site (HTTPS). If the button fails, use <strong>GitHub Releases</strong> backup below.</p>
+        <p class="dl-recommended-steps"><strong>No Xcode required.</strong> Browser download or Terminal install — both use the pre-built app.</p>
         <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="requestDownload('rNitro-v1.2.14.zip')">⬇ Download App ZIP · 3.6 MB</button>
+        <div style="margin-top:14px; text-align:left;">
+          <div style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--orange); margin-bottom:6px;">Terminal · no Xcode</div>
+          <p class="dl-recommended-steps" style="margin-bottom:8px;">Downloads the App ZIP and installs to <code>~/Applications</code>. Needs only <code>curl</code> + <code>unzip</code> (built into macOS).</p>
+          <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:11px; color:var(--orange); word-break:break-all; line-height:1.45; margin-bottom:10px;">
+            curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.14.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name "rNitro.app" -type d | head -1) && test -n "$APP" && mkdir -p "$HOME/Applications" && rm -rf "$HOME/Applications/rNitro.app" && ditto "$APP" "$HOME/Applications/rNitro.app" && xattr -cr "$HOME/Applications/rNitro.app" && echo "Installed ~/Applications/rNitro.app — right-click Open if Gatekeeper blocks."
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('stable_zip')">⎘ Copy Terminal install (no Xcode)</button>
+        </div>
       </div>
       <div id="dl-beta-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
         <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-beta-other')" aria-expanded="false">
@@ -2921,7 +2961,8 @@
       "dmg": "rNitro-v1.2.9-Final.dmg",
       "zip": "rNitro-v1.2.9-Final.zip",
       "hash": "6bc8ec614c6d558ebd9e6a9a9096bfc2b229cdf2dcdd0f328d8c22b442367e44",
-      "curlInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+      "curlInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh",
+      "curlZipInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name \"rNitro.app\" -type d | head -1) && test -n \"$APP\" && mkdir -p \"$HOME/Applications\" && rm -rf \"$HOME/Applications/rNitro.app\" && ditto \"$APP\" \"$HOME/Applications/rNitro.app\" && xattr -cr \"$HOME/Applications/rNitro.app\" && echo \"Installed ~/Applications/rNitro.app \u2014 right-click Open if Gatekeeper blocks.\""
     },
     "beta": {
       "id": "v1.2.14",
@@ -2932,7 +2973,8 @@
       "dmg": "rNitro-v1.2.14.dmg",
       "zip": "rNitro-v1.2.14.zip",
       "hash": "fd0b18b17a47cbed728c875dc7035429cdabee37d1ef1df76c11072171ebf92f",
-      "curlInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.14.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+      "curlInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.14.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh",
+      "curlZipInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.2.14.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name \"rNitro.app\" -type d | head -1) && test -n \"$APP\" && mkdir -p \"$HOME/Applications\" && rm -rf \"$HOME/Applications/rNitro.app\" && ditto \"$APP\" \"$HOME/Applications/rNitro.app\" && xattr -cr \"$HOME/Applications/rNitro.app\" && echo \"Installed ~/Applications/rNitro.app \u2014 right-click Open if Gatekeeper blocks.\""
     },
     "windows": {
       "id": "v4.2.4-Windows-Final-x86",
@@ -2984,7 +3026,8 @@
       "dmg": "rNitro-v1.3.26-Experimental.dmg",
       "zip": "rNitro-v1.3.26-Experimental.zip",
       "hash": "1e5aaa4adaf713a4ebc445f13cdfc73dc0c94b7f17358130d79ae1283b7ca23b",
-      "curlInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.3.26-Experimental.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh"
+      "curlInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.3.26-Experimental.sh -o /tmp/rnitro-install.sh && bash /tmp/rnitro-install.sh",
+      "curlZipInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-v1.3.26-Experimental.zip -o /tmp/rnitro-app.zip && rm -rf /tmp/rnitro-extract && mkdir -p /tmp/rnitro-extract && unzip -qo /tmp/rnitro-app.zip -d /tmp/rnitro-extract && APP=$(find /tmp/rnitro-extract -name \"rNitro.app\" -type d | head -1) && test -n \"$APP\" && mkdir -p \"$HOME/Applications\" && rm -rf \"$HOME/Applications/rNitro.app\" && ditto \"$APP\" \"$HOME/Applications/rNitro.app\" && xattr -cr \"$HOME/Applications/rNitro.app\" && echo \"Installed ~/Applications/rNitro.app \u2014 right-click Open if Gatekeeper blocks.\""
     }
   };
   // @end:js-versions
@@ -3334,18 +3377,28 @@
   }
 
   function _copyCurlCmdUnlocked(which) {
+    const key = String(which || 'stable');
+    const wantZip = key.endsWith('_zip');
+    const channel = wantZip ? key.replace(/_zip$/, '') : key;
     let rel = RNITRO_VERSIONS.stable;
-    if (which === 'beta') rel = RNITRO_VERSIONS.beta;
-    else if (which === 'experimental') rel = RNITRO_VERSIONS.experimental;
-    else if (which === 'intel_beta') rel = RNITRO_VERSIONS.intel_beta;
-    else if (which === 'intel_stable') rel = RNITRO_VERSIONS.intel_stable;
-    const cmd = rel?.curlInstall || '';
+    if (channel === 'beta') rel = RNITRO_VERSIONS.beta;
+    else if (channel === 'experimental') rel = RNITRO_VERSIONS.experimental;
+    else if (channel === 'intel_beta') rel = RNITRO_VERSIONS.intel_beta;
+    else if (channel === 'intel_stable') rel = RNITRO_VERSIONS.intel_stable;
+    // Prefer pre-built ZIP terminal install (no Xcode) when requested / available.
+    const cmd = (wantZip ? (rel?.curlZipInstall || rel?.curlInstall) : (rel?.curlInstall || rel?.curlZipInstall)) || '';
+    if (!cmd) {
+      alert('Install command not available for this channel.');
+      return;
+    }
     navigator.clipboard.writeText(cmd).then(() => {
       const toast = document.getElementById('toast');
       if (!toast) return;
-      toast.textContent = '✓ curl command copied';
+      toast.textContent = wantZip ? '✓ Terminal install (no Xcode) copied' : '✓ curl compile command copied';
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2500);
+    }).catch(() => {
+      alert('Could not copy automatically. Command:\n\n' + cmd);
     });
   }
 
@@ -3358,7 +3411,10 @@
       _copyCurlCmdUnlocked(which);
       return;
     }
-    if (!openTcModal((which || 'curl') + ' install command')) {
+    const label = String(which || '').endsWith('_zip')
+      ? 'Terminal install (no Xcode)'
+      : ((which || 'curl') + ' install command');
+    if (!openTcModal(label)) {
       alert('Please accept the Terms and Conditions before copying the install command.');
       return;
     }
