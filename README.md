@@ -7,7 +7,7 @@ Open source · no account · no telemetry · no subscription.
 
 | Download | HQ | Releases |
 |----------|-----|----------|
-| **[getrnitro.netlify.app](https://getrnitro.netlify.app/)** | **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** | **[GitHub Releases](https://github.com/ilikemacos/MacBar/releases)** |
+| **[getrnitro.netlify.app](https://getrnitro.netlify.app/)** | **[chopstickshq.com/macbar](https://chopstickshq.com/macbar/)** | **[GitHub Releases](https://github.com/ilikemacos/MacBar/releases)** |
 
 [![Stable](https://img.shields.io/badge/stable-v1.2.9%20Final-00ff80)](https://github.com/ilikemacos/MacBar/releases/tag/v1.2.9-Final)
 [![Beta](https://img.shields.io/badge/beta-v1.2.14-ff8c1a)](https://github.com/ilikemacos/MacBar/releases/tag/v1.2.14)
@@ -20,7 +20,7 @@ Open source · no account · no telemetry · no subscription.
 
 ## Install in 3 steps (macOS)
 
-1. Download the **App ZIP** from [Releases](https://github.com/ilikemacos/MacBar/releases) or the [website](https://chopstickshq.com/rnitro/) (accept Terms when prompted on the site).
+1. Download the **App ZIP** from [Releases](https://github.com/ilikemacos/MacBar/releases) or the [website](https://chopstickshq.com/macbar/) (accept Terms when prompted on the site).
 2. Unzip → drag **MacBar.app** (Experimental) or **rNitro.app** (Stable/Beta) to **Applications**.
 3. First launch: if macOS blocks it, **right-click → Open → Open**.
 
@@ -45,7 +45,7 @@ Also available: **PKG**, **DMG**, or **`.sh`** (compiles on your Mac with Xcode 
 - **Beta** = power users.  
 - **Experimental** = playground (e.g. **New style** glass monitor UI, display modes).
 
-Full matrix: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)
+Full matrix: [chopstickshq.com/macbar](https://chopstickshq.com/macbar/)
 
 ---
 

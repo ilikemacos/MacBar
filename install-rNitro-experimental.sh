@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="0f1515d74702a42678ff24eea585dcb6acd78f555a61e7db8ec2dabf3a6a3bff"
+EXPECTED_HASH="96d6f8af14fecca490c6052ab1f09cc73cadeaaa3f7369a8a3cc239e541642a9"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -377,17 +377,17 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.24-Experimental"
+let CURRENT_VERSION = "v1.3.25-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
 let RNITRO_FEATURE_EXPERIMENTAL_UI = (RNITRO_BUILD_CHANNEL == "experimental")
 private let RNITRO_UI_FONT_DEFAULT = "Varela Round"
 // Prefer HQ (canonical product site we control) then getrnitro CDN.
-let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/rnitro/version.json")!
+let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/macbar/version.json")!
 private let UPDATE_CHECK_URL_FALLBACK = URL(string: "https://getrnitro.netlify.app/version.json")!
-let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/rnitro/")!
-private let UPDATE_CDN_ORIGIN = "https://chopstickshq.com/rnitro"
+let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/macbar/")!
+private let UPDATE_CDN_ORIGIN = "https://chopstickshq.com/macbar"
 private let UPDATE_CDN_ORIGIN_LEGACY = "https://getrnitro.netlify.app"
 
 struct VersionInfo: Decodable {
@@ -652,7 +652,7 @@ enum UpdateChecker {
     /// Short bullet lines from site changelog.json for a version / channel.
     static func changelogBlurb(for versionId: String, channel: String, completion: @escaping (String?) -> Void) {
         let urls = [
-            URL(string: "https://chopstickshq.com/rnitro/changelog.json")!,
+            URL(string: "https://chopstickshq.com/macbar/changelog.json")!,
             URL(string: "https://getrnitro.netlify.app/changelog.json")!,
         ]
         func tryFetch(_ i: Int) {
@@ -755,7 +755,7 @@ enum UpdateChecker {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             let alert = NSAlert()
             alert.messageText = "Previous Update Did Not Complete"
-            alert.informativeText = detail + "\n\nCheck ~/Library/Logs/MacBar/update.log or download the App ZIP from chopstickshq.com/rnitro."
+            alert.informativeText = detail + "\n\nCheck ~/Library/Logs/MacBar/update.log or download the App ZIP from chopstickshq.com/macbar."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open Website")
             alert.addButton(withTitle: "OK")
@@ -1022,7 +1022,7 @@ enum UpdateInstaller {
         }
         if actual != expected {
             log("ZIP hash mismatch expected=\(expected) actual=\(actual)")
-            return "Update package failed integrity check (SHA-256 mismatch). Refusing to install. Re-download from chopstickshq.com/rnitro."
+            return "Update package failed integrity check (SHA-256 mismatch). Refusing to install. Re-download from chopstickshq.com/macbar."
         }
         log("ZIP SHA-256 OK (\(actual.prefix(16))…)")
         UserDefaults.standard.set(actual, forKey: "rnitro.update.remoteZipSha")
@@ -1061,7 +1061,7 @@ enum UpdateInstaller {
         let verify = runCommand("/usr/bin/codesign", ["--verify", "--deep", app.path])
         if verify.0 != 0 {
             log("codesign --verify failed: \(verify.1)")
-            return "Staged app failed code signature verification. Refusing to install. Re-download from chopstickshq.com/rnitro."
+            return "Staged app failed code signature verification. Refusing to install. Re-download from chopstickshq.com/macbar."
         }
         log("codesign --verify OK for \(app.lastPathComponent) id=\(bid)")
         return nil
@@ -1307,7 +1307,7 @@ enum UpdateInstaller {
         }
         if httpStatus != 0 && httpStatus != 200 {
             log("HTTP \(httpStatus) for \(zipName)")
-            return .failure("Server returned HTTP \(httpStatus) for \(zipName). Download the App ZIP manually from chopstickshq.com/rnitro.")
+            return .failure("Server returned HTTP \(httpStatus) for \(zipName). Download the App ZIP manually from chopstickshq.com/macbar.")
         }
         guard fm.fileExists(atPath: zipFile.path) else {
             return .failure("Download did not save \(zipName). Try again or use the website.")
@@ -1345,7 +1345,7 @@ enum UpdateInstaller {
         }
         guard let staged = findAppBundle(in: extractDir) else {
             log("MacBar.app missing after extract")
-            return .failure("MacBar.app not found inside \(zipName). Download manually from chopstickshq.com/rnitro.")
+            return .failure("MacBar.app not found inside \(zipName). Download manually from chopstickshq.com/macbar.")
         }
         if let stageErr = verifyStagedApp(staged) {
             try? fm.removeItem(at: extractDir)
@@ -1562,7 +1562,7 @@ rm -rf /Applications/MacBar.app
             if proc.terminationStatus != 0 {
                 let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
                 log("Admin install failed (status \(proc.terminationStatus)): \(err)")
-                return ReplaceResult(error: "Could not replace MacBar in /Applications (admin install failed or signature check failed). Download the App ZIP from chopstickshq.com/rnitro.")
+                return ReplaceResult(error: "Could not replace MacBar in /Applications (admin install failed or signature check failed). Download the App ZIP from chopstickshq.com/macbar.")
             }
             return ReplaceResult(opensBeforeQuit: true)
         }
@@ -8141,7 +8141,7 @@ struct SettingsGeneralSection: View {
                             updateStatus.refreshIntegrityLabels()
                             UpdateChecker.checkManually()
                         })
-                        if let url = URL(string: "https://chopstickshq.com/rnitro/") {
+                        if let url = URL(string: "https://chopstickshq.com/macbar/") {
                             Button(display.tr("general.openSite")) {
                                 NSWorkspace.shared.open(url)
                             }
@@ -18140,8 +18140,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>MacBar</string>
     <key>CFBundleDisplayName</key><string>MacBar</string>
-    <key>CFBundleVersion</key><string>v1.3.24-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.24-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.25-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.25-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

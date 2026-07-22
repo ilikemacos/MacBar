@@ -1,6 +1,15 @@
 {
   "whats_new": [
     {
+      "version": "v1.3.25-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Product URL is now **chopstickshq.com/macbar** (and macbar.chopstickshq.com).",
+        "Legacy /rnitro paths redirect to /macbar.",
+        "GitHub repo: ilikemacos/MacBar."
+      ]
+    },
+    {
       "version": "v1.3.24-Experimental",
       "channel": "experimental",
       "highlights": [

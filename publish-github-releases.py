@@ -83,7 +83,7 @@ def release_notes(data: dict, channel: str) -> str:
     lines += [
         f"Also available: [{other['label']}]({v.github_release_page_url(other['id'])})",
         "",
-        "Website: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/) · CDN: [getrnitro.netlify.app](https://getrnitro.netlify.app/)",
+        "Website: [chopstickshq.com/macbar](https://chopstickshq.com/macbar/) · CDN: [getrnitro.netlify.app](https://getrnitro.netlify.app/)",
     ]
     return "\n".join(lines)
 
