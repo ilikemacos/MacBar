@@ -554,7 +554,7 @@ final class UpdateStatusStore: ObservableObject {
 
     var channelDisplayName: String {
         switch RNITRO_BUILD_CHANNEL {
-        case "experimental": return "Experimental"
+        case "experimental": return "Current"
         case "beta": return "Beta"
         default: return "Stable"
         }
@@ -562,7 +562,7 @@ final class UpdateStatusStore: ObservableObject {
 
     var channelTint: Color {
         switch RNITRO_BUILD_CHANNEL {
-        case "experimental": return Color(red: 0.62, green: 0.48, blue: 1.0)
+        case "experimental": return Color(red: 0.2, green: 0.85, blue: 0.45) // Current (mainline)
         case "beta": return Color(red: 1.0, green: 0.55, blue: 0.1)
         default: return Color(red: 0.2, green: 0.85, blue: 0.45)
         }
