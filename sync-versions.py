@@ -224,9 +224,7 @@ def js_versions_object(data: dict) -> str:
 
 
 def nav_right(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    linux = v.linux_release(data)
+    exp = v.experimental_release(data)
     archive = data.get("archive") or []
     archives_link = (
         '    <a class="nav-link" href="/archives">Archives</a>\n'
@@ -238,7 +236,7 @@ def nav_right(data: dict) -> str:
 {archives_link}    <a class="nav-link" href="/faq.html">FAQ</a>
     <a class="nav-link" href="/privacy.html">Privacy</a>
     <a class="nav-link" href="/terms.html">Terms</a>
-    <div class="nav-badge">{stable["label"]} · {beta["label"]} · Exp {v.experimental_release(data)["short"]} · Apple Silicon + Intel</div>
+    <div class="nav-badge">{exp["label"]} · Apple Silicon</div>
   </div>"""
 
 
@@ -251,7 +249,7 @@ def intel_sunset_banner() -> str:
       Intel Mac will no longer be getting updates after <strong style="color:var(--orange);">v1.2.5-Beta</strong>.
     </div>
     <div style="font-size:13px; color:var(--muted); margin-top:6px;">
-      Apple Silicon continues to receive full Stable and Beta updates. Plan to move to an Apple Silicon Mac for ongoing support.
+      Apple Silicon continues to receive updates. Plan to move to an Apple Silicon Mac for ongoing support.
     </div>
   </div>"""
 
@@ -326,75 +324,35 @@ def hero_intel_panel(data: dict) -> str:
 
 
 def hero_stable_card(data: dict) -> str:
-    s = v.stable_release(data)
-    other = other_downloads_panel(
-        "hero-stable-other",
-        f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{s["pkg"]}')">{sized_label("PKG installer", s["pkg"])}</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('{s["dmg"]}')">{sized_label("DMG disk image", s["dmg"])}</button>
-            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('{s["sh"]}')">{sized_label("Shell installer (.sh)", s["sh"])}</button>
-            <button class="btn btn-secondary" onclick="copyCurlCmd('stable')">⎘ Copy curl install</button>
-            <button class="btn btn-secondary" onclick="copyCmd('stable')">⎘ Copy bash command</button>""",
-        note="<strong>PKG</strong> needs admin password. <strong>DMG</strong> — drag to Applications. <strong>.sh</strong> compiles from readable source (~30s). PKG may trigger a macOS security prompt — use System Settings → Privacy &amp; Security → Open.",
-    )
-    curl_block = hero_curl_recommended_block(
-        "stable", s["sh"], accent="var(--green)", accent_rgb="0,255,136"
-    )
-    return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
-      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">{s["id"]}</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Stable — CPU monitor, benchmark, and AI chat with <strong>OpenAI (GPT)</strong> and <strong>OpenRouter</strong> only.</div>
-{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136", which="stable")}
-{curl_block}
-{other}
-    </div>"""
+    """Stable channel hidden — Experimental is the sole primary download."""
+    return ""
 
 
 def hero_beta_card(data: dict) -> str:
-    b = v.beta_release(data)
-    other = other_downloads_panel(
-        "hero-beta-other",
-        f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{b["pkg"]}')">{sized_label("PKG installer", b["pkg"])}</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('{b["dmg"]}')">{sized_label("DMG disk image", b["dmg"])}</button>
-            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('{b["sh"]}')">{sized_label("Shell installer (.sh)", b["sh"])}</button>
-            <button class="btn btn-secondary" onclick="copyCurlCmd('beta')">⎘ Copy curl install</button>
-            <button class="btn btn-secondary" onclick="copyCmd('beta')">⎘ Copy bash command</button>""",
-        note="<strong>Beta notice:</strong> Experimental AI — Terms required. <strong>curl</strong> or <strong>.sh</strong> compiles full source on your Mac if you don't trust pre-built PKGs.",
-    )
-    return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
-      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">{b["id"]}</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">Beta (slim Lab) — weather, detective, whisper, compile-farm, time-scrub, power receipt + all AI providers. Toys live on <strong>Experimental</strong>.</div>
-      <p style="font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
-        <strong>Beta notice:</strong> Power-user channel without the playground toys. Terms required before download.
-      </p>
-{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;", which="beta")}
-{hero_curl_recommended_block("beta", b["sh"], accent="var(--orange)", accent_rgb="255,140,26")}
-{other}
-    </div>"""
-
+    """Beta channel hidden — Experimental is the sole primary download."""
+    return ""
 
 
 def hero_experimental_card(data: dict) -> str:
-    """Apple Silicon Experimental — Beta + Lab toys."""
+    """Apple Silicon primary download (Experimental channel, presented as main)."""
     e = v.experimental_release(data)
     other = other_downloads_panel(
         "hero-exp-other",
         f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{e.get("pkg", "")}')">{sized_label("PKG installer", e.get("pkg", ""))}</button>
             <button type="button" class="btn btn-secondary" onclick="requestDownload('{e.get("dmg", "")}')">{sized_label("DMG disk image", e.get("dmg", ""))}</button>
-            <button type="button" class="btn btn-sh" style="border-color:#b8a0ff; color:#b8a0ff;" onclick="requestDownload('{e.get("sh", "")}')">{sized_label("Shell installer (.sh)", e.get("sh", ""))}</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('{e.get("sh", "")}')">{sized_label("Shell installer (.sh)", e.get("sh", ""))}</button>
             <button class="btn btn-secondary" onclick="copyCurlCmd('experimental')">⎘ Copy curl install</button>""",
-        note="<strong>Experimental:</strong> Beta + duel, ghost-load, budget, cloak, peer, AirDrop card, desktop widget, confession, alibi, presets. Unstable.",
+        note="<strong>PKG</strong> needs admin password. <strong>DMG</strong> — drag to Applications. <strong>.sh</strong> compiles from readable source (~30s). PKG may trigger a macOS security prompt — use System Settings → Privacy &amp; Security → Open.",
     )
-    return f"""    <div style="width:100%; background:var(--card); border:1px solid #9b7bff; border-radius:12px; padding:20px; text-align:center;">
-      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:#b8a0ff; margin-bottom:4px;">{e["id"]}</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0;"><strong style="color:#b8a0ff;">Experimental</strong> — everything in Beta <em>plus</em> Lab toys (duel, ghost-load, SOC budget, meeting cloak, polite peer, AirDrop card, desktop widget, confession, alibi, presets).</div>
-      <p style="font-size:14px; color:#b8a0ff; background:rgba(155,123,255,0.1); border:1px solid rgba(155,123,255,0.4); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.5; text-align:left;">
-        <strong>Unstable playground.</strong> Prefer Beta for daily use. Terms required before download. Apple Silicon recommended.
-      </p>
-{recommended_zip_block(e.get("zip") or "", accent="#b8a0ff", accent_rgb="155,123,255", btn_style="background:#9b7bff; color:#000;", which="experimental")}
+    return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">{e["id"]}</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">rNitro for macOS — menu bar monitor, Lab tools, AI chat, New style UI, and more. Apple Silicon.</div>
+{recommended_zip_block(e.get("zip") or "", accent="var(--green)", accent_rgb="0,255,136", which="experimental")}
 {hero_curl_recommended_block(
         "experimental",
         e.get("sh") or "install-rNitro-experimental.sh",
-        accent="#b8a0ff",
-        accent_rgb="155,123,255",
+        accent="var(--green)",
+        accent_rgb="0,255,136",
     )}
 {other}
     </div>"""
@@ -492,14 +450,13 @@ def cli_curl_install_cmd(tar_name: str) -> str:
 
 
 def hero_head(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
+    exp = v.experimental_release(data)
     linux = v.linux_release(data)
     desc = (
         f"rNitro — free open-source macOS menu bar system monitor "
-        f"({stable['short']} Stable / {beta['short']} Beta). Live CPU, temperature, "
+        f"({exp['label']}). Live CPU, temperature, "
         f"MacBook battery %, GPU, RAM, network. Free iStat/Stats alternative · btop-style CLI. "
-        f"Linux {linux['short']} pre-release. No account, no telemetry. Apple Silicon &amp; Intel."
+        f"Linux {linux['short']} pre-release. No account, no telemetry. Apple Silicon."
     )
     # High-intent discovery phrases (honest alternatives; no trademark-as-product claims).
     keywords = (
@@ -530,7 +487,7 @@ def hero_head(data: dict) -> str:
             "operatingSystem": "macOS 12+, Linux, Windows",
             "applicationCategory": "UtilitiesApplication",
             "applicationSubCategory": "System Monitor",
-            "softwareVersion": stable["id"],
+            "softwareVersion": exp["id"],
             "isAccessibleForFree": True,
             "offers": {
                 "@type": "Offer",
@@ -612,12 +569,11 @@ def hero_head(data: dict) -> str:
 <script type="application/ld+json">{faq_json}</script>"""
 
 def hero_copy(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon &amp; Intel · macOS 12+</p>
+    exp = v.experimental_release(data)
+    return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon · macOS 12+</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>{stable["label"]}</strong> for daily use · <strong>{beta["label"]}</strong> for every AI provider. Choose <strong>Apple Silicon</strong> or <strong>Intel</strong> below. Free · no account · no telemetry.</p>"""
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>{exp["label"]}</strong> — the current build. Free · no account · no telemetry.</p>"""
 
 
 def trust_strip() -> str:
@@ -723,17 +679,17 @@ def steps_win(data: dict) -> str:
 def hero_dl_note(data: dict) -> str:
     gh = v.github_releases_url()
     return f"""    <p style="color:var(--muted); font-size:14px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:8px; line-height:1.55;">
-      Pick <strong style="color:var(--green);">Apple Silicon</strong> or <strong style="color:var(--cyan);">Intel</strong> above, then Stable or Beta. Terms apply once per session. Also on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a>.
+      Download the current build for <strong style="color:var(--green);">Apple Silicon</strong> (or Intel installers below). Terms apply once per session. Also on <a href="{gh}" style="color:var(--cyan);">GitHub Releases</a>.
     </p>"""
 
 
 def install_step_pkg(data: dict) -> str:
     return f"""        <h3>Download the PKG, DMG, or App ZIP</h3>
-        <p>Choose <strong>Stable</strong> (green), <strong>Beta</strong> (orange), or <strong>Experimental</strong> (purple). Agree to the Terms &amp; Conditions on every download, then pick a format:</p>
+        <p>Agree to the Terms &amp; Conditions on every download, then pick a format:</p>
         <ul style="margin:10px 0 0 18px; line-height:1.7; color:var(--muted);">
+          <li><strong>App ZIP</strong> — unzip and drag <code>rNitro.app</code> to Applications (recommended).</li>
           <li><strong>PKG</strong> — double-click; installs to Applications (admin password).</li>
           <li><strong>DMG</strong> — open the disk image and drag <code>rNitro.app</code> to Applications.</li>
-          <li><strong>Apps ZIP</strong> — one file with both Stable and Beta <code>.app</code> bundles.</li>
         </ul>
         <div style="margin-top:12px;">
 {pkg_gatekeeper_warning()}
@@ -742,7 +698,7 @@ def install_step_pkg(data: dict) -> str:
 
 def install_step_sh(data: dict) -> str:
     return """        <h3>Or install from Terminal with curl</h3>
-        <p>No browser download needed — paste a one-liner in Terminal. It fetches the <strong>.sh</strong> installer (readable source), saves it to <code>/tmp</code>, then runs it. Stable:</p>"""
+        <p>No browser download needed — paste a one-liner in Terminal. It fetches the <strong>.sh</strong> installer (readable source), saves it to <code>/tmp</code>, then runs it:</p>"""
 
 
 def hero_linux_buttons(data: dict) -> str:
@@ -900,17 +856,11 @@ def feature_ai_chat(data: dict) -> str:
 
 
 def install_sh_commands(data: dict) -> str:
-    s = v.stable_release(data)
-    b = v.beta_release(data)
-    stable_curl = curl_install_cmd(s["sh"])
-    beta_curl = curl_install_cmd(b["sh"])
+    e = v.experimental_release(data)
+    exp_curl = curl_install_cmd(e.get("sh") or "install-rNitro-experimental.sh")
     return f"""        <p style="margin-top:8px; color:var(--muted); line-height:1.6;">Paste in <strong>Terminal</strong> (Apple Silicon Mac, Xcode CLT required). The script is saved to disk first — <code>curl | bash</code> is blocked on purpose.</p>
         <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--green); word-break:break-all; text-align:left;">
-          {stable_curl}
-        </div>
-        <p style="margin-top:10px; color:var(--muted);">Beta ({b["short"]}):</p>
-        <div style="margin-top:6px; background:var(--card2); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--orange); word-break:break-all; text-align:left;">
-          {beta_curl}
+          {exp_curl}
         </div>
         <p style="margin-top:8px;">Installs to <code>~/Applications/rNitro.app</code> in ~30 seconds. Self-verifies its SHA-256 checksum before running.</p>"""
 
@@ -921,70 +871,13 @@ def hero_curl_install(data: dict) -> str:
 
 
 def download_card_stable(data: dict) -> str:
-    s = v.stable_release(data)
-    h = data["hashes"]["stable_sh"]
-    other = other_downloads_panel(
-        "dl-stable-other",
-        f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{s["pkg"]}')">{sized_label("PKG installer", s["pkg"])}</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('{s["dmg"]}')">{sized_label("DMG disk image", s["dmg"])}</button>
-            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('{s["sh"]}')">{sized_label("Shell installer (.sh)", s["sh"])}</button>""",
-        note="<strong>Don't trust the PKG?</strong> The .sh compiles from readable source on your Mac.",
-    )
-    return f"""  <div class="download-card" style="border-color:var(--green);">
-    <div class="download-meta">
-      <h2>rNitro {s["id"]}</h2>
-      <p>Stable macOS build — monitor, benchmark, and AI chat (OpenAI GPT + OpenRouter only).</p>
-      <div class="req">
-        <span class="req-tag">macOS 12+</span>
-        <span class="req-tag">Apple Silicon</span>
-        <span class="req-tag">Xcode CLT (.sh)</span>
-        <span class="req-tag">Free</span>
-      </div>
-      <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
-        SHA-256 (.sh):
-        <span id="sha-hash-stable" style="color:var(--green); word-break:break-all;">{h}</span>
-        <button onclick="copyHash('stable')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
-      </div>
-    </div>
-{recommended_zip_block(s["zip"], accent="var(--green)", accent_rgb="0,255,136")}
-{other}
-  </div>"""
+    """Stable download card hidden — primary is Experimental hero."""
+    return ""
 
 
 def download_card_beta(data: dict) -> str:
-    b = v.beta_release(data)
-    s = v.stable_release(data)
-    h = data["hashes"]["beta_sh"]
-    other = other_downloads_panel(
-        "dl-beta-other",
-        f"""            <button type="button" class="btn btn-secondary" onclick="requestDownload('{b["pkg"]}')">{sized_label("PKG installer", b["pkg"])}</button>
-            <button type="button" class="btn btn-secondary" onclick="requestDownload('{b["dmg"]}')">{sized_label("DMG disk image", b["dmg"])}</button>
-            <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('{b["sh"]}')">{sized_label("Shell installer (.sh)", b["sh"])}</button>""",
-        note="<strong>Skeptical of the PKG?</strong> Use the .sh — full-source compile, verified checksum.",
-    )
-    return f"""  <div class="download-card" style="margin-top:16px; border-color:var(--orange);">
-    <div class="download-meta">
-      <h2>rNitro {b["id"]}</h2>
-      <p>Beta macOS build — {s["short"]} features plus AI chat API (Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes).</p>
-      <p style="font-family:var(--mono); font-size:16px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-top:12px; line-height:1.6;">
-        <strong>Beta notice:</strong> Experimental AI features — Terms &amp; Conditions required before download.
-      </p>
-      <div class="req">
-        <span class="req-tag" style="border-color:var(--orange); color:var(--orange);">Beta</span>
-        <span class="req-tag">macOS 12+</span>
-        <span class="req-tag">Apple Silicon</span>
-        <span class="req-tag">AI Chat API</span>
-        <span class="req-tag">Free</span>
-      </div>
-      <div style="margin-top:16px; font-family:var(--mono); font-size:16px; color:var(--muted);">
-        SHA-256 (.sh):
-        <span id="sha-hash-beta" style="color:var(--orange); word-break:break-all;">{h}</span>
-        <button onclick="copyHash('beta')" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:4px; padding:2px 8px; margin-left:8px; cursor:pointer; font-family:var(--mono); font-size:16px;">⎘ copy</button>
-      </div>
-    </div>
-{recommended_zip_block(b["zip"], accent="var(--orange)", accent_rgb="255,140,26", btn_style="background:var(--orange); color:#000;")}
-{other}
-  </div>"""
+    """Beta download card hidden — primary is Experimental hero."""
+    return ""
 
 
 def _archive_link(fname: str | None, label: str) -> str:
@@ -994,49 +887,23 @@ def _archive_link(fname: str | None, label: str) -> str:
 
 
 def download_previous_section(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
+    exp = v.experimental_release(data)
     return f"""  <div style="margin-top:16px; text-align:center;">
     <p style="color:var(--muted); font-size:14px; font-family:var(--mono); line-height:1.6;">
-      Need an older build? Shell installers for v8.3.9–v8.3.11 are in <strong style="color:var(--text);">Other download options</strong> above.
-      All hosted <strong style="color:var(--text);">DMG</strong> disk images (current + archive) are on
-      <a href="/archives" style="color:var(--cyan);">rNitro Archives</a> — {stable["short"]} Final, {beta["short"]} Beta, and older releases.
+      Older builds are on
+      <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>
+      and <a href="{v.github_releases_url()}" style="color:var(--cyan);">GitHub Releases</a>.
+      Current: <strong style="color:var(--text);">{exp["label"]}</strong>.
     </p>
   </div>"""
 
 
 def download_card_macos_apps(data: dict) -> str:
-    apps = v.macos_apps_release(data)
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    return f"""  <div class="download-card" style="margin-top:16px; border-color:#9b7bff;">
-    <div class="download-meta">
-      <h2>rNitro {apps["label"]}</h2>
-      <p>Both macOS builds in one archive — <code>rNitro-Stable.app</code> ({stable["id"]}) and <code>rNitro-Beta.app</code> ({beta["id"]}). Extract, choose one, drag to Applications.</p>
-      <div class="req">
-        <span class="req-tag" style="border-color:#9b7bff; color:#b8a0ff;">Stable + Beta</span>
-        <span class="req-tag">macOS 12+</span>
-        <span class="req-tag">Apple Silicon</span>
-        <span class="req-tag">No admin password</span>
-      </div>
-    </div>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <button type="button" class="btn btn-primary" style="white-space:nowrap; background:#9b7bff; color:#000;" onclick="requestDownload('{apps["zip"]}')">⬇ Download macOS Apps ZIP</button>
-    </div>
-    <p class="sh-trust-note" style="margin-top:14px; max-width:100%; border-color:rgba(155,123,255,0.35); background:rgba(155,123,255,0.06);"><strong style="color:#b8a0ff;">Tip:</strong> install only one at a time. Right-click → Open on first launch if macOS blocks the app.</p>
-  </div>"""
+    return ""
 
 
 def download_more_section(data: dict) -> str:
-    apps = v.macos_apps_release(data)
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    inner = f"""            <button type="button" class="btn btn-secondary" style="background:#9b7bff; color:#000;" onclick="requestDownload('{apps["zip"]}')">{sized_label("macOS Apps ZIP (Stable + Beta)", apps["zip"])}</button>"""
-    return other_downloads_panel(
-        "dl-more-downloads",
-        inner,
-        note=f"Apps ZIP includes rNitro-Stable.app ({stable['id']}) and rNitro-Beta.app ({beta['id']}). macOS 12+ Apple Silicon.",
-    )
+    return ""
 
 
 def download_card_windows(data: dict) -> str:
@@ -1245,8 +1112,6 @@ def _status_pill(label: str, kind: str) -> str:
 
 
 def how_it_works_section(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
     win = v.windows_release(data)
     linux = v.linux_release(data)
     cli = v.cli_release(data)
@@ -1256,36 +1121,18 @@ def how_it_works_section(data: dict) -> str:
     exp = v.experimental_release(data)
     platform_rows = [
         (
-            f'<strong style="color:var(--green);">macOS</strong> · Stable',
-            stable["id"],
-            _status_pill("Active", "active"),
-            f'<code>{stable["zip"]}</code>',
-            "<code>~/Applications/rNitro.app</code>",
-            "In-app updater on launch",
-            "CPU monitor, benchmark, stress test, System Advisor, App Cleaner; AI chat: OpenAI + OpenRouter only",
-        ),
-        (
-            f'<strong style="color:var(--orange);">macOS</strong> · Beta',
-            beta["id"],
-            _status_pill("Beta", "beta"),
-            f'<code>{beta["zip"]}</code>',
-            "<code>~/Applications/rNitro.app</code>",
-            "In-app updater on launch",
-            "Everything in Stable plus all AI providers, Lab (slim), temp banners, AES-256 key storage",
-        ),
-        (
-            f'<strong style="color:#b8a0ff;">macOS</strong> · Experimental',
+            f'<strong style="color:var(--green);">macOS</strong>',
             exp["id"],
-            _status_pill("Playground", "prerelease"),
+            _status_pill("Current", "active"),
             f'<code>{exp["zip"]}</code>',
             "<code>~/Applications/rNitro.app</code>",
-            "In-app updater (Stable / Beta / Experimental)",
-            "Everything in Beta plus Lab toys (duel, ghost-load, SOC budget, cloak, peer, …). Unstable.",
+            "In-app updater on launch",
+            "Menu bar monitor, Lab tools, all AI providers, New style UI, display modes",
         ),
         (
             f'<strong style="color:#a78bfa;">CLI</strong> · Terminal',
             cli["version"],
-            _status_pill("New", "active"),
+            _status_pill("Active", "active"),
             f'<code>{cli["tar"]}</code>',
             "<code>~/bin/rnitro</code> or <code>/usr/local/bin/rnitro</code>",
             "Manual — re-download tarball or curl one-liner",
@@ -1363,10 +1210,10 @@ def how_it_works_section(data: dict) -> str:
     flow_rows = [
         ("Pick your platform tab", "macOS, Linux, or Windows — the site auto-detects your OS"),
         ("Accept Terms &amp; Conditions", "Agree continues download; Disagree returns home. Optional: remember for this browser session"),
-        ("Download recommended file", "Green / orange / purple cards (Stable · Beta · Experimental) — sizes shown on buttons"),
+        ("Download recommended file", "Green App ZIP card (current macOS build) — size shown on button"),
         ("Install", "Follow the <strong>How to install</strong> steps below for your tab"),
-        ("Updates", "macOS: in-app prompt → download ZIP → replace app (Experimental channel supported). Linux: checks same <code>version.json</code>. Windows: manual."),
-        ("GitHub mirror", f"All current builds also on <a href=\"{gh}\" style=\"color:var(--cyan);\">GitHub Releases</a>"),
+        ("Updates", "macOS: in-app prompt → download ZIP → replace app. Linux: checks same <code>version.json</code>. Windows: manual."),
+        ("GitHub mirror", f"Current build also on <a href=\"{gh}\" style=\"color:var(--cyan);\">GitHub Releases</a>"),
     ]
 
     platform_body = "\n".join(platform_tr(r) for r in platform_rows)
@@ -1376,8 +1223,8 @@ def how_it_works_section(data: dict) -> str:
     )
 
     return f"""  <div class="channel-compare" style="margin-bottom:14px;">
-    <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Platforms &amp; channels at a glance</h2>
-    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">One place to see what each build is, where it installs, and how updates work. New here? <strong style="color:var(--green);">macOS Stable App ZIP</strong> for daily monitoring, <strong style="color:var(--orange);">Beta</strong> for Lab + every AI provider, or <strong style="color:#b8a0ff;">Experimental</strong> for playground toys.</p>
+    <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Platforms at a glance</h2>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">One place to see what each build is, where it installs, and how updates work. New here? Download the <strong style="color:var(--green);">macOS App ZIP</strong> ({exp["label"]}).</p>
     <div class="channel-compare-scroll">
       <table class="channel-compare-table how-it-works-table">
         <thead>
@@ -1431,86 +1278,37 @@ def how_it_works_section(data: dict) -> str:
 
 
 def stable_beta_compare_section(changelog: dict, data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    exp = v.experimental_release(data)
-    meta = changelog.get("compare", {})
-    title = meta.get("title", "Stable vs Beta vs Experimental")
-    subtitle = meta.get(
-        "subtitle",
-        f"Start with Stable ({stable['label']}) App ZIP. "
-        f"{beta['label']} adds Lab + every AI provider. "
-        f"{exp['label']} is the playground — expect breakage. "
-        f"Linux pre-release is on the Linux page; Windows is deprecated but downloads remain.",
-    )
-    rows_html = []
-    for row in meta.get("rows", []):
-        exp_cell = row.get("experimental") or row.get("beta", "")
-        rows_html.append(
-            f"""          <tr>
-            <td>{row.get('feature', '')}</td>
-            <td style="color:var(--green);">{row.get('stable', '')}</td>
-            <td style="color:var(--orange);">{row.get('beta', '')}</td>
-            <td style="color:#b8a0ff;">{exp_cell}</td>
-          </tr>"""
-        )
-    return f"""  <div class="channel-compare">
-    <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">{title}</h2>
-    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">{subtitle}</p>
-    <div class="channel-compare-scroll">
-      <table class="channel-compare-table">
-        <thead>
-          <tr>
-            <th></th>
-            <th style="color:var(--green);">{stable['label']}</th>
-            <th style="color:var(--orange);">{beta['label']}</th>
-            <th style="color:#b8a0ff;">{exp['label']}</th>
-          </tr>
-        </thead>
-        <tbody>
-{chr(10).join(rows_html)}
-        </tbody>
-      </table>
-    </div>
-  </div>"""
+    """Channel comparison table removed — single primary macOS build."""
+    return ""
 
 
 def chat_kb_platform(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
     linux = v.linux_release(data)
     linux_gh = v.github_release_page_url(linux["id"])
     exp = v.experimental_release(data)
     return f"""    {{ label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
-      a: "Scroll to **How everything works** on [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/) for tables covering macOS Stable ({stable['short']}), Beta ({beta['short']}), Experimental ({exp['short']}), Linux ({linux['short']}), and deprecated Windows. Recommended: green Stable App ZIP for daily use, orange Beta for all AI providers, purple Experimental for playground toys. Terms: Agree or Disagree on every download." }},
+      a: "Scroll to **How everything works** on [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/) for macOS ({exp['label']}), Linux ({linux['short']}), and deprecated Windows. Recommended: green App ZIP. Terms: Agree or Disagree on every download." }},
     {{ label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
       a: `Windows is no longer actively supported. The last build (${{RNITRO_VERSIONS.windows.id}}) remains on the Windows page — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` }},
     {{ label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
       a: `Linux pre-release (${{RNITRO_VERSIONS.linux.id}}): switch to the Linux page, download the tarball or install-rNitro-linux.sh, then run bash install-rNitro-linux.sh. Requires Python 3.10+, GTK 4, and libadwaita. Also on GitHub: {linux_gh}` }},
     {{ label: 'How do updates work?', kws: ['update', 'new version', 'upgrade'],
-      a: "macOS: rNitro checks getrnitro.netlify.app on launch. If a newer Final or Beta build exists, you get a choice: Install Final (stable) or Install Beta — then it downloads the ZIP in-app and restarts. Linux v0.1 checks the same version.json for Linux updates." }},"""
+      a: "macOS: rNitro checks for updates on launch and can download the latest ZIP in-app. Linux checks version.json. Windows: manual download." }},"""
 
 
 def chat_whats_new_kb(data: dict, changelog: dict) -> str:
-    """Point chat at current channels + experimental."""
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
+    """Point chat at current primary build."""
     exp = v.experimental_release(data)
     answer = (
-        f"Current macOS builds: Stable {stable['label']} ({stable['id']}), "
-        f"Beta {beta['label']} ({beta['id']}), and Experimental {exp['label']} ({exp['id']}). "
-        f"Use Stable for daily monitoring; Beta for every AI provider; Experimental for playground toys. "
-        f"See the Stable vs Beta vs Experimental table on the download page."
+        f"Current macOS build: {exp['label']} ({exp['id']}). "
+        f"Download the App ZIP from the site or GitHub Releases."
     )
     answer_js = json.dumps(answer, ensure_ascii=False)
     kws = [
         "whats new",
         "what's new",
-        beta["short"],
-        stable["short"],
         exp["short"],
         "experimental",
-        "v1.0.0",
         "changelog",
         "version",
     ]
@@ -1891,34 +1689,20 @@ def readme_release_table(rel: dict) -> str:
 
 
 def readme_downloads(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    return f"""### Stable — {stable["label"]}
+    exp = v.experimental_release(data)
+    return f"""### Current — {exp["label"]}
 
 | Format | File |
 |--------|------|
-{readme_release_table(stable)}
-
-### Beta — {beta["label"]}
-
-| Format | File |
-|--------|------|
-{readme_release_table(beta)}"""
+{readme_release_table(exp)}"""
 
 
 def readme_curl(data: dict) -> str:
-    stable = v.stable_release(data)
-    beta = v.beta_release(data)
-    stable_curl = curl_install_cmd(stable["sh"])
-    beta_curl = curl_install_cmd(beta["sh"])
-    return f"""**Stable ({stable["label"]}):**
+    exp = v.experimental_release(data)
+    exp_curl = curl_install_cmd(exp.get("sh") or "install-rNitro-experimental.sh")
+    return f"""**Current ({exp["label"]}):**
 ```bash
-{stable_curl}
-```
-
-**Beta ({beta["label"]}):**
-```bash
-{beta_curl}
+{exp_curl}
 ```"""
 
 

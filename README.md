@@ -7,11 +7,9 @@ Open source · no account · no telemetry · no subscription.
 
 | Download | HQ | Releases |
 |----------|-----|----------|
-| **[getrnitro.netlify.app](https://getrnitro.netlify.app/)** | **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** | **[GitHub Releases](https://github.com/ilikemacos/rNitro/releases)** |
+| **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** | **[chopstickshq.com](https://chopstickshq.com/)** | **[GitHub Releases](https://github.com/ilikemacos/rNitro/releases)** |
 
-[![Stable](https://img.shields.io/badge/stable-v1.2.9%20Final-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.9-Final)
-[![Beta](https://img.shields.io/badge/beta-v1.2.14-ff8c1a)](https://github.com/ilikemacos/rNitro/releases/tag/v1.2.14)
-[![Experimental](https://img.shields.io/badge/experimental-v1.3.26-9b7bff)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.26-Experimental)
+[![Download](https://img.shields.io/badge/download-v1.3.26%20Experimental-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.26-Experimental)
 [![License](https://img.shields.io/badge/license-see%20repo-6b6b8a)](https://github.com/ilikemacos/rNitro)
 
 ---
@@ -24,26 +22,22 @@ Open source · no account · no telemetry · no subscription.
 
 Also available: **Terminal install (no Xcode)** on the website, or **PKG** / **DMG** / **`.sh`** (compile needs Xcode CLT).
 
-**Latest Experimental ZIP:**  
+**Latest ZIP:**  
 [rNitro-v1.3.26-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.26-Experimental/rNitro-v1.3.26-Experimental.zip)
 
 > **First open on macOS:** builds are ad-hoc signed (not notarized yet). Prefer App ZIP or Terminal install (no Xcode) from [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/).
 
 ---
 
-## Which channel?
+## Current build
 
-| Channel | Version | Best for |
-|---------|---------|----------|
-| **Stable** | v1.2.9 Final | Daily monitoring; AI: OpenAI + OpenRouter |
-| **Beta** | v1.2.14 | Lab tools + every AI provider |
-| **Experimental** | v1.3.26 Exp (rNitro) | Newest UI/features (may change quickly) |
+| | |
+|--|--|
+| **Version** | v1.3.26 Experimental |
+| **Best for** | Menu bar monitoring, Lab tools, AI chat, New style UI |
+| **Chip** | Apple Silicon (Intel installers still listed on the site for older Macs) |
 
-- **Stable** = boring reliability.  
-- **Beta** = power users.  
-- **Experimental** = playground (e.g. **New style** glass monitor UI, display modes).
-
-Full matrix: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)
+Older Final / Beta tags remain on GitHub Releases for history only — the site and README point at this build.
 
 ---
 
@@ -52,7 +46,7 @@ Full matrix: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)
 - **Free** alternative to paid menu bar monitors (not affiliated with iStat)
 - **Local-first** — battery and sensors from macOS APIs (IOPS / IOKit / pmset)
 - **No account, no product telemetry**
-- **Optional AI** (Beta/Exp) with *your* API keys in Keychain
+- **Optional AI** with *your* API keys in Keychain
 - **Open source** install path via shell + GitHub
 
 ---
@@ -62,8 +56,8 @@ Full matrix: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)
 - Menu bar: CPU, temp, battery %, GPU, RAM, network  
 - Battery % aligned with the macOS menu bar; remaining time is a system/estimate-based value  
 - Appearance: fonts (Google Fonts OFL, offline), size, language  
-- **Monitor UI:** Modern · Legacy · **New style** (glass dashboard, Exp)  
-- **Display modes** (Exp + website): System / Light / Dark / OLED / IPS / LCD / Mini LED  
+- **Monitor UI:** Modern · Legacy · **New style** (glass dashboard)  
+- **Display modes:** System / Light / Dark / OLED / IPS / LCD / Mini LED  
 - CLI, limited Linux / Windows companions on the site  
 
 ---
@@ -71,7 +65,7 @@ Full matrix: [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)
 ## Privacy
 
 No accounts. No product telemetry. Optional chat keys stay on your Mac.  
-[Privacy](https://getrnitro.netlify.app/privacy.html) · [Terms](https://getrnitro.netlify.app/terms.html) · [FAQ](https://getrnitro.netlify.app/faq.html)
+[Privacy](https://chopstickshq.com/rnitro/privacy.html) · [Terms](https://chopstickshq.com/rnitro/terms.html) · [FAQ](https://chopstickshq.com/rnitro/faq.html)
 
 ---
 
@@ -90,7 +84,7 @@ Hub: [chopstickshq.com](https://chopstickshq.com/)
 ## Support
 
 - Issues: [github.com/ilikemacos/rNitro/issues](https://github.com/ilikemacos/rNitro/issues)  
-- FAQ: [faq.html](https://getrnitro.netlify.app/faq.html)
+- FAQ: [faq.html](https://chopstickshq.com/rnitro/faq.html)
 
 ---
 
