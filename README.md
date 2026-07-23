@@ -9,7 +9,7 @@ Open source · no account · no telemetry · no subscription.
 |----------|-----|----------|
 | **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** | **[chopstickshq.com](https://chopstickshq.com/)** | **[GitHub Releases](https://github.com/ilikemacos/rNitro/releases)** |
 
-[![Download](https://img.shields.io/badge/download-v1.3.26%20Experimental-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.26-Experimental)
+[![Download](https://img.shields.io/badge/download-v1.3.26-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.26-Experimental)
 [![License](https://img.shields.io/badge/license-see%20repo-6b6b8a)](https://github.com/ilikemacos/rNitro)
 
 ---
@@ -33,11 +33,11 @@ Also available: **Terminal install (no Xcode)** on the website, or **PKG** / **D
 
 | | |
 |--|--|
-| **Version** | v1.3.26 Experimental |
+| **Version** | **v1.3.26** (mainline; release tag `v1.3.26-Experimental`) |
 | **Best for** | Menu bar monitoring, Lab tools, AI chat, New style UI |
-| **Chip** | Apple Silicon (Intel installers still listed on the site for older Macs) |
+| **Chip** | Apple Silicon (legacy Intel installers on the site) |
 
-Older Final / Beta tags remain on GitHub Releases for history only — the site and README point at this build.
+Older Final / Beta tags remain on GitHub Releases for history only.
 
 ---
 

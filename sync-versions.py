@@ -274,48 +274,28 @@ def mac_arch_subtabs() -> str:
 
 
 def hero_intel_panel(data: dict) -> str:
-    """Intel Mac downloads — source installers (compile on device)."""
+    """Intel Mac — single legacy source installer (no channel split)."""
     ib = v.intel_beta_release(data)
-    is_ = v.intel_stable_release(data)
     beta_curl = curl_install_cmd(ib.get("sh") or "install-rNitro-intel.sh")
-    stable_curl = curl_install_cmd(is_.get("sh") or "rNitro-v1.1.0-Intel.sh")
     return f"""    <div id="mac-intel-panel" style="display:none; width:100%; flex-direction:column; gap:16px;">
       <div role="status" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,140,26,0.55); background:rgba(255,140,26,0.12); text-align:center; line-height:1.5;">
-        <strong style="color:var(--orange);">Intel Mac will no longer be getting updates after v1.2.5-Beta.</strong>
-        <div style="font-size:13px; color:var(--muted); margin-top:4px;">Current Intel builds remain downloadable; no new features after that release.</div>
+        <strong style="color:var(--orange);">Legacy Intel</strong>
+        <div style="font-size:13px; color:var(--muted); margin-top:4px;">Last Intel updates through v1.2.5-Beta. Prefer Apple Silicon for the current build.</div>
       </div>
       <div style="width:100%; background:var(--card); border:1px solid var(--cyan); border-radius:12px; padding:20px; text-align:center;">
-        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">{is_["id"]}</div>
-        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel Stable — compiles from source on your Intel Mac. Daily monitoring; AI: OpenAI + OpenRouter.</div>
+        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">{ib["id"]}</div>
+        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel installer — compiles from source on your Intel Mac.</div>
         <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4);">
-          <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Recommended · Intel</div>
+          <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Legacy · Intel</div>
           <div class="dl-recommended-title" style="color:var(--cyan);">Terminal one-liner</div>
           <p class="dl-recommended-steps">Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>. Compiles ~30–60s on Intel.</p>
           <div style="background:var(--card2); border:1px solid rgba(0,217,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--cyan); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
-            {stable_curl}
-          </div>
-          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="copyCurlCmd('intel_stable')">⎘ Copy curl one-liner</button>
-        </div>
-        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-          <button type="button" class="btn btn-sh" style="border-color:var(--cyan); color:var(--cyan);" onclick="requestDownload('{is_["sh"]}')">⬇ Download .sh installer</button>
-        </div>
-      </div>
-      <div style="width:100%; background:var(--card); border:1px solid var(--orange); border-radius:12px; padding:20px; text-align:center;">
-        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--orange); margin-bottom:4px;">{ib["id"]}</div>
-        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel Beta — Lab features + all AI providers. Experimental on Intel.</div>
-        <p style="font-size:14px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin:0 0 12px; line-height:1.5; text-align:left;">
-          <strong>Beta notice:</strong> Experimental — some sensors differ on Intel. Agree to Terms &amp; Conditions before download.
-        </p>
-        <div class="dl-recommended" style="border-color:rgba(255,140,26,0.4);">
-          <div class="dl-recommended-badge" style="color:var(--orange); border-color:rgba(255,140,26,0.45); background:rgba(255,140,26,0.1);">Recommended · Intel Beta</div>
-          <div class="dl-recommended-title" style="color:var(--orange);">Terminal one-liner</div>
-          <div style="background:var(--card2); border:1px solid rgba(255,140,26,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--orange); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
             {beta_curl}
           </div>
-          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--orange); color:#000;" onclick="copyCurlCmd('intel_beta')">⎘ Copy curl one-liner</button>
+          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="copyCurlCmd('intel_beta')">⎘ Copy curl one-liner</button>
         </div>
         <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-          <button type="button" class="btn btn-sh btn-sh-orange" onclick="requestDownload('{ib["sh"]}')">⬇ Download .sh installer</button>
+          <button type="button" class="btn btn-sh" style="border-color:var(--cyan); color:var(--cyan);" onclick="requestDownload('{ib["sh"]}')">⬇ Download .sh installer</button>
           <button type="button" class="btn btn-secondary" onclick="requestDownload('install-rNitro-intel.sh')">⬇ install-rNitro-intel.sh (source)</button>
         </div>
       </div>
@@ -570,10 +550,15 @@ def hero_head(data: dict) -> str:
 
 def hero_copy(data: dict) -> str:
     exp = v.experimental_release(data)
+    zip_name = exp.get("zip") or ""
     return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon · macOS 12+</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. <strong>{exp["label"]}</strong> — the current build. Free · no account · no telemetry.</p>"""
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. Current: <strong>{exp["label"]}</strong>. Free · no account · no telemetry.</p>
+  <p style="margin:14px 0 0; text-align:center;">
+    <button type="button" class="btn btn-primary btn-recommended" style="font-size:16px; padding:12px 28px;" onclick="requestDownload('{zip_name}')">⬇ Download for Mac · App ZIP</button>
+  </p>
+  <p style="margin:8px 0 0; font-size:13px; color:var(--muted); text-align:center;">Terms apply once per session · Apple Silicon</p>"""
 
 
 def trust_strip() -> str:
