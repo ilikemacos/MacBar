@@ -9,7 +9,7 @@ Open source · no account · no telemetry · no subscription.
 |----------|-----|----------|
 | **[chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/)** | **[chopstickshq.com](https://chopstickshq.com/)** | **[GitHub Releases](https://github.com/ilikemacos/rNitro/releases)** |
 
-[![Download](https://img.shields.io/badge/download-v1.3.26-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.26-Experimental)
+[![Download](https://img.shields.io/badge/download-v1.3.27-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.27-Experimental)
 [![License](https://img.shields.io/badge/license-see%20repo-6b6b8a)](https://github.com/ilikemacos/rNitro)
 
 ---
@@ -23,7 +23,7 @@ Open source · no account · no telemetry · no subscription.
 Also available: **Terminal install (no Xcode)** on the website, or **PKG** / **DMG** / **`.sh`** (compile needs Xcode CLT).
 
 **Latest ZIP:**  
-[rNitro-v1.3.26-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.26-Experimental/rNitro-v1.3.26-Experimental.zip)
+[rNitro-v1.3.27-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.27-Experimental/rNitro-v1.3.27-Experimental.zip)
 
 > **First open on macOS:** builds are ad-hoc signed (not notarized yet). Prefer App ZIP or Terminal install (no Xcode) from [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/).
 
@@ -33,7 +33,7 @@ Also available: **Terminal install (no Xcode)** on the website, or **PKG** / **D
 
 | | |
 |--|--|
-| **Version** | **v1.3.26** (mainline; release tag `v1.3.26-Experimental`) |
+| **Version** | **v1.3.27** (mainline; release tag `v1.3.27-Experimental`) |
 | **Best for** | Menu bar monitoring, Lab tools, AI chat, New style UI |
 | **Chip** | Apple Silicon (legacy Intel installers on the site) |
 

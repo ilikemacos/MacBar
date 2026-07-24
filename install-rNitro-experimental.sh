@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="1e016273f5c19918ea76fe12d6972f229441e4664fdbfc79eaba07f1d29eab28"
+EXPECTED_HASH="77e4628df22a68d32670ca22c45c937c50ef90a18f3d7382f0f4f099fe715e34"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -377,7 +377,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.26-Experimental"
+let CURRENT_VERSION = "v1.3.27-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -2340,7 +2340,10 @@ struct RingBuffer<Element> {
 }
 
 enum IdleProfile: String, CaseIterable, Identifiable {
-    case balanced, aggressive
+    /// Default: slower menubar sampling, low CPU for rNitro itself.
+    case aggressive
+    /// Snappier gauges when you want live-feel (uses more CPU).
+    case balanced
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -2560,6 +2563,10 @@ class CPUMonitor: ObservableObject {
     private var prevNumCPUInfo: mach_msg_type_number_t = 0
     private var cachedMemsizeGB: Double = 0
     private var lastDiskSampleTime = Date.distantPast
+    private var lastTempSampleTime = Date.distantPast
+    private var lastPowerSampleTime = Date.distantPast
+    private var cachedSensorReadings: [Double] = []
+    private var cachedSocSample: SocPowerSample?
 
     private struct MemorySample {
         let totalGB, usedGB, freeGB, usedPct: Double
@@ -2708,10 +2715,9 @@ class CPUMonitor: ObservableObject {
         case .slotAware, .full:
             cpu = updateCPUUsage()
         }
-        // Always sample memory (cheap host_statistics64). Previously this was gated
-        // on popoverOpen || menubar RAM slot, so Monitor could show 0% forever.
         var mem: MemorySample? = nil
-        if now.timeIntervalSince(lastMemorySampleTime) >= MonitorActivity.memoryInterval {
+        if MonitorActivity.samplesMemory,
+           now.timeIntervalSince(lastMemorySampleTime) >= MonitorActivity.memoryInterval {
             mem = sampleMemory()
             lastMemorySampleTime = now
         }
@@ -2915,27 +2921,47 @@ class CPUMonitor: ObservableObject {
     }
 
     private func sampleDerived() -> DerivedSample {
-        var sensors: [Double] = []
-        if MonitorActivity.includeSmcSample {
+        let now = Date()
+        var sensors = cachedSensorReadings
+        if MonitorActivity.includeSmcSample,
+           now.timeIntervalSince(lastTempSampleTime) >= MonitorActivity.tempSampleInterval {
             // Apple Silicon: MTR via IOHID is the reliable die path (SMC often empty/locked).
-            // Prefer HID die cluster; merge SMC only when it sits in the same domain.
+            var next: [Double] = []
             let hid = IOHIDTempReader.shared.dieLikelyReadings()
             let smcDie = SMCReader.shared.smcReadings(preferDie: true)
             if !hid.isEmpty {
-                sensors.append(contentsOf: hid)
+                next.append(contentsOf: hid)
                 if let hidPeak = hid.max(), !smcDie.isEmpty {
                     let agree = smcDie.filter { abs($0 - hidPeak) <= 20 }
-                    sensors.append(contentsOf: agree)
+                    next.append(contentsOf: agree)
                 }
             } else {
-                sensors.append(contentsOf: smcDie)
+                next.append(contentsOf: smcDie)
             }
+            sensors = next
+            cachedSensorReadings = next
+            lastTempSampleTime = now
+        } else if !MonitorActivity.includeSmcSample {
+            sensors = []
+            cachedSensorReadings = []
         }
+
+        var soc = cachedSocSample
+        if MonitorActivity.includePowerSample,
+           now.timeIntervalSince(lastPowerSampleTime) >= MonitorActivity.powerSampleInterval {
+            soc = IOReportPowerReader.shared.sample()
+            cachedSocSample = soc
+            lastPowerSampleTime = now
+        } else if !MonitorActivity.includePowerSample {
+            soc = nil
+            cachedSocSample = nil
+        }
+
         return DerivedSample(
             lpm: Self.readLowPowerModeEnabled(),
             state: ProcessInfo.processInfo.thermalState,
             sensorReadings: sensors,
-            socSample: MonitorActivity.includePowerSample ? IOReportPowerReader.shared.sample() : nil
+            socSample: soc
         )
     }
 
@@ -4764,7 +4790,7 @@ final class ProcessMonitor: ObservableObject {
     private var lastTicks: [Int32: UInt64] = [:]
     private var lastSampleTime = Date.distantPast
     private let topN = 5
-    private let interval: TimeInterval = 3.0
+    private let interval: TimeInterval = 5.0
 
     func start() {
         stop()
@@ -5539,7 +5565,8 @@ enum MonitorActivity {
     private(set) static var popoverOpen = false
 
     static var idleProfile: IdleProfile {
-        IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .balanced
+        // Default: Efficient (aggressive) — keep rNitro itself out of top CPU processes.
+        IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .aggressive
     }
 
     static var enabledSlots: [MenuBarSlot] { MenuBarConfig.enabledSlots }
@@ -5552,62 +5579,74 @@ enum MonitorActivity {
     }
 
     static var cpuInterval: TimeInterval {
-        if DeveloperModeStore.shared.forceHighSampleRate { return 0.75 }
-        if popoverOpen || CompileFarmDetector.shared.shouldForceSampling { return 1.0 }
-        if PolitePeer.shared.shouldEaseSampling { return idleProfile == .aggressive ? 8.0 : 5.0 }
-        return idleProfile == .aggressive ? 4.0 : 2.0
+        if DeveloperModeStore.shared.forceHighSampleRate { return 1.0 }
+        if popoverOpen || CompileFarmDetector.shared.shouldForceSampling { return 2.0 }
+        if PolitePeer.shared.shouldEaseSampling { return idleProfile == .aggressive ? 12.0 : 8.0 }
+        // Menubar idle: 5s efficient / 3s balanced (was 2–4s)
+        return idleProfile == .aggressive ? 5.0 : 3.0
     }
 
-    static var gpuInterval: TimeInterval { 3.0 }
-    static var networkInterval: TimeInterval { popoverOpen ? 1.5 : 3.0 }
+    static var gpuInterval: TimeInterval { popoverOpen ? 4.0 : 8.0 }
+    static var networkInterval: TimeInterval { popoverOpen ? 3.0 : 6.0 }
     static var batteryInterval: TimeInterval {
-        // Adaptive: faster while discharging low / under load; slower on AC or idle.
+        // Adaptive but never sub-second on menubar — battery IOPS is expensive.
         let bat = BatteryMonitor.shared
         let load = CPUMonitor.shared.totalUsage
-        if popoverOpen { return 1.5 }
+        if popoverOpen { return 3.0 }
         if bat.isPresent, !bat.isOnAC, !bat.isCharging {
-            if bat.levelPercent < 25 || load >= 55 { return 1.5 }
-            if bat.levelPercent < 40 || load >= 35 { return 2.5 }
-            return idleProfile == .aggressive ? 6.0 : 3.5
+            if bat.levelPercent < 20 || load >= 60 { return 4.0 }
+            if bat.levelPercent < 40 || load >= 40 { return 6.0 }
+            return idleProfile == .aggressive ? 12.0 : 8.0
         }
-        if bat.isPresent, bat.isCharging { return 2.5 }
-        // On AC / desktop — keep light.
-        return idleProfile == .aggressive ? 12.0 : 8.0
+        if bat.isPresent, bat.isCharging { return 6.0 }
+        // On AC / desktop — very light.
+        return idleProfile == .aggressive ? 20.0 : 12.0
     }
     static var memoryInterval: TimeInterval {
-        if popoverOpen { return 2.0 }
-        if PolitePeer.shared.shouldEaseSampling { return 12.0 }
-        return idleProfile == .aggressive ? 10.0 : 5.0
+        if popoverOpen { return 3.0 }
+        if PolitePeer.shared.shouldEaseSampling { return 20.0 }
+        return idleProfile == .aggressive ? 12.0 : 8.0
     }
     static var diskInterval: TimeInterval {
-        if popoverOpen { return 5.0 }
-        if PolitePeer.shared.shouldEaseSampling { return 12.0 }
-        return 8.0
+        if popoverOpen { return 8.0 }
+        if PolitePeer.shared.shouldEaseSampling { return 30.0 }
+        return 20.0
     }
     static var sensorsInterval: TimeInterval {
+        if popoverOpen { return 5.0 }
+        if PolitePeer.shared.shouldEaseSampling { return 20.0 }
+        return 15.0
+    }
+    /// How often to hit IOReport for package power (heavy). Independent of CPU tick.
+    static var powerSampleInterval: TimeInterval {
         if popoverOpen { return 3.0 }
-        if PolitePeer.shared.shouldEaseSampling { return 10.0 }
-        return 8.0
+        return idleProfile == .aggressive ? 12.0 : 8.0
+    }
+    /// How often to re-read HID/SMC die temps (also non-trivial).
+    static var tempSampleInterval: TimeInterval {
+        if popoverOpen { return 2.0 }
+        return idleProfile == .aggressive ? 8.0 : 5.0
     }
     static var includePowerSample: Bool {
         popoverOpen || enabledSlots.contains(.power)
     }
-    /// Sensor cache: short when UI open; still snappy when only menubar shows temp.
-    static var smcCacheTTL: TimeInterval { popoverOpen ? 0.40 : 1.0 }
+    /// Sensor cache: longer TTL when menubar-only.
+    static var smcCacheTTL: TimeInterval { popoverOpen ? 1.2 : 4.0 }
     static var includeSmcSample: Bool {
-        // Always sample temps lightly when power slot is on (package heat correlates).
         popoverOpen
             || enabledSlots.contains(.temp)
             || enabledSlots.contains(.weather)
-            || enabledSlots.contains(.power)
             || CompileFarmDetector.shared.shouldForceSampling
             || DeveloperModeStore.shared.showRawSensors
+        // Note: power slot alone no longer forces SMC/HID — uses load estimate or throttled IOReport.
     }
-    /// Always sample RAM — Monitor UI needs it even when menubar has no RAM slot.
-    static var samplesMemory: Bool { true }
+    /// RAM sampling only when needed (menubar RAM slot or UI open).
+    static var samplesMemory: Bool {
+        popoverOpen || enabledSlots.contains(.ram)
+    }
     static var includePerCoreSampling: Bool { popoverOpen }
     static var recordsHistory: Bool { popoverOpen }
-    static var historyCapacity: Int { popoverOpen ? 80 : 0 }
+    static var historyCapacity: Int { popoverOpen ? 60 : 0 }
 
     static var tracksBatteryHistory: Bool {
         popoverOpen || UserDefaults.standard.bool(forKey: "rnitro.sectionExpanded.battery")
@@ -8207,7 +8246,7 @@ struct SettingsGeneralSection: View {
                     .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
                     .padding(.top, 6)
                 Picker(display.tr("general.idleProfile"), selection: Binding(
-                    get: { IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .balanced },
+                    get: { IdleProfile(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.idleProfileKey) ?? "") ?? .aggressive },
                     set: { UserDefaults.standard.set($0.rawValue, forKey: MonitorPreferences.idleProfileKey); MonitorActivity.applyIdleProfileChange() }
                 )) {
                     ForEach(IdleProfile.allCases) { p in
@@ -10245,10 +10284,10 @@ final class DisplayPreferencesStore: ObservableObject {
         "general.compileFarm.hint": "Detect swiftc/clang/xcodebuild, boost sampling while building, then cool down.",
         "general.developerMode": "Developer Mode",
         "general.developerMode.hint": "Unlocks the Developer settings tab and process tools.",
-        "general.idleAggressive": "Aggressive (lowest RAM)",
-        "general.idleBalanced": "Balanced",
-        "general.idleEfficiency": "Idle efficiency",
-        "general.idleHint": "Balanced keeps the menu bar snappy. Aggressive uses slower polls and skips history buffers until the popover opens.",
+        "general.idleAggressive": "Efficient (default · low CPU)",
+        "general.idleBalanced": "Snappy (higher CPU)",
+        "general.idleEfficiency": "Sampling efficiency",
+        "general.idleHint": "Efficient (default) samples the menubar every few seconds so rNitro stays out of Activity Monitor. Snappy updates faster when the UI is open. Turn off the Power menubar slot if you still see high CPU.",
         "general.idleProfile": "Idle profile",
         "general.installLocation": "Install location",
         "general.launchAtLogin": "Launch at Login",
@@ -10263,7 +10302,7 @@ final class DisplayPreferencesStore: ObservableObject {
         "menubar.preset.laptop": "Laptop",
         "menubar.preset.minimal": "Minimal",
         "menubar.presets": "Presets",
-        "menubar.presets.hint": "Laptop = CPU · Temp · Battery · Power. Desktop = CPU · Temp · RAM · Power · Network. Minimal = CPU only. Active preset is highlighted.",
+        "menubar.presets.hint": "Laptop = CPU · Temp · Battery. Desktop = CPU · Temp · RAM · Network. Minimal = CPU only. Power slot is optional (uses more CPU).",
         "menubar.presets.restore": "Restore previous slots",
         "lab.alibi": "Process alibi",
         "lab.alibi.copy": "Copy alibi",
@@ -11885,8 +11924,8 @@ enum MenuBarPreset: String, CaseIterable, Identifiable {
 
     var slots: [MenuBarSlot] {
         switch self {
-        case .laptop: return [.cpu, .temp, .battery, .power]
-        case .desktop: return [.cpu, .temp, .ram, .power, .network]
+        case .laptop: return [.cpu, .temp, .battery]
+        case .desktop: return [.cpu, .temp, .ram, .network]
         case .minimal: return [.cpu]
         }
     }
@@ -11924,7 +11963,7 @@ enum FathomLink {
 }
 
 enum MenuBarConfig {
-    static let defaultSlots: [MenuBarSlot] = [.cpu, .temp, .battery, .power]
+    static let defaultSlots: [MenuBarSlot] = [.cpu, .temp, .battery]
 
     static var layout: MenuBarLayout {
         MenuBarLayout(rawValue: UserDefaults.standard.string(forKey: MonitorPreferences.menuBarLayoutKey) ?? "") ?? .inline
@@ -16043,7 +16082,7 @@ final class LabStatusWriter: ObservableObject {
     func start() {
         guard timer == nil else { return }
         LabStatusFile.write()
-        let t = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in LabStatusFile.write() }
+        let t = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in LabStatusFile.write() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
     }
@@ -17996,7 +18035,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func rebuildMenubarSubscriptions() {
         subscriptions.removeAll()
         menuBarRefreshTrigger
-            .debounce(for: .milliseconds(80), scheduler: RunLoop.main)
+            .debounce(for: .milliseconds(220), scheduler: RunLoop.main)
             .sink { [weak self] in self?.updateStatusTitle() }
             .store(in: &subscriptions)
         let scheduleRefresh: () -> Void = { [weak self] in self?.menuBarRefreshTrigger.send() }
