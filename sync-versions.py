@@ -326,7 +326,7 @@ def hero_experimental_card(data: dict) -> str:
     )
     return f"""    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
       <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">{e["id"]}</div>
-      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">rNitro for macOS — menu bar monitor, Lab tools, AI chat, New style UI, and more. Apple Silicon.</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">rNitro for macOS — menu bar monitor, Lab tools, AI chat, New style UI. Requires <strong style="color:var(--green);">macOS 14.0+</strong> (Sonoma / Sequoia / later) · universal when available.</div>
 {recommended_zip_block(e.get("zip") or "", accent="var(--green)", accent_rgb="0,255,136", which="experimental")}
 {hero_curl_recommended_block(
         "experimental",
@@ -335,6 +335,32 @@ def hero_experimental_card(data: dict) -> str:
         accent_rgb="0,255,136",
     )}
 {other}
+    </div>
+    <div style="width:100%; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:left;">
+      <div style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--muted); margin-bottom:8px;">Older macOS — downloads &amp; limits</div>
+      <table style="width:100%; border-collapse:collapse; font-size:14px; line-height:1.55;">
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--green); font-weight:600; white-space:nowrap;">macOS 14+</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">Supported.</strong> Use the current App ZIP above.</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--orange); font-weight:600; white-space:nowrap;">macOS 11–13</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">No app build.</strong> Current rNitro uses SwiftUI APIs that need macOS 14+. Big Sur / Monterey / Ventura are not supported. See the info pack.</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--orange); font-weight:600; white-space:nowrap;">Mac OS X 10.x</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">Not supported.</strong> No binary — too old for modern SwiftUI.</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--orange); font-weight:600; white-space:nowrap;">Mac OS 8 / 9</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">Not possible.</strong> Classic Mac OS is a different platform. No rNitro app exists.</td>
+        </tr>
+      </table>
+      <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-Older-MacOS-Support-Info.zip')">⬇ Older macOS info pack (ZIP)</button>
+        <a class="btn btn-secondary" href="{GITHUB_URL}" style="display:inline-flex; align-items:center; text-decoration:none;">GitHub source</a>
+      </div>
+      <p style="margin:10px 0 0; font-size:12px; color:var(--muted);">The info pack is documentation only — not an installer for Mac OS 8, OS X, or macOS 11–13.</p>
     </div>"""
 
 
@@ -448,7 +474,7 @@ def hero_head(data: dict) -> str:
         "battery percent menu bar, mac thermal monitor, free istat alternative, "
         "stats app alternative mac, btop menu bar, activity monitor menu bar, "
         "open source menu bar app, no telemetry mac app, no account system monitor, "
-        "offline sensors mac, arm64 mac monitor, intel mac monitor, macos 12 monitor"
+        "offline sensors mac, arm64 mac monitor, intel mac monitor, macos 11 monitor, big sur menu bar monitor"
     )
     og_image = f"{SITE_URL}/screenshots/hero-monitor.png"
     public = PUBLIC_SITE_URL.rstrip("/") + "/"
@@ -464,7 +490,7 @@ def hero_head(data: dict) -> str:
                 "Free alternative to paid menubar monitors. Optional CLI and Linux builds. "
                 "No account, no product telemetry."
             ),
-            "operatingSystem": "macOS 12+, Linux, Windows",
+            "operatingSystem": "macOS 14+, Linux, Windows",
             "applicationCategory": "UtilitiesApplication",
             "applicationSubCategory": "System Monitor",
             "softwareVersion": exp["id"],
@@ -551,10 +577,10 @@ def hero_head(data: dict) -> str:
 def hero_copy(data: dict) -> str:
     exp = v.experimental_release(data)
     zip_name = exp.get("zip") or ""
-    return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon · macOS 12+</p>
+    return f"""  <p class="hero-eyebrow">Menu bar · Apple Silicon &amp; Intel · macOS 14+</p>
   <h1 class="hero-title"><span>rNitro</span></h1>
   <p class="hero-credit">Made by <strong>chopsticks</strong></p>
-  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. Current: <strong>{exp["label"]}</strong>. Free · no account · no telemetry.</p>
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. Current: <strong>{exp["label"]}</strong> · requires <strong>macOS 14+</strong> (Sonoma or later). Free · no account · no telemetry.</p>
   <p style="margin:14px 0 0; text-align:center;">
     <button type="button" class="btn btn-primary btn-recommended" style="font-size:16px; padding:12px 28px;" onclick="requestDownload('{zip_name}')">⬇ Download for Mac · App ZIP</button>
   </p>
@@ -1606,7 +1632,7 @@ def screenshots_section(data: dict) -> str:
     return f"""  <div class="shots">
     <p class="shots-kicker">macOS · Apple Silicon · Menu bar</p>
     <h2 class="shots-title">See rNitro on your Mac</h2>
-    <p class="shots-sub">Menu bar monitor with Advisor, Chat, Chat Config, App cleaner, and Settings — built for macOS 12+ on Apple Silicon.</p>
+    <p class="shots-sub">Menu bar monitor with Advisor, Chat, Chat Config, App cleaner, and Settings — built for macOS 14+ (Sonoma and later).</p>
     <figure class="shot-hero">
       <img src="screenshots/hero-monitor.png" alt="rNitro menu bar monitor showing CPU, temperature, memory, and battery" width="1200" height="800">
       <figcaption>Menu bar + Monitor — live CPU, temps, memory, battery, and more</figcaption>
