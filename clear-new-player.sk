@@ -1,0 +1,13 @@
+# clear-new-player.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4) — vanilla Skript only, no addons.
+#
+# Guarantees a brand-new player starts with nothing: empties their main
+# inventory, armor slots, and ender chest on their very first join.
+# (Bukkit's inventory clear doesn't touch armor slots on its own, so
+# that's cleared separately.)
+
+on first join:
+	clear player's inventory
+	clear player's armor slots
+	clear player's ender chest
