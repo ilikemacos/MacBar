@@ -1,0 +1,61 @@
+# hologram.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4) — vanilla Skript only, no addons.
+#
+# Floating-text holograms built from invisible, gravity-less armor stands.
+# Only players with the "skript.hologram" permission (ops by default) can
+# use the command.
+#
+# Usage:
+#   /hologram <text>          - create a hologram at your location
+#                                (use "|" to split into multiple lines)
+#   /hologram remove <id>     - remove a hologram by its id
+#   /hologram list            - list the ids of all active holograms
+
+command /hologram <text>:
+	description: Create or remove floating text holograms
+	usage: &c/hologram <text> &7(use | for multiple lines)&n&c/hologram remove <id>&n&c/hologram list
+	permission: skript.hologram
+	permission message: &cYou don't have permission to use holograms.
+	trigger:
+		set {_words::*} to arg-1 split at " "
+
+		if {_words::1} is "list":
+			if {holograms::*} is not set:
+				send "&cThere are no active holograms." to player
+				stop trigger
+			send "&6Active hologram ids: &e%indices of {holograms::*}%" to player
+			stop trigger
+
+		if {_words::1} is "remove":
+			if {_words::2} is not set:
+				send "&cUsage: /hologram remove <id>" to player
+				stop trigger
+			set {_id} to {_words::2}
+			if {holograms::%{_id}%::*} is not set:
+				send "&cNo hologram found with id &e%{_id}%&c." to player
+				stop trigger
+			loop {holograms::%{_id}%::*}:
+				delete loop-value
+			delete {holograms::%{_id}%::*}
+			send "&aHologram &e%{_id}% &awas removed." to player
+			stop trigger
+
+		add 1 to {hologram-next-id}
+		set {_id} to {hologram-next-id}
+		set {_loc} to location of player
+		add 2 to the altitude of {_loc}
+		set {_lines::*} to arg-1 split at "|"
+
+		loop {_lines::*}:
+			spawn an armor stand at {_loc}
+			set {_entity} to last spawned entity
+			set the name of {_entity} to colored loop-value
+			show the custom name of {_entity}
+			make {_entity} invisible
+			set gravity of {_entity} to false
+			add {_entity} to {holograms::%{_id}%::*}
+			subtract 0.25 from the altitude of {_loc}
+
+		send "&aHologram &e%{_id}% &acreated with &e%size of {_lines::*}%&a line(s)." to player
+		send "&7Remove it later with &f/hologram remove %{_id}%" to player
