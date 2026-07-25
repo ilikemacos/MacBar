@@ -1,0 +1,27 @@
+# welcome-reward.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4) — vanilla Skript only, no addons.
+#
+# When a player joins the server for the very first time, a 2-minute
+# "welcome window" opens and everyone is invited to greet them in chat.
+# Anyone (other than the new player) who types a message containing
+# "welcome" during that window receives an enchanted golden apple.
+# Each player can only be rewarded once per welcome window.
+
+on first join:
+	set {new-player} to player
+	set {welcome-window} to true
+	delete {welcome-rewarded::*}
+	broadcast "&a&l%player% &ajoined for the first time! Say &ewelcome&a in chat to greet them (and earn a reward)!"
+	wait 2 minutes
+	set {welcome-window} to false
+	delete {new-player}
+
+on chat:
+	if {welcome-window} is true:
+		if message contains "welcome":
+			if player is not {new-player}:
+				if player is not in {welcome-rewarded::*}:
+					add player to {welcome-rewarded::*}
+					give player 1 of enchanted golden apple
+					send "&aThanks for welcoming &e%{new-player}%&a! Here's an enchanted golden apple." to player
