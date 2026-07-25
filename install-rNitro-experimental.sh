@@ -214,7 +214,7 @@ fi
 # break that circularity, the EXPECTED_HASH line itself is masked out before
 # hashing — the published hash on the site is generated the same way, so it
 # stays stable regardless of what value is plugged in here.
-EXPECTED_HASH="77e4628df22a68d32670ca22c45c937c50ef90a18f3d7382f0f4f099fe715e34"
+EXPECTED_HASH="ef6d977bc988e04a3316c5fd4ec2befb636cb287d624b806ab5fa6fb7bb997fa"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -377,7 +377,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
 // ── Update check ────────────────────────────────────────────────────────────
 // This build's version (kept in sync with CFBundleShortVersionString below).
 // Compared against version.json (CDN + HQ mirror) on every launch.
-let CURRENT_VERSION = "v1.3.27-Experimental"
+let CURRENT_VERSION = "v1.3.28-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 // beta = core power-user Lab; experimental = beta + toys (duel, ghost, budget, …)
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -18125,18 +18125,39 @@ enum AppLauncher {
 SWIFTEOF
 
 # ── Compile directly with swiftc (no SPM) ────────────────────────────────────
-echo "🔨 Compiling (this takes ~30 seconds)..."
-swiftc "$WORK_DIR/main.swift" \
-    -o "$WORK_DIR/rNitro" \
-    -framework SwiftUI \
-    -framework Cocoa \
-    -framework IOKit \
-    -framework Security \
-    -framework CryptoKit \
-    -framework Network \
-    -lIOReport \
-    -parse-as-library \
-    -O
+# Min OS: macOS 14.0 (Sonoma). Explicit -target is required — without it, Xcode on
+# newer hosts embeds the host OS as minos (e.g. 26.0), which blocks every older Mac.
+# macOS 11–13 / classic Mac OS X / Mac OS 8 cannot run this codebase without a major rewrite.
+echo "🔨 Compiling (this takes ~30–90 seconds)..."
+HOST_ARCH="$(uname -m)"
+SWIFT_FLAGS=(
+  -framework SwiftUI
+  -framework Cocoa
+  -framework IOKit
+  -framework Security
+  -framework CryptoKit
+  -framework Network
+  -lIOReport
+  -parse-as-library
+  -O
+)
+# Prefer universal (Apple Silicon + Intel) for macOS 14+.
+compile_one() {
+  local target="$1" out="$2"
+  swiftc "$WORK_DIR/main.swift" -o "$out" -target "$target" "${SWIFT_FLAGS[@]}"
+}
+if compile_one "arm64-apple-macos14.0" "$WORK_DIR/rNitro-arm64" \
+  && compile_one "x86_64-apple-macos14.0" "$WORK_DIR/rNitro-x86_64" \
+  && lipo -create -output "$WORK_DIR/rNitro" "$WORK_DIR/rNitro-arm64" "$WORK_DIR/rNitro-x86_64"; then
+  echo "   universal binary (arm64 + x86_64), min macOS 14.0"
+  rm -f "$WORK_DIR/rNitro-arm64" "$WORK_DIR/rNitro-x86_64"
+elif [[ "$HOST_ARCH" == "arm64" ]]; then
+  echo "   ⚠ universal build failed — arm64-only, min macOS 14.0"
+  compile_one "arm64-apple-macos14.0" "$WORK_DIR/rNitro"
+else
+  echo "   ⚠ universal build failed — x86_64-only, min macOS 14.0"
+  compile_one "x86_64-apple-macos14.0" "$WORK_DIR/rNitro"
+fi
 
 strip -x "$WORK_DIR/rNitro" 2>/dev/null || true
 
@@ -18183,13 +18204,13 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.26-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.26-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.28-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.28-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHighResolutionCapable</key><true/>
-    <key>LSMinimumSystemVersion</key><string>12.0</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>rNitro uses the local network only for optional Stress Duel between Macs on your LAN. No data leaves your network.</string>
     <key>NSBonjourServices</key>
