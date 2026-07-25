@@ -36,7 +36,7 @@ command /hologram <text>:
 				send "&cNo hologram found with id &e%{_id}%&c." to player
 				stop trigger
 			loop {holograms::%{_id}%::*}:
-				delete loop-value
+				kill loop-value
 			delete {holograms::%{_id}%::*}
 			send "&aHologram &e%{_id}% &awas removed." to player
 			stop trigger
@@ -44,7 +44,7 @@ command /hologram <text>:
 		add 1 to {hologram-next-id}
 		set {_id} to {hologram-next-id}
 		set {_loc} to location of player
-		add 2 to the altitude of {_loc}
+		set {_loc} to location((x-coordinate of {_loc}), (y-coordinate of {_loc} + 2), (z-coordinate of {_loc}), (world of {_loc}))
 		set {_lines::*} to arg-1 split at "|"
 
 		loop {_lines::*}:
@@ -55,7 +55,7 @@ command /hologram <text>:
 			make {_entity} invisible
 			set gravity of {_entity} to false
 			add {_entity} to {holograms::%{_id}%::*}
-			subtract 0.25 from the altitude of {_loc}
+			set {_loc} to location((x-coordinate of {_loc}), (y-coordinate of {_loc} - 0.25), (z-coordinate of {_loc}), (world of {_loc}))
 
 		send "&aHologram &e%{_id}% &acreated with &e%size of {_lines::*}%&a line(s)." to player
 		send "&7Remove it later with &f/hologram remove %{_id}%" to player
