@@ -1,0 +1,23 @@
+# rules.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4) — vanilla Skript only, no addons.
+#
+# Displays the SpleenGens server rules to whoever runs /rules.
+# No permission node is required, so every player can use it.
+
+command /rules:
+	description: Show the SpleenGens server rules
+	trigger:
+		send "&6&l=== SpleenGens Rules ===" to player
+		send "&e1. &7Don't duplicate items or generators." to player
+		send "&e2. &7Don't use hacks like X-ray or auto-clickers." to player
+		send "&e3. &7Don't build laggy redstone machines." to player
+		send "&e4. &7Don't bypass anti-AFK timers with scripts." to player
+		send "&e5. &7Don't destroy other players' builds." to player
+		send "&e6. &7Don't steal from your own teammates." to player
+		send "&e7. &7Don't trap or trick players to kill them." to player
+		send "&e8. &7Don't team with more players than allowed." to player
+		send "&e9. &7Don't scam players out of their items." to player
+		send "&e10. &7Don't sell in-game items for real money." to player
+		send "&e11. &7Don't insult, harass, or spam other players." to player
+		send "&6&l=========================" to player
