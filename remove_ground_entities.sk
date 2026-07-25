@@ -1,0 +1,15 @@
+# remove_ground_entities.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4)
+#
+# Automatically clears dropped-item entities lying on the ground
+# in every loaded world, once every 5 minutes.
+
+every 5 minutes:
+	set {_removed} to 0
+	loop all entities in all worlds:
+		if loop-entity is a dropped item:
+			delete loop-entity
+			add 1 to {_removed}
+	if {_removed} > 0:
+		broadcast "&7[&6Cleanup&7] &eRemoved &6%{_removed}%&e ground item(s) from all worlds."
