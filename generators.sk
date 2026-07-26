@@ -1,0 +1,86 @@
+# generators.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4) — vanilla Skript only, no addons.
+#
+# /wood, /stone, /iron, /diamond, and /debris each replace the block
+# you're looking at with a self-regenerating generator block. Mining a
+# generator block gives you the drop as normal, then the block grows
+# back on its own a few seconds later.
+#
+# Only players with the "skript.gen" permission (ops by default) can
+# place generators — mining an already-placed one needs no permission.
+#
+# Regenerated block type is remembered per-location in {gen::<location>},
+# so only blocks placed through these commands ever regenerate.
+
+command /wood:
+	description: Place a self-regenerating oak log generator
+	permission: skript.gen
+	permission message: &cYou don't have permission to place generators.
+	trigger:
+		set {_target} to target block of player
+		if {_target} is air:
+			send "&cLook at a block within reach first." to player
+			stop trigger
+		set {_target} to oak log
+		set {gen::%location of {_target}%} to oak log
+		send "&aPlaced a self-regenerating &6oak log&a generator." to player
+
+command /stone:
+	description: Place a self-regenerating stone generator
+	permission: skript.gen
+	permission message: &cYou don't have permission to place generators.
+	trigger:
+		set {_target} to target block of player
+		if {_target} is air:
+			send "&cLook at a block within reach first." to player
+			stop trigger
+		set {_target} to stone
+		set {gen::%location of {_target}%} to stone
+		send "&aPlaced a self-regenerating &7stone&a generator." to player
+
+command /iron:
+	description: Place a self-regenerating iron ore generator
+	permission: skript.gen
+	permission message: &cYou don't have permission to place generators.
+	trigger:
+		set {_target} to target block of player
+		if {_target} is air:
+			send "&cLook at a block within reach first." to player
+			stop trigger
+		set {_target} to iron ore
+		set {gen::%location of {_target}%} to iron ore
+		send "&aPlaced a self-regenerating &firon ore&a generator." to player
+
+command /diamond:
+	description: Place a self-regenerating diamond ore generator
+	permission: skript.gen
+	permission message: &cYou don't have permission to place generators.
+	trigger:
+		set {_target} to target block of player
+		if {_target} is air:
+			send "&cLook at a block within reach first." to player
+			stop trigger
+		set {_target} to diamond ore
+		set {gen::%location of {_target}%} to diamond ore
+		send "&aPlaced a self-regenerating &bdiamond ore&a generator." to player
+
+command /debris:
+	description: Place a self-regenerating ancient debris generator
+	permission: skript.gen
+	permission message: &cYou don't have permission to place generators.
+	trigger:
+		set {_target} to target block of player
+		if {_target} is air:
+			send "&cLook at a block within reach first." to player
+			stop trigger
+		set {_target} to ancient debris
+		set {gen::%location of {_target}%} to ancient debris
+		send "&aPlaced a self-regenerating &6ancient debris&a generator." to player
+
+on break:
+	if {gen::%location of event-block%} is set:
+		set {_type} to {gen::%location of event-block%}
+		set {_loc} to location of event-block
+		wait 5 seconds
+		set block at {_loc} to {_type}
