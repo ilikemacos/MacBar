@@ -22,14 +22,16 @@ function fixEnchantLore(itm: item) :: item:
 
 	set {_needs-fix} to false
 	loop enchantments of {_itm}:
-		if (level of loop-value of {_itm}) > 10:
+		set {_ench} to loop-value
+		if (level of {_ench} of {_itm}) > 10:
 			set {_needs-fix} to true
 
 	if {_needs-fix} is true:
 		hide {_itm}'s additional tooltip
 		delete {_lore::*}
 		loop enchantments of {_itm}:
-			add colored "&7Enchant Level %level of loop-value of {_itm}%" to {_lore::*}
+			set {_ench} to loop-value
+			add colored "&7Enchant Level %level of {_ench} of {_itm}%" to {_lore::*}
 		set the lore of {_itm} to {_lore::*}
 
 	return {_itm}
