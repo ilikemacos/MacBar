@@ -1,14 +1,3 @@
-// ===== Gold Runner - a Lode Runner style game for MakeCode Arcade =====
-// Grab every piece of gold, then climb to the very top row to win!
-//
-// Controls:
-//   Arrow keys - run left/right, climb ladders up/down
-//   A button   - dig the brick you are facing (traps enemies that fall in!)
-//
-// This whole level is drawn on a grid instead of MakeCode's Tilemap editor,
-// so you can paste this file straight into the JavaScript editor at
-// arcade.makecode.com and it will just work.
-
 namespace SpriteKind {
     export const Enemy = SpriteKind.create()
     export const Gold = SpriteKind.create()
@@ -19,15 +8,14 @@ const COLS = 20
 const ROWS = 15
 
 const EMPTY = 0
-const SOLID = 1   // indestructible wall
-const BRICK = 2   // diggable floor
-const LADDER = 3  // climbable
-const HOLE = 4    // temporarily dug-out brick
+const SOLID = 1
+const BRICK = 2
+const LADDER = 3
+const HOLE = 4
 
-const HOLE_TICKS = 24  // how many game steps a dug hole stays open
-const TICK_MS = 120    // how fast the grid game steps (lower = faster)
+const HOLE_TICKS = 24
+const TICK_MS = 120
 
-// ----- tile art (8x8 each) -----
 const brickTile = img`
     4 4 4 4 4 4 4 4
     4 4 4 4 4 4 4 4
@@ -72,7 +60,6 @@ const emptyTile = img`
     . . . . . . . .
 `
 
-// ----- sprite art -----
 const playerImg = img`
     . . 1 1 1 1 . .
     . . 1 f 1 f . .
@@ -106,9 +93,6 @@ const goldImg = img`
     . . . 5 5 . . .
 `
 
-// ----- level layout -----
-// # solid wall   B diggable brick   H ladder
-// G gold   P player start   E enemy start   . open air
 const LEVEL = [
     "#..................#",
     "#BBHBBBBBBBBBBBBHBB#",
@@ -184,11 +168,9 @@ function isLadderAt(col: number, row: number): boolean {
 function isSupported(col: number, row: number): boolean {
     if (grid[row][col] == LADDER) return true
     if (isBlocking(col, row + 1)) return true
-    // the top rung of a ladder is solid enough to stand on too
     return isLadderAt(col, row + 1)
 }
 
-// ----- gold -----
 let goldRemaining = 0
 for (let g of goldSpawns) {
     let s = sprites.create(goldImg, SpriteKind.Gold)
@@ -197,7 +179,6 @@ for (let g of goldSpawns) {
     goldRemaining += 1
 }
 
-// ----- player -----
 let player = sprites.create(playerImg, SpriteKind.Player)
 player.x = playerSpawnCol * TILE + TILE / 2
 player.y = playerSpawnRow * TILE + TILE / 2
@@ -213,7 +194,6 @@ function loseLife() {
     respawnPlayer()
 }
 
-// ----- enemies -----
 let enemies: Sprite[] = []
 let enemyHomeCol: number[] = []
 let enemyHomeRow: number[] = []
@@ -226,7 +206,6 @@ for (let e of enemySpawns) {
     enemyHomeRow.push(e[1])
 }
 
-// ----- holes (dug bricks that regenerate after a while) -----
 let holeCol: number[] = []
 let holeRow: number[] = []
 let holeTicksLeft: number[] = []
@@ -257,7 +236,6 @@ function updateHoles() {
             grid[r][c] = BRICK
             changed = true
 
-            // anything still standing in the hole when it closes gets caught
             if (Math.floor(player.x / TILE) == c && Math.floor(player.y / TILE) == r) {
                 loseLife()
             }
@@ -277,7 +255,6 @@ function updateHoles() {
     if (changed) redrawBackground()
 }
 
-// ----- movement -----
 function movePlayer() {
     let col = Math.floor(player.x / TILE)
     let row = Math.floor(player.y / TILE)
