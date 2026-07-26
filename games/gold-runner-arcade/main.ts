@@ -194,9 +194,13 @@ function loseLife() {
     respawnPlayer()
 }
 
+const ENEMY_SPEED = 20
+
 let enemies: Sprite[] = []
 let enemyHomeCol: number[] = []
 let enemyHomeRow: number[] = []
+let enemyDir: number[] = []
+let enemyWaitTicks: number[] = []
 for (let e of enemySpawns) {
     let s = sprites.create(enemyImg, SpriteKind.Enemy)
     s.x = e[0] * TILE + TILE / 2
@@ -204,6 +208,8 @@ for (let e of enemySpawns) {
     enemies.push(s)
     enemyHomeCol.push(e[0])
     enemyHomeRow.push(e[1])
+    enemyDir.push(Math.random() < 0.5 ? -1 : 1)
+    enemyWaitTicks.push(0)
 }
 
 let holeCol: number[] = []
@@ -295,17 +301,28 @@ function moveEnemy(index: number) {
         return
     }
 
-    let pc = Math.floor(player.x / TILE)
-    let pr = Math.floor(player.y / TILE)
+    enemyWaitTicks[index] += 1
+    if (enemyWaitTicks[index] >= ENEMY_SPEED) {
+        enemyWaitTicks[index] = 0
+        let choice = Math.floor(Math.random() * 4)
+        if (choice == 0 && (grid[row][col] == LADDER || isLadderAt(col, row - 1))) {
+            s.y -= TILE
+            return
+        } else if (choice == 1 && (grid[row][col] == LADDER || isLadderAt(col, row + 1))) {
+            s.y += TILE
+            return
+        } else {
+            enemyDir[index] = Math.floor(Math.random() * 3) - 1
+        }
+    }
 
-    if (pr < row && (grid[row][col] == LADDER || isLadderAt(col, row - 1))) {
-        s.y -= TILE
-    } else if (pr > row && (grid[row][col] == LADDER || isLadderAt(col, row + 1))) {
-        s.y += TILE
-    } else if (pc < col && !isBlocking(col - 1, row)) {
+    let dir = enemyDir[index]
+    if (dir < 0 && !isBlocking(col - 1, row)) {
         s.x -= TILE
-    } else if (pc > col && !isBlocking(col + 1, row)) {
+    } else if (dir > 0 && !isBlocking(col + 1, row)) {
         s.x += TILE
+    } else if (dir != 0) {
+        enemyDir[index] = -dir
     }
 }
 
