@@ -1,0 +1,12 @@
+{
+    "name": "Gold Runner",
+    "description": "A Lode Runner style dig-and-climb game for MakeCode Arcade.",
+    "dependencies": {
+        "device": "*"
+    },
+    "files": [
+        "main.ts",
+        "README.md"
+    ],
+    "preferredEditor": "tsprj"
+}
