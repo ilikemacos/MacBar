@@ -1,0 +1,45 @@
+# scoreboard.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ AND the SkBee addon (https://github.com/ShaneBeee/SkBee)
+#           — search "SkBee" on Modrinth/SpigotMC/Hangar to install it.
+#           This script will fail to load without SkBee, since vanilla
+#           Skript has no built-in scoreboard/sidebar syntax.
+#
+# Shows a per-player sidebar scoreboard with the server name, IP, the
+# player's own name, their rank, and the website. The title animates by
+# cycling through colors once a second. /sb toggles the board on/off.
+#
+# Rank is stored in a plain Skript variable ({rank::<player>}), defaulting
+# to "Member" for anyone without one set. Change it elsewhere in your
+# scripts (e.g. set {rank::%player%} to "Owner") to update what shows here.
+
+on join:
+	if {rank::%player%} is not set:
+		set {rank::%player%} to "Member"
+	set line 1 of player's fastboard to "&7&m----------------"
+	set line 2 of player's fastboard to "&fServer: &b&lSpleenGens"
+	set line 3 of player's fastboard to "&fIP: &bspleengens.minefort.com"
+	set line 4 of player's fastboard to "&fPlayer: &b%player%"
+	set line 5 of player's fastboard to "&fRank: &b%{rank::%player%}%"
+	set line 6 of player's fastboard to "&fWeb: &bchopstickshq.com"
+	set line 7 of player's fastboard to "&7&m----------------"
+
+every 1 second:
+	add 1 to {sb-color-index}
+	if {sb-color-index} > 4:
+		set {sb-color-index} to 1
+	if {sb-color-index} is 1:
+		set {_color} to "&b"
+	else if {sb-color-index} is 2:
+		set {_color} to "&3"
+	else if {sb-color-index} is 3:
+		set {_color} to "&9"
+	else:
+		set {_color} to "&1"
+	loop all players:
+		set title of loop-player's fastboard to "%{_color}%&lSpleenGens"
+
+command /sb:
+	description: Toggle your scoreboard on or off
+	trigger:
+		toggle player's fastboard
