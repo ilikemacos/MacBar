@@ -7,14 +7,16 @@
 # use the command.
 #
 # Usage:
-#   /hologram <text>          - create a hologram at your location
-#                                (use "|" to split into multiple lines)
-#   /hologram remove <id>     - remove a hologram by its id
-#   /hologram list            - list the ids of all active holograms
+#   /hologram <text>            - create a hologram at your location
+#                                  (use "|" to split into multiple lines)
+#   /hologram remove <id>       - remove an entire hologram by its id
+#   /hologram remove <id> <n>   - remove just line <n> from that hologram
+#                                  (lines are numbered from 1, top to bottom)
+#   /hologram list               - list the ids of all active holograms
 
 command /hologram <text>:
 	description: Create or remove floating text holograms
-	usage: &c/hologram <text> &7(use | for multiple lines)&n&c/hologram remove <id>&n&c/hologram list
+	usage: &c/hologram <text> &7(use | for multiple lines)&n&c/hologram remove <id> [line]&n&c/hologram list
 	permission: skript.hologram
 	permission message: &cYou don't have permission to use holograms.
 	trigger:
@@ -35,6 +37,17 @@ command /hologram <text>:
 			if {holograms::%{_id}%::*} is not set:
 				send "&cNo hologram found with id &e%{_id}%&c." to player
 				stop trigger
+
+			if {_words::3} is set:
+				set {_line} to {_words::3}
+				if {holograms::%{_id}%::%{_line}%} is not set:
+					send "&cHologram &e%{_id}% &chas no line &e%{_line}%&c." to player
+					stop trigger
+				kill {holograms::%{_id}%::%{_line}%}
+				delete {holograms::%{_id}%::%{_line}%}
+				send "&aRemoved line &e%{_line}% &afrom hologram &e%{_id}%&a." to player
+				stop trigger
+
 			loop {holograms::%{_id}%::*}:
 				kill loop-value
 			delete {holograms::%{_id}%::*}
