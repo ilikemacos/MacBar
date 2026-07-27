@@ -1,0 +1,35 @@
+# hblock.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4) — vanilla Skript only, no addons.
+#
+# /hblock gives you an end stone block named "Floater". Place it down
+# and standing on it gives you a soft, continuous upward bounce — like
+# a gentle trampoline rather than a hard slime-block-style launch.
+#
+# Placed Floaters are tracked by location in {floaters::<location>} so
+# only blocks placed through this item bounce; plain end stone doesn't.
+
+command /hblock:
+	description: Get a Floater block — bounces you softly when placed
+	permission: skript.hblock
+	permission message: &cYou don't have permission for that.
+	trigger:
+		give player 1 of end stone named colored "&bFloater"
+		send "&aYou received a &bFloater&a block! Place it down to create a soft bounce pad." to player
+
+on place:
+	if event-block is end stone:
+		if name of player's tool is colored "&bFloater":
+			set {floaters::%location of event-block%} to true
+
+on break:
+	if {floaters::%location of event-block%} is set:
+		delete {floaters::%location of event-block%}
+
+every 5 ticks:
+	loop all players:
+		set {_p} to loop-player
+		set {_below} to 1 meter below {_p}
+		set {_block} to {_below}'s block
+		if {floaters::%location of {_block}%} is set:
+			set the velocity of {_p} to vector(0, 0.35, 0)
