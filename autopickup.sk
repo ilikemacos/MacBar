@@ -1,0 +1,20 @@
+# autopickup.sk
+# Skript (https://skriptlang.org) for Minecraft 1.21.4 / Paper-Spigot
+# Requires: Skript 2.9+ (or latest release supporting 1.21.4) — vanilla Skript only, no addons.
+#
+# Auto-pickup: mining a block gives its drops straight to your inventory
+# instead of dropping them on the ground.
+#
+# For ore blocks specifically, this gives you the actual ore block itself
+# (e.g. "Coal Ore") instead of vanilla's smelted drop (e.g. "Coal") — so
+# mining coal ore hands you a coal ore block, not a lump of coal.
+
+on break:
+	if event-block is coal ore or deepslate coal ore or iron ore or deepslate iron ore or copper ore or deepslate copper ore or gold ore or deepslate gold ore or redstone ore or deepslate redstone ore or lapis ore or deepslate lapis ore or diamond ore or deepslate diamond ore or emerald ore or deepslate emerald ore or nether gold ore or nether quartz ore or ancient debris:
+		clear drops
+		give player 1 of event-block
+	else:
+		set {_drops::*} to drops
+		clear drops
+		loop {_drops::*}:
+			give player loop-value
