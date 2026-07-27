@@ -29,7 +29,10 @@ on break:
 every 5 ticks:
 	loop all players:
 		set {_p} to loop-player
-		set {_below} to 1 meter below {_p}
-		set {_block} to {_below}'s block
-		if {floaters::%location of {_block}%} is set:
+		set {_loc} to location of {_p}
+		set {_x} to floor(x-coordinate of {_loc})
+		set {_y} to floor((y-coordinate of {_loc}) - 1)
+		set {_z} to floor(z-coordinate of {_loc})
+		set {_key} to location({_x}, {_y}, {_z}, world of {_p})
+		if {floaters::%{_key}%} is set:
 			set the velocity of {_p} to vector(0, 0.35, 0)
