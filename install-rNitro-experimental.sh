@@ -31,7 +31,7 @@ if [[ -z "${HOME:-}" || ! -d "$HOME" ]]; then
   echo "❌ \$HOME is not set to a valid directory. Aborting."
   exit 1
 fi
-EXPECTED_HASH="222577199181ccec1527ea8f0910745898ec3090c6e8c03638b4b8d1a8fafe43"
+EXPECTED_HASH="67123668beaa9f979df8b4c64cafab97715c998462c2cb897673922200ba78c6"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -14467,7 +14467,7 @@ struct MonitorOptiMacTabView: View {
                             HStack(spacing: 5) {
                                 Circle().fill(Color.nGreen).frame(width: 5, height: 5)
                                 Text(DisplayPreferencesStore.shared.tr("live"))
-                                    .font(.system(size: 10, design: .rounded, weight: .medium))
+                                    .font(.system(size: 10, weight: .medium, design: .rounded))
                                     .foregroundColor(.secondary)
                             }
                             .contentShape(Rectangle())
