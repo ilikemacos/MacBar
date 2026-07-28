@@ -1,0 +1,28 @@
+rNitro Website — AI Support Chat
+================================
+
+DEFAULT (recommended): each visitor uses their own API key
+----------------------------------------------------------
+1. Open https://getrnitro.netlify.app
+2. Click the chat widget (bottom-right)
+3. Tap the key icon
+4. Choose provider (Grok recommended) and paste your key
+5. Key is stored in your browser session only — not on our servers
+
+Get a free Grok key: https://console.groq.com/
+OpenRouter: https://openrouter.ai/keys
+Gemini: https://aistudio.google.com/apikey
+
+Instant keyword answers work without any key.
+
+
+OPTIONAL: site-wide AI (one key for all visitors)
+-------------------------------------------------
+Only if you want AI without visitors bringing a key:
+
+1. Copy chat-api-key.local.example → chat-api-key.local
+2. Paste your key: GROQ_API_KEY=gsk_...
+3. Run: python3 setup-chat-api.py
+4. Run: python3 deploy-netlify.py
+
+The key is stored as a Netlify secret env var (never in the website code).

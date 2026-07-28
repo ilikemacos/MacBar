@@ -1,0 +1,91 @@
+rNitro Terms and Conditions
+
+By downloading, installing, compiling from the official source code, accessing, or using rNitro in any form, including Stable, Beta, Preview, Nightly, Windows, macOS, Linux, and any future releases, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree to these Terms, you must not download, install, or use rNitro.
+
+Acceptance of These Terms
+
+These Terms govern your use of rNitro and any associated downloads, updates, documentation, or online services provided by the developer. Your continued use of the software constitutes your acceptance of the most recent version of these Terms.
+
+Software Provided "AS IS"
+
+rNitro is provided free of charge on an "AS IS" and "AS AVAILABLE" basis without warranties, guarantees, or conditions of any kind, whether express, implied, or statutory. To the fullest extent permitted by applicable law, the developer disclaims all warranties, including but not limited to merchantability, fitness for a particular purpose, non-infringement, uninterrupted availability, compatibility, security, reliability, accuracy, or error-free operation.
+
+The developer does not guarantee that rNitro will operate without interruptions, bugs, crashes, freezes, security vulnerabilities, data loss, hardware stress, increased resource consumption, overheating, reduced battery life, or other unexpected behavior.
+
+You acknowledge and agree that your use of rNitro is entirely at your own risk.
+
+Beta and Experimental Features
+
+Beta releases, preview builds, nightly builds, experimental features, benchmarks, stress-testing tools, AI integrations, and third-party services may be incomplete, unstable, or subject to unexpected changes without notice.
+
+Such features may experience instability, increased hardware usage, inaccurate results, temporary service interruptions, data corruption, or complete failure to function. You acknowledge these risks and voluntarily assume full responsibility for using any experimental or pre-release functionality.
+
+Limitation of Liability
+
+To the fullest extent permitted by applicable law, the developer, contributors, licensors, and any affiliated parties shall not be liable for any direct, indirect, incidental, consequential, special, exemplary, punitive, or other damages arising out of or relating to your installation, use of, inability to use, or reliance upon rNitro.
+
+This limitation includes, without limitation, damages relating to data loss, file corruption, hardware or software failures, reduced system performance, overheating, battery drain, business interruption, lost profits, lost revenue, security incidents, service interruptions, or any other loss or damage arising from the use of the software.
+
+Where applicable law does not permit certain limitations of liability, such limitations shall apply only to the maximum extent permitted by law.
+
+Third-Party Services
+
+rNitro may communicate with or integrate third-party software, application programming interfaces (APIs), artificial intelligence providers, cloud services, or other external platforms.
+
+The developer has no control over these services and makes no representations regarding their availability, accuracy, security, reliability, or continued operation. Your use of third-party services is governed solely by the terms and privacy policies of the respective providers.
+
+The developer accepts no responsibility for outages, changes, generated content, pricing, functionality, or any loss arising from third-party services.
+
+User Responsibilities
+
+You are solely responsible for maintaining backups of your files, protecting your data, ensuring that your device meets the necessary system requirements, and determining whether rNitro is suitable for your intended use.
+
+rNitro is not designed, certified, or intended for use in environments where software failure could result in injury, loss of life, significant property damage, or other high-risk situations, including medical, emergency response, aviation, industrial control, financial trading, or similar critical applications.
+
+Intellectual Property
+
+Unless otherwise stated, all trademarks, branding, logos, graphical assets, documentation, original source code, and other intellectual property associated with rNitro remain the exclusive property of the developer or their respective owners.
+
+Nothing contained within these Terms grants you ownership of any intellectual property rights except where expressly permitted by an applicable license.
+
+Any third-party software, libraries, fonts, or components included with rNitro remain subject to their respective licenses.
+
+Software Updates
+
+The developer may release updates, modifications, security patches, new features, or revised versions of rNitro at any time.
+
+The developer also reserves the right to modify, suspend, discontinue, or permanently remove any feature, service, download, or version of rNitro without prior notice.
+
+Availability
+
+The availability of downloads, online services, cloud features, AI functionality, updates, documentation, or websites associated with rNitro is not guaranteed.
+
+The developer reserves the right to discontinue any part of the project at any time without liability.
+
+Acceptable Use
+
+You agree to use rNitro only in compliance with all applicable laws and regulations.
+
+You agree not to misuse, interfere with, abuse, or intentionally disrupt any online services provided through rNitro, nor represent modified or unofficial versions as official releases.
+
+Changes to These Terms
+
+The developer reserves the right to revise these Terms and Conditions at any time.
+
+Updated versions become effective upon publication unless otherwise stated. Your continued use of rNitro after revised Terms have been published constitutes your acceptance of those changes.
+
+Governing Law
+
+These Terms shall be governed and interpreted in accordance with the laws applicable in the jurisdiction in which the developer resides, except where mandatory consumer protection laws provide otherwise.
+
+Nothing contained in these Terms is intended to limit or exclude any legal rights that cannot be limited or excluded under applicable law.
+
+Entire Agreement
+
+These Terms and Conditions constitute the entire agreement between you and the developer concerning rNitro and supersede any prior agreements, communications, understandings, or representations relating to the software.
+
+---
+
+By downloading, installing, compiling from the official source code, accessing, or using rNitro, you confirm that you have read, understood, and agree to be bound by these Terms and Conditions.
+
+Battery readings: rNitro aims to show the same charge percentage as the macOS menu bar (CurrentCapacity/pmset). Remaining time is an estimate and can change with system load. Chemical gauge SoC may differ slightly from the menu bar.

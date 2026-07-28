@@ -1,0 +1,495 @@
+{
+  "whats_new": [
+    {
+      "version": "v1.3.26-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Product name restored to **rNitro** (MacBar rebrand reverted).",
+        "Canonical site path again **chopstickshq.com/rnitro**."
+      ]
+    },
+    {
+      "version": "v1.3.25-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Product URL is now **chopstickshq.com/macbar** (and macbar.chopstickshq.com).",
+        "Legacy /rnitro paths redirect to /macbar.",
+        "GitHub repo: ilikemacos/MacBar."
+      ]
+    },
+    {
+      "version": "v1.3.24-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Renamed Experimental product to **MacBar** (formerly rNitro) for clearer discovery.",
+        "Installs as MacBar.app; same sensors, same chopstickshq.com/rnitro downloads.",
+        "Keeps rNitro as alternate name in search metadata during the transition."
+      ]
+    },
+    {
+      "version": "v1.3.23-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Fix: IOHID temperature sensors were never read (SetMatching void return mis-checked) \u2014 real MTR die temps now drive the gauge.",
+        "Prefer Apple Silicon HID die cluster over empty/locked SMC; drop calibration-offset sensors."
+      ]
+    },
+    {
+      "version": "v1.3.22-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "More accurate CPU temperature: die-only SMC keys (no ambient/GPU/skin mix).",
+        "Prefer die peak + MTR HID; decode sp87/extra SMC types; less thermal-estimate blend.",
+        "Faster temp response under load and fresher sensor cache."
+      ]
+    },
+    {
+      "version": "v1.3.21-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "UX: first-launch menubar presets (Laptop/Desktop/Minimal) with laptop defaults.",
+        "UX: monitor layout blurbs (Modern / Legacy / New style).",
+        "UX: process list density (top 5) and menubar live preview helpers."
+      ]
+    },
+    {
+      "version": "v1.3.20-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Monitor UI: renamed glass dashboard option to \u201cNew style\u201d (was OptiMac)."
+      ]
+    },
+    {
+      "version": "v1.3.19-Experimental",
+      "channel": "experimental",
+      "highlights": [
+        "Monitor UI: New style dashboard option \u2014 purple gradient, glass cards, metric tiles (look only; no optimizers).",
+        "Settings \u2192 Appearance \u2192 Monitor UI \u2192 New style."
+      ]
+    },
+    {
+      "channel": "beta",
+      "title": "v1.2.14 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Battery matches menu bar",
+          "text": " \u2014 IOPS + pmset charge % and remaining (same path as Experimental); IOKit for amps/mAh/health only."
+        },
+        {
+          "strong": "OS strip + parity",
+          "text": " \u2014 menu % \u00b7 remaining \u00b7 source; Compare with macOS self-test with cached result."
+        },
+        {
+          "strong": "Low-battery automation",
+          "text": " \u2014 optional notify / dim / mute stress at 20%/10%."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.17 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Parity memory",
+          "text": " \u2014 last Compare with macOS result is saved and shown after relaunch; battery section defaults expanded for OS strip."
+        },
+        {
+          "strong": "Lighter IOPS polling",
+          "text": " \u2014 IOPS every tick; pmset subprocess only ~every 30s or when %/remaining missing or level jumps."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.16 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Lab speed test",
+          "text": " \u2014 Experimental Lab toy: ping / download / upload via Cloudflare public endpoints; recent results kept on-device."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.15 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "OS battery strip",
+          "text": " \u2014 always shows menu % \u00b7 remaining \u00b7 source (IOPS/pmset)."
+        },
+        {
+          "strong": "Compare with macOS",
+          "text": " \u2014 one-shot IOPS + pmset + system_profiler parity check with copyable report."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.14 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Battery = local OS sources",
+          "text": " \u2014 charge % and remaining time from IOPS + pmset (same APIs as menu bar / btop). IOKit only supplies amps, mAh, health. Live pack-draw ETA is secondary, not a replacement."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.13 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Discharge time accuracy",
+          "text": " \u2014 remaining time now blends live pack amps/watts and observed %/hr drain; never prefers optimistic longer pmset/IOKit times under load."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.12 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Dual SoC + compare",
+          "text": " \u2014 menu-bar % with chemical gauge; pmset/IOPS/IOKit compare rows; copy diagnostics."
+        },
+        {
+          "strong": "IOPS + drain graph",
+          "text": " \u2014 public power-sources API for %/ETA; 1h pack-power history."
+        },
+        {
+          "strong": "Top energy proxy + Fathom",
+          "text": " \u2014 top CPU apps as free energy proxy; Fathom link for attribution."
+        },
+        {
+          "strong": "Adaptive sample + low-battery auto",
+          "text": " \u2014 faster when discharging/low; notify/dim/mute stress at 20%/10%."
+        },
+        {
+          "strong": "Update SHA labels",
+          "text": " \u2014 installed binary vs published ZIP SHA in Settings."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.11 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Battery matches menu bar",
+          "text": " \u2014 charge % is strict CurrentCapacity/pmset (no raw-mAh blend); chemical StateOfCharge never overrides UI."
+        },
+        {
+          "strong": "Health & power",
+          "text": " \u2014 Maximum Capacity from System Settings when available; signed 64-bit amps; PowerTelemetry pack watts."
+        },
+        {
+          "strong": "AC detection",
+          "text": " \u2014 ExternalChargeCapable no longer counts as plugged in."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.10 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Battery accuracy",
+          "text": " \u2014 raw mAh SoC cross-check, signed InstantAmperage pack watts, discharge W, ETA from capacity when IOKit times are stale."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.9 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Update ZIP integrity",
+          "text": " \u2014 verifies published SHA-256 from version.json before install."
+        },
+        {
+          "strong": "Hardened auto-update",
+          "text": " \u2014 only /Applications or ~/Applications; codesign verify pre/post replace."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.8 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "More sensors",
+          "text": " \u2014 full SMC temp key enumeration + expanded M-series keys; die-preferring blend."
+        },
+        {
+          "strong": "Smarter temps",
+          "text": " \u2014 load-aware upper-sensor fusion; faster track-up under load."
+        },
+        {
+          "strong": "SoC power",
+          "text": " \u2014 IOReport also picks DRAM/related energy; richer GPU util keys."
+        },
+        {
+          "strong": "Still light",
+          "text": " \u2014 one-time key discovery + short caches; idle sampling unchanged."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.7 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "T&C session remember",
+          "text": " \u2014 optional \u201cRemember for this browser session\u201d on download modal."
+        },
+        {
+          "strong": "What's new strip",
+          "text": " \u2014 General shows changelog blurb after updates / on Experimental."
+        },
+        {
+          "strong": "Menu presets",
+          "text": " \u2014 selected preset highlight + restore previous slots."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.6 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Update UX",
+          "text": " \u2014 channel badge, last check time, Check for Updates strip; Later snoozes 24h; release notes from changelog."
+        },
+        {
+          "strong": "Menu bar presets",
+          "text": " \u2014 Laptop / Desktop / Minimal one-click layouts."
+        },
+        {
+          "strong": "Fathom link",
+          "text": " \u2014 battery section opens Fathom (or install page) for drain attribution."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
+      "title": "v1.2.13 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Font picker UX",
+          "text": " \u2014 search, category chips, scrollable live previews, star favorites, OFL credit."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.4 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Font picker UX",
+          "text": " \u2014 same improved Appearance font browser as Beta."
+        }
+      ]
+    },
+    {
+      "channel": "stable",
+      "title": "v1.2.9 Final",
+      "accent": "green",
+      "items": [
+        {
+          "strong": "Light & dark theme",
+          "text": " \u2014 Appearance \u2192 Theme: System / Dark / Light."
+        },
+        {
+          "strong": "UI fonts",
+          "text": " \u2014 searchable catalog + OFL fonts."
+        },
+        {
+          "strong": "Stable scope",
+          "text": " \u2014 OpenAI/OpenRouter only; no Lab."
+        }
+      ]
+    },
+    {
+      "channel": "experimental",
+      "title": "v1.3.3 Experimental",
+      "accent": "purple",
+      "items": [
+        {
+          "strong": "Theme + Dev Deck",
+          "text": " \u2014 app theme picker; site light/dark + Dev Deck (Ctrl+Shift+D)."
+        },
+        {
+          "strong": "All toys",
+          "text": " \u2014 experimental Lab playground."
+        }
+      ]
+    },
+    {
+      "channel": "beta",
+      "title": "v1.2.12 Beta",
+      "accent": "orange",
+      "items": [
+        {
+          "strong": "Theme + Dev toolkit",
+          "text": " \u2014 light/dark mode; Dev Mode surprise tools (CDN ping, font map, accent shuffle)."
+        },
+        {
+          "strong": "Lab",
+          "text": " \u2014 full beta Lab + process tools."
+        }
+      ]
+    },
+    {
+      "channel": "site",
+      "title": "Website & distribution",
+      "accent": "cyan",
+      "items": [
+        {
+          "strong": "Chopsticks HQ",
+          "text": " \u2014 chopstickshq.com hub; full product site at getrnitro.netlify.app."
+        },
+        {
+          "strong": "GitHub",
+          "text": " \u2014 releases on github.com/ilikemacos/MacBar with App ZIP, PKG, DMG, and .sh."
+        },
+        {
+          "strong": "Privacy",
+          "text": " \u2014 no accounts, no telemetry; see /privacy."
+        }
+      ]
+    }
+  ],
+  "releases": [
+    {
+      "version": "v1.3.29-Experimental",
+      "channel": "experimental",
+      "date": "2026-07-28",
+      "highlights": [
+        "Enable Logging in Settings \u2192 General (local diagnostics to ~/Library/Logs/rNitro)",
+        "Structured rnitro.log with categories, rotation, open/clear controls"
+      ]
+    },
+    {
+      "title": "v1.3.3 Experimental / v1.2.12 Beta / v1.2.9 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">Light & dark mode</strong> on website + app. <strong>Dev toolkit</strong>: site Dev Deck (CDN ping, grid, party mode); app Dev Mode environment manifest, font map, CDN ping, accent shuffle."
+    },
+    {
+      "title": "v1.3.2 Experimental / v1.2.11 Beta / v1.2.8 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">Font picker UX</strong> \u2014 search fonts, filter Sans/Serif/Display/Script/Mono, star favorites, OFL credit. 50+ Google Fonts still offline."
+    },
+    {
+      "title": "v1.3.1 Experimental / v1.2.10 Beta / v1.2.7 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">Version bump</strong> \u2014 same UI font library (50+ Google Fonts OFL). Patch release for channel versioning and distribution."
+    },
+    {
+      "title": "v1.3.0 Experimental / v1.2.9 Beta / v1.2.6 Final",
+      "body_html": "<strong style=\"color:var(--orange);\">UI font library</strong> \u2014 50+ Google Fonts (OFL) in Appearance, including EB Garamond, Audiowide, and Caveat. Experimental 1.3.0 keeps all Lab toys; Beta 1.2.9 ships fonts + process tools; Stable 1.2.6 Final gets fonts without Lab."
+    },
+    {
+      "title": "v1.2.7 Beta / Experimental",
+      "body_html": "<strong style=\"color:var(--orange);\">Process tools + Dev Mode finish</strong> \u2014 Why hot?, kill/reveal (Dev), UI config JSON, Lab toys TOC collapsed. Gatekeeper guide on site."
+    },
+    {
+      "title": "v1.2.0 Final (Stable)",
+      "body_html": "<strong style=\"color:var(--green);\">Stable catch-up</strong> \u2014 customizable UI + \u2318Q from modern builds; OpenAI/OpenRouter only; no Lab. <a href=\"https://github.com/ilikemacos/MacBar/releases/tag/v1.2.0-Final\" style=\"color:var(--cyan);\">GitHub</a>."
+    },
+    {
+      "title": "v1.2.6 Experimental",
+      "body_html": "<strong style=\"color:#9b7bff;\">New Lab toys</strong> \u2014 thermal forecast, heat haiku, throttle cosplay, overnight watch, core roulette, chaos blip. Beta keeps slim Lab."
+    },
+    {
+      "title": "v1.2.5 Beta / Experimental",
+      "body_html": "<strong style=\"color:var(--orange);\">Customizable UI + Developer Mode</strong> \u2014 menubar builder, density, accents, thresholds for everyone; optional Dev tools for sampling/logs/dumps. <a href=\"https://github.com/ilikemacos/MacBar/releases/tag/v1.2.5\" style=\"color:var(--cyan);\">GitHub</a>."
+    },
+    {
+      "title": "v1.2.4 Beta / Experimental",
+      "body_html": "<strong style=\"color:var(--orange);\">Patched a bug</strong> \u2014 \u2318Q now quits the menu bar app. Lab crash fix (scrub slider) + Experimental Features sidebar."
+    },
+    {
+      "title": "v1.2.3 Beta",
+      "body_html": "<strong style=\"color:var(--orange);\">Beta</strong> \u2014 Lab: AirDrop card, SOC budget, cooling confession, desktop widget, <code>rnitro lab status</code>."
+    },
+    {
+      "title": "v1.1.0 Final Reloaded",
+      "body_html": "<strong style=\"color:var(--green);\">Stable channel</strong> \u2014 production-ready menu bar monitor for daily use. AI limited to OpenAI + OpenRouter."
+    },
+    {
+      "title": "Platform notes",
+      "body_html": "<strong style=\"color:var(--cyan);\">macOS</strong> \u2014 Apple Silicon, macOS 12+. <strong>Linux</strong> \u2014 v0.1 pre-release. <strong style=\"color:var(--orange);\">Windows</strong> \u2014 deprecated."
+    }
+  ],
+  "compare": {
+    "title": "Stable vs Beta vs Experimental \u2014 which should I download?",
+    "subtitle": "Start with Stable App ZIP for daily use. Beta adds Lab + every AI provider. Experimental is the playground (toys) \u2014 expect breakage.",
+    "rows": [
+      {
+        "feature": "Best for",
+        "stable": "Daily monitoring + light customization",
+        "beta": "Lab, Dev Mode, every AI provider",
+        "experimental": "Playground toys \u2014 duel, ghost-load, budget, cloak, etc."
+      },
+      {
+        "feature": "Stability",
+        "stable": "Production-ready",
+        "beta": "Power-user (may change)",
+        "experimental": "Unstable / bleeding edge"
+      },
+      {
+        "feature": "Settings",
+        "stable": "Appearance, Menubar, Monitor, Alerts, General + custom UI",
+        "beta": "Same + Lab + Developer Mode + full AI list",
+        "experimental": "Everything in Beta + experimental toys UI"
+      },
+      {
+        "feature": "AI chat",
+        "stable": "OpenAI + OpenRouter only",
+        "beta": "Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, Hermes",
+        "experimental": "Same as Beta"
+      },
+      {
+        "feature": "System Advisor",
+        "stable": "Yes",
+        "beta": "Yes",
+        "experimental": "Yes"
+      },
+      {
+        "feature": "Temp notification banners",
+        "stable": "No",
+        "beta": "Yes (optional)",
+        "experimental": "Yes (optional)"
+      },
+      {
+        "feature": "AES-256 key storage",
+        "stable": "No",
+        "beta": "Yes (GCM + Keychain)",
+        "experimental": "Yes (GCM + Keychain)"
+      },
+      {
+        "feature": "In-app updates",
+        "stable": "Stable + Beta choices",
+        "beta": "Stable + Beta choices",
+        "experimental": "Stable + Beta + Experimental"
+      },
+      {
+        "feature": "Terms before download",
+        "stable": "Agree or Disagree on every download",
+        "beta": "Agree or Disagree on every download",
+        "experimental": "Agree or Disagree on every download"
+      }
+    ]
+  }
+}
