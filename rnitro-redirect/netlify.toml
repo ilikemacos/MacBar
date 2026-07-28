@@ -1,0 +1,8 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/*"
+  to = "https://getrnitro.netlify.app/:splat"
+  status = 301
+  force = true
