@@ -31,7 +31,7 @@ if [[ -z "${HOME:-}" || ! -d "$HOME" ]]; then
   echo "❌ \$HOME is not set to a valid directory. Aborting."
   exit 1
 fi
-EXPECTED_HASH="5f17fef48e393db4991c3191d266e43b6d5f486e2b66f974b1416b3274c6a835"
+EXPECTED_HASH="222577199181ccec1527ea8f0910745898ec3090c6e8c03638b4b8d1a8fafe43"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -145,7 +145,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
     }
 }
 
-let CURRENT_VERSION = "v1.3.30-Experimental"
+let CURRENT_VERSION = "v1.3.31-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -13776,6 +13776,15 @@ struct MonitorModernHeaderView: View {
             if m.isLowPowerModeEnabled {
                 LowPowerModeBadge(compact: true)
             }
+            HStack(spacing: 5) {
+                Circle().fill(Color.nGreen).frame(width: 5, height: 5)
+                Text(DisplayPreferencesStore.shared.tr("live"))
+                    .font(rNitroFont(.micro, metrics: metrics))
+                    .foregroundColor(.secondary.opacity(0.85))
+            }
+            .contentShape(Rectangle())
+            .help("…")
+            .onTapGesture { RNitroEasterEgg.reveal() }
             Text(CURRENT_VERSION)
                 .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary.opacity(0.7))
@@ -14454,9 +14463,20 @@ struct MonitorOptiMacTabView: View {
                         Text("New style · glass dashboard")
                             .font(.system(.caption, design: .rounded, weight: .medium))
                             .foregroundColor(.secondary)
-                        Text(CURRENT_VERSION)
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.secondary.opacity(0.75))
+                        HStack(spacing: 8) {
+                            HStack(spacing: 5) {
+                                Circle().fill(Color.nGreen).frame(width: 5, height: 5)
+                                Text(DisplayPreferencesStore.shared.tr("live"))
+                                    .font(.system(size: 10, design: .rounded, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { RNitroEasterEgg.reveal() }
+                            Text(CURRENT_VERSION)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(.secondary.opacity(0.75))
+                                .onTapGesture { RNitroEasterEgg.noteVersionTap() }
+                        }
                     }
                     .padding(.horizontal, 4)
 
@@ -14660,8 +14680,15 @@ struct MonitorTabContent: View {
                         if m.isLowPowerModeEnabled {
                             LowPowerModeBadge(compact: true)
                         }
-                        Circle().fill(Color.nGreen).frame(width: 5, height: 5)
-                        Text("Live").font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        HStack(spacing: 6) {
+                            Circle().fill(Color.nGreen).frame(width: 5, height: 5)
+                            Text(DisplayPreferencesStore.shared.tr("live"))
+                                .font(rNitroFont(.caption, metrics: metrics))
+                                .foregroundColor(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                        .help("…")
+                        .onTapGesture { RNitroEasterEgg.reveal() }
                     }
                 }
                 .padding(.horizontal, metrics.hPad).padding(.top, 12).padding(.bottom, 14)
@@ -17927,8 +17954,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.30-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.30-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.31-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.31-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

@@ -384,6 +384,15 @@
   ],
   "releases": [
     {
+      "version": "v1.3.31-Experimental",
+      "channel": "experimental",
+      "date": "2026-07-28",
+      "highlights": [
+        "Click the green Live badge for the personal easter egg",
+        "Option-click menubar / five taps on version still work"
+      ]
+    },
+    {
       "version": "v1.3.30-Experimental",
       "channel": "experimental",
       "date": "2026-07-28",
