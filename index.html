@@ -1,0 +1,3729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- @sync:hero-head -->
+<title>rNitro — Free Open Source macOS Menu Bar Monitor (formerly rNitro)</title>
+<meta name="description" content="rNitro — free open-source macOS menu bar system monitor (v1.3.28). Live CPU, temperature, MacBook battery %, GPU, RAM, network. Free iStat/Stats alternative · btop-style CLI. Linux v0.1 pre-release. No account, no telemetry. Apple Silicon.">
+<meta name="keywords" content="rNitro, rnitro, getrnitro, chopsticks hq rnitro, free macOS menu bar monitor, free mac system monitor, open source mac monitor, macOS system monitor, mac menu bar CPU monitor, Apple Silicon system monitor, M1 M2 M3 M4 CPU monitor, MacBook battery monitor, menu bar CPU temperature, mac GPU monitor, live cpu usage menubar, mac temp sensor app free, battery percent menu bar, mac thermal monitor, free istat alternative, stats app alternative mac, btop menu bar, activity monitor menu bar, open source menu bar app, no telemetry mac app, no account system monitor, offline sensors mac, arm64 mac monitor, intel mac monitor, macos 11 monitor, big sur menu bar monitor">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="chopsticks">
+<link rel="canonical" href="https://chopstickshq.com/rnitro/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="rNitro">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="rNitro — Free Open Source macOS Menu Bar System Monitor">
+<meta property="og:description" content="rNitro — free open-source macOS menu bar system monitor (v1.3.28). Live CPU, temperature, MacBook battery %, GPU, RAM, network. Free iStat/Stats alternative · btop-style CLI. Linux v0.1 pre-release. No account, no telemetry. Apple Silicon.">
+<meta property="og:url" content="https://chopstickshq.com/rnitro/">
+<meta property="og:image" content="https://chopstickshq.com/rnitro/screenshots/hero-monitor.png">
+<meta property="og:image:alt" content="rNitro menu bar system monitor on macOS">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="rNitro — Free Open Source macOS Menu Bar Monitor">
+<meta name="twitter:description" content="rNitro — free open-source macOS menu bar system monitor (v1.3.28). Live CPU, temperature, MacBook battery %, GPU, RAM, network. Free iStat/Stats alternative · btop-style CLI. Linux v0.1 pre-release. No account, no telemetry. Apple Silicon.">
+<meta name="twitter:image" content="https://chopstickshq.com/rnitro/screenshots/hero-monitor.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "rNitro", "alternateName": ["r Nitro", "getrnitro", "rNitro Monitor", "Chopsticks rNitro"], "description": "rNitro is a free open-source menu bar system monitor for macOS (Apple Silicon & Intel). Live CPU, temperature, GPU, RAM, battery, and network. Free alternative to paid menubar monitors. Optional CLI and Linux builds. No account, no product telemetry.", "operatingSystem": "macOS 14+, Linux, Windows", "applicationCategory": "UtilitiesApplication", "applicationSubCategory": "System Monitor", "softwareVersion": "v1.3.29-Experimental", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "url": "https://chopstickshq.com/rnitro/", "downloadUrl": "https://chopstickshq.com/rnitro", "screenshot": "https://chopstickshq.com/rnitro/screenshots/hero-monitor.png", "author": {"@type": "Organization", "name": "chopsticks", "url": "https://chopstickshq.com/"}, "publisher": {"@type": "Organization", "name": "chopsticks", "url": "https://chopstickshq.com/"}, "sameAs": ["https://github.com/ilikemacos/rNitro", "https://chopstickshq.com/rnitro/", "https://chopstickshq.com/rnitro/"], "license": "https://github.com/ilikemacos/rNitro", "keywords": "rNitro,rnitro,getrnitro,chopsticks hq rnitro,free macOS menu bar monitor,free mac system monitor,open source mac monitor,macOS system monitor,mac menu bar CPU monitor,Apple Silicon system monitor,M1 M2 M3 M4 CPU monitor,MacBook battery monitor,menu bar CPU temperature,mac GPU monitor,live cpu usage menubar,mac temp sensor app free,battery percent menu bar,mac thermal monitor,free istat alternative,stats app alternative mac,btop menu bar,activity monitor menu bar,open source menu bar app,no telemetry mac app,no account system monitor,offline sensors mac,arm64 mac monitor,intel mac monitor,macos 11 monitor,big sur menu bar monitor"}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "What is rNitro?", "acceptedAnswer": {"@type": "Answer", "text": "rNitro is a free, open-source menu bar system monitor for macOS. It shows live CPU, temperature, memory, battery, GPU, and network stats."}}, {"@type": "Question", "name": "Is rNitro free and open source?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. rNitro is free, has no account requirement and no telemetry. Source and releases are on GitHub: https://github.com/ilikemacos/rNitro"}}, {"@type": "Question", "name": "Does rNitro work on Apple Silicon Macs?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Primary builds target Apple Silicon (arm64). Intel Mac installers are also available for older machines."}}]}</script>
+<!-- @end:hero-head -->
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<style>
+  @font-face {
+    font-family: 'Varela Round';
+    src: url('VarelaRound.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Geist Mono';
+    src: url('GeistMono.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0A0A0F;
+    --bg2:      #0F0F18;
+    --card:     #13131E;
+    --card2:    #1A1A28;
+    --border:   #2A2A40;
+    --cyan:     #00D9FF;
+    --green:    #00FF80;
+    --orange:   #FF8C1A;
+    --red:      #FF4040;
+    --text:     #E8E8F0;
+    --muted:    #6B6B8A;
+    --mono:     'Geist Mono', ui-monospace, Menlo, monospace;
+    --sans:     'Varela Round', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --fw:       400;
+    --fw-label: 450;
+    --fw-title: 500;
+    --text-sm:  11px;
+    --text-base: 13px;
+    --text-lg:  15px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  html, body,
+  button, input, textarea, select, option,
+  code, kbd, pre, a, h1, h2, h3, h4, p, span, label, li, strong, em, small {
+    font-family: var(--sans);
+  }
+
+  .file-protocol-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    background: rgba(10, 10, 15, 0.97);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  html.file-protocol .file-protocol-overlay { display: flex; }
+  .file-protocol-card {
+    max-width: 440px;
+    background: var(--card);
+    border: 1px solid var(--orange);
+    border-radius: 12px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .file-protocol-card h2 {
+    color: var(--orange);
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .file-protocol-card p {
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .file-protocol-card strong { color: var(--text); }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: var(--text-base);
+    font-weight: var(--fw);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,217,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,217,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-weight: var(--fw-title);
+    font-size: 12px;
+    background: linear-gradient(90deg, var(--cyan), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  nav .theme-toggle, nav .dev-deck-btn { margin-left: 0; }
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-link {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--cyan);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover {
+    border-color: var(--cyan);
+    background: rgba(0,217,255,0.08);
+  }
+
+  .nav-link-home {
+    color: var(--wood, #e8a86a);
+    border-color: rgba(232, 168, 106, 0.45);
+  }
+  .nav-link-home:hover {
+    border-color: var(--wood, #e8a86a);
+    background: rgba(232, 168, 106, 0.1);
+    color: var(--wood, #e8a86a);
+  }
+
+  .nav-badge {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 12px 36px;
+    text-align: center;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .hero-title {
+    font-size: clamp(26px, 5.5vw, 40px);
+    font-weight: var(--fw-title);
+    letter-spacing: -4px;
+    line-height: 0.95;
+    margin-bottom: 8px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.35s;
+  }
+
+  .hero-credit {
+    font-size: var(--text-base);
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.42s;
+  }
+
+  .hero-credit strong {
+    color: var(--text);
+    font-weight: var(--fw-title);
+  }
+
+  .hero-title span {
+    background: linear-gradient(135deg, var(--cyan) 0%, var(--green) 60%, var(--cyan) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 4s linear infinite 1s;
+  }
+
+  .hero-sub {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+    max-width: 340px;
+    line-height: 1.45;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.5s;
+  }
+
+  
+  .terminal {
+    width: 100%;
+    max-width: 400px;
+    background: #080810;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,217,255,0.08), 0 0 0 1px rgba(0,217,255,0.05);
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.65s;
+    margin-bottom: 22px;
+  }
+
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #0D0D1A;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .dot-r { background: #FF5F57; }
+  .dot-y { background: #FEBC2E; }
+  .dot-g { background: #28C840; }
+
+  .terminal-title {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-left: auto;
+    margin-right: auto;
+    padding-right: 36px;
+  }
+
+  .terminal-body {
+    padding: 12px 14px 14px;
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    line-height: 1.65;
+  }
+
+  .t-prompt { color: var(--green); }
+  .t-cmd    { color: var(--text); }
+  .t-cursor {
+    display: inline-block;
+    width: 8px; height: 16px;
+    background: var(--cyan);
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+  }
+
+  .t-comment { color: var(--muted); font-size: var(--text-sm); }
+
+  
+  .btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.8s;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    font-weight: var(--fw-label);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), #0099BB);
+    color: #000;
+    box-shadow: 0 0 30px rgba(0,217,255,0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(0,217,255,0.5);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0,217,255,0.05);
+  }
+
+  .btn-sh {
+    font-weight: var(--fw-title);
+    border-width: 2px;
+    box-shadow: 0 0 24px rgba(0, 217, 255, 0.18);
+  }
+  .btn-sh:hover {
+    transform: translateY(-2px);
+  }
+  .btn-sh-green {
+    background: rgba(0, 255, 128, 0.12);
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 24px rgba(0, 255, 128, 0.22);
+  }
+  .btn-sh-green:hover {
+    background: rgba(0, 255, 128, 0.2);
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 36px rgba(0, 255, 128, 0.35);
+  }
+  .btn-sh-orange {
+    background: rgba(255, 140, 26, 0.14);
+    border-color: var(--orange);
+    color: var(--orange);
+    box-shadow: 0 0 24px rgba(255, 140, 26, 0.22);
+  }
+  .btn-sh-orange:hover {
+    background: rgba(255, 140, 26, 0.22);
+    border-color: var(--orange);
+    color: var(--orange);
+    box-shadow: 0 0 36px rgba(255, 140, 26, 0.35);
+  }
+
+  .sh-trust-note {
+    font-size: var(--text-base);
+    line-height: 1.55;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    background: rgba(0, 217, 255, 0.06);
+    border: 1px solid rgba(0, 217, 255, 0.25);
+    color: var(--muted);
+  }
+  .sh-trust-note strong { color: var(--cyan); }
+
+  
+  .copy-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--card2);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    padding: 10px 20px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .copy-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  
+  .section {
+    position: relative;
+    z-index: 1;
+    padding: 28px 12px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .feature {
+    background: var(--card);
+    padding: 10px 10px;
+    transition: background 0.2s;
+  }
+  .feature:hover { background: var(--card2); }
+
+  .feature-icon {
+    font-size: 16px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .feature-title {
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .feature-desc {
+    font-size: var(--text-base);
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .step {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--cyan);
+    background: rgba(0,217,255,0.08);
+    border: 1px solid rgba(0,217,255,0.2);
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: var(--fw-title);
+  }
+
+  .step-content h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--fw-label);
+    margin-bottom: 4px;
+  }
+
+  .step-content p {
+    font-size: var(--text-base);
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .step-content code {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: var(--green);
+  }
+
+  
+  .download-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dl-recommended {
+    background: var(--card2);
+    border: 1px solid rgba(0, 255, 136, 0.4);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-top: 14px;
+    text-align: left;
+  }
+  .dl-recommended-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 255, 136, 0.45);
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .dl-recommended-title {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .dl-recommended-steps {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0 0 14px;
+  }
+  .btn-recommended {
+    width: 100%;
+    padding: 14px 18px !important;
+    font-size: 17px !important;
+    font-weight: 600 !important;
+  }
+  .dl-other-panel { width: 100%; }
+  .dl-other-panel.is-open .dl-other-body { max-height: 360px; }
+  .dl-other-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .dl-other-note {
+    margin-top: 10px;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.55;
+    text-align: left;
+  }
+  #dl-win.dl-win-wrap,
+  #dl-linux.dl-linux-wrap {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 640px;
+    gap: 0;
+  }
+  .platform-banner {
+    font-size: 15px;
+    line-height: 1.55;
+    text-align: left;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  .platform-banner--deprecated {
+    color: var(--orange);
+    background: rgba(255, 140, 26, 0.08);
+    border: 1px solid rgba(255, 140, 26, 0.35);
+  }
+
+  .channel-compare {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .channel-compare-scroll { overflow-x: auto; }
+  .channel-compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    min-width: 520px;
+  }
+  .channel-compare-table th,
+  .channel-compare-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .channel-compare-table th {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .channel-compare-table td:first-child {
+    color: var(--text);
+    font-weight: 500;
+    width: 28%;
+  }
+  .how-it-works-table { min-width: 880px; }
+  .how-it-works-table td:first-child { width: auto; white-space: nowrap; }
+  .how-it-works-subtitle {
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--cyan);
+    margin: 22px 0 10px;
+  }
+  .status-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+  .status-pill--active { color: var(--green); background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.35); }
+  .status-pill--beta { color: var(--orange); background: rgba(255,140,26,0.12); border: 1px solid rgba(255,140,26,0.35); }
+  .status-pill--prerelease { color: #e8a838; background: rgba(232,168,56,0.12); border: 1px solid rgba(232,168,56,0.35); }
+  .status-pill--deprecated { color: var(--muted); background: rgba(107,107,138,0.12); border: 1px solid var(--border); }
+
+  .download-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(0,217,255,0.08), transparent 70%);
+    pointer-events: none;
+  }
+
+  .prev-versions-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+  .prev-versions-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: none;
+    border: none;
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+  }
+  .prev-versions-note {
+    margin: 8px 0 0;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .prev-versions-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+  .prev-versions-panel.is-open .prev-versions-body {
+    max-height: 320px;
+  }
+
+  .whats-new-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+  .whats-new-panel.is-open .whats-new-body {
+    max-height: 520px;
+  }
+  .whats-new-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .whats-new-grid {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  @media (min-width: 700px) {
+    .whats-new-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .whats-new-card {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+  .whats-new-card h3 {
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    margin: 0 0 8px;
+  }
+  .whats-new-card ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: var(--text-sm);
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .whats-new-card li { margin-bottom: 4px; }
+  .whats-new-card li strong { color: var(--text); font-weight: 600; }
+  .prev-versions-panel.is-open .prev-versions-chevron {
+    transform: rotate(90deg);
+  }
+  .prev-versions-chevron {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    color: var(--muted);
+  }
+  .prev-versions-scroll {
+    margin-top: 14px;
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .prev-versions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .prev-versions-table th,
+  .prev-versions-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+  }
+  .prev-versions-table th {
+    color: var(--muted);
+    font-weight: var(--fw-label);
+    background: var(--card2);
+    position: sticky;
+    top: 0;
+  }
+  .prev-channel {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 11px;
+    font-weight: var(--fw-title);
+  }
+  .prev-dl-link {
+    background: none;
+    border: none;
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+  .prev-hash {
+    color: var(--green);
+    font-size: 12px;
+    word-break: break-all;
+  }
+
+  
+  .next-releases {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 16px 8px;
+  }
+  .next-rel-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 16px;
+  }
+  .next-rel-tab {
+    appearance: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .next-rel-tab:hover {
+    filter: brightness(1.08);
+  }
+  .next-rel-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 720px) {
+    .next-rel-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .next-rel-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .next-rel-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .next-rel-card-head strong {
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  .next-rel-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--bg2);
+  }
+  .next-rel-eta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .next-rel-card ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .next-rel-card li { margin-bottom: 4px; color: var(--muted); }
+  .next-rel-card li::marker { color: var(--cyan); }
+
+  
+  .mc-section {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 20px 56px;
+  }
+
+  .mc-section .section-label { color: #5DBD4A; }
+  .mc-section .section-label::after { background: rgba(93,189,74,0.25); }
+
+  .mc-card {
+    background: var(--card);
+    border: 1px solid rgba(93,189,74,0.35);
+    border-radius: 16px;
+    padding: 18px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mc-card::before {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -40px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(93,189,74,0.12), transparent 70%);
+    pointer-events: none;
+  }
+
+  .mc-card::after {
+    content: '';
+    position: absolute;
+    top: -60px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(139,90,43,0.1), transparent 70%);
+    pointer-events: none;
+  }
+
+  .mc-card h2 {
+    font-size: 17px;
+    font-weight: var(--fw-title);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .mc-card p {
+    font-size: var(--text-base);
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .mc-ip-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    max-width: 420px;
+    margin: 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(93,189,74,0.4);
+    background: var(--bg2);
+  }
+
+  .mc-ip {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    font-weight: var(--fw-title);
+    color: #5DBD4A;
+    padding: 14px 18px;
+    text-align: left;
+    letter-spacing: 0.3px;
+    user-select: all;
+  }
+
+  .mc-copy-btn {
+    background: #5DBD4A;
+    color: #0A1A08;
+    border: none;
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    font-weight: var(--fw-title);
+    padding: 0 20px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .mc-copy-btn:hover { background: #6FD45C; }
+  .mc-copy-btn:active { transform: scale(0.97); }
+
+  .mc-hint {
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
+  .download-meta h2 {
+    font-size: 14px;
+    font-weight: var(--fw-title);
+    margin-bottom: 4px;
+  }
+
+  .download-meta p {
+    font-size: var(--text-base);
+    color: var(--muted);
+  }
+
+  .download-meta .req {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .req-tag {
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 20px 16px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: var(--text-base);
+    color: var(--muted);
+  }
+
+  footer span {
+    color: var(--cyan);
+  }
+
+  
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  @keyframes typing {
+    from { width: 0; }
+    to   { width: 100%; }
+  }
+
+  
+  .tc-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tc-overlay.open { display: flex; }
+  .tc-modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  }
+  .tc-modal-header {
+    padding: 20px 22px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tc-modal-header h2 {
+    font-family: var(--mono);
+    font-size: var(--text-lg);
+    color: var(--green);
+  }
+  .tc-download-label {
+    margin: 8px 0 0;
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+  .tc-download-label code {
+    color: var(--cyan);
+    font-size: var(--text-sm);
+  }
+  .tc-platform-notice {
+    margin: 10px 22px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    color: var(--text);
+    background: rgba(255, 140, 26, 0.1);
+    border: 1px solid rgba(255, 140, 26, 0.35);
+  }
+  .tc-platform-notice--linux {
+    background: rgba(232, 168, 56, 0.1);
+    border-color: rgba(232, 168, 56, 0.35);
+  }
+  .tc-platform-notice--windows {
+    background: rgba(0, 217, 255, 0.08);
+    border-color: rgba(0, 217, 255, 0.3);
+  }
+  .tc-modal-body {
+    padding: 16px 22px;
+    overflow-y: auto;
+    font-size: var(--text-base);
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .tc-modal-body p { margin-bottom: 14px; }
+  .tc-modal-body p:last-child { margin-bottom: 0; }
+  .tc-modal-body h3 {
+    font-size: var(--text-lg);
+    color: var(--cyan);
+    margin: 20px 0 10px;
+    font-weight: var(--fw-title);
+  }
+  .tc-modal-body h3:first-of-type { margin-top: 0; }
+  .tc-modal-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+  .tc-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    font-size: var(--text-base);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .tc-checkbox-row input { margin-top: 3px; accent-color: var(--green); }
+  .tc-modal-actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px 22px 20px;
+    justify-content: flex-end;
+  }
+  .tc-modal-actions .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  
+  @media (max-width: 600px) {
+    nav { padding: 6px 10px; }
+    .hero { padding: 52px 10px 28px; }
+    .download-card { flex-direction: column; text-align: center; }
+    .download-card .req { justify-content: center; }
+    .tc-modal-actions { flex-direction: column; }
+  }
+
+  .shots { max-width: 980px; margin: 0 auto; padding: 8px 16px 48px; text-align: center; }
+  .shots-kicker { font-family: var(--mono); font-size: 12px; color: var(--cyan); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .shots-title { font-family: var(--mono); font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+  .shots-sub { color: var(--muted); font-size: 15px; line-height: 1.55; max-width: 640px; margin: 0 auto 20px; }
+  .shot-hero { margin: 0 auto 20px; max-width: 920px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+  .shot-hero img, .shot-card img { display: block; width: 100%; height: auto; }
+  .shot-hero figcaption, .shot-card figcaption { font-family: var(--mono); font-size: 12px; color: var(--muted); padding: 10px 14px 12px; text-align: left; border-top: 1px solid var(--border); }
+  .shot-hero figcaption strong, .shot-card figcaption strong { color: var(--text); }
+  .shot-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 720px) {
+    .shot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 980px) {
+    .shot-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  .shot-card { margin: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  
+  html { color-scheme: dark; }
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg:       #F4F5FA;
+    --bg2:      #ECEEF6;
+    --card:     #FFFFFF;
+    --card2:    #F0F1F8;
+    --border:   #D0D4E4;
+    --text:     #14141F;
+    --muted:    #5A5A78;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg:       #0A0A0F;
+    --bg2:      #0F0F18;
+    --card:     #13131E;
+    --card2:    #1A1A28;
+    --border:   #2A2A40;
+    --text:     #E8E8F0;
+    --muted:    #6B6B8A;
+  }
+  
+  html[data-theme="oled"] {
+    color-scheme: dark;
+    --bg:       #000000;
+    --bg2:      #050505;
+    --card:     #0A0A0A;
+    --card2:    #111111;
+    --border:   #222222;
+    --text:     #F2F2F2;
+    --muted:    #7A7A8A;
+    --cyan:     #00E5FF;
+    --green:    #00FF88;
+  }
+  
+  html[data-theme="ips"] {
+    color-scheme: dark;
+    --bg:       #0A0C14;
+    --bg2:      #10141F;
+    --card:     #141A28;
+    --card2:    #1C2436;
+    --border:   #2E3A52;
+    --text:     #EAF0FF;
+    --muted:    #7A88A8;
+    --cyan:     #20E0FF;
+    --green:    #2CFF9A;
+  }
+  
+  html[data-theme="lcd"] {
+    color-scheme: dark;
+    --bg:       #16161C;
+    --bg2:      #1C1C24;
+    --card:     #22222C;
+    --card2:    #2A2A36;
+    --border:   #3A3A48;
+    --text:     #E4E4EC;
+    --muted:    #8888A0;
+    --cyan:     #33D0E8;
+    --green:    #40E890;
+  }
+  
+  html[data-theme="miniled"] {
+    color-scheme: dark;
+    --bg:       #04050A;
+    --bg2:      #080A12;
+    --card:     #0E1018;
+    --card2:    #161A28;
+    --border:   #2A3450;
+    --text:     #F0F4FF;
+    --muted:    #7080A0;
+    --cyan:     #00F0FF;
+    --green:    #00FFA0;
+    --orange:   #FFA040;
+  }
+  html[data-theme="light"] body,
+  html[data-theme="dark"] body,
+  html[data-theme="oled"] body,
+  html[data-theme="ips"] body,
+  html[data-theme="lcd"] body,
+  html[data-theme="miniled"] body { background: var(--bg); }
+  html[data-theme="light"] .file-protocol-overlay { background: rgba(244,245,250,0.97); }
+  html[data-theme="light"] .nav {
+    background: rgba(244,245,250,0.92);
+    border-bottom-color: var(--border);
+  }
+  html[data-theme="oled"] .nav,
+  html[data-theme="miniled"] .nav {
+    background: rgba(0,0,0,0.92);
+  }
+  .theme-toggle, .dev-deck-btn, .theme-select {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .theme-select {
+    padding: 5px 8px;
+    max-width: 120px;
+  }
+  .theme-toggle:hover, .dev-deck-btn:hover, .theme-select:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+  
+  #dev-deck {
+    display: none;
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    width: min(380px, calc(100vw - 32px));
+    max-height: min(70vh, 520px);
+    overflow: auto;
+    z-index: 30000;
+    background: var(--card);
+    border: 1px solid var(--cyan);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  #dev-deck.open { display: block; }
+  #dev-deck h3 {
+    font-size: 13px;
+    color: var(--cyan);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #dev-deck .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  #dev-deck button {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #dev-deck button:hover { border-color: var(--green); color: var(--green); }
+  #dev-deck pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--muted);
+    max-height: 160px;
+    overflow: auto;
+  }
+  #dev-deck .hint { color: var(--muted); margin-bottom: 6px; }
+  html.dev-grid body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 25000;
+    background-image:
+      linear-gradient(rgba(0,217,255,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,217,255,0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  html.party {
+    animation: partyHue 3s linear infinite;
+  }
+  @keyframes partyHue {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(360deg); }
+  }
+
+</style>
+<script>
+
+(function(){
+  try {
+    var p=new URLSearchParams(location.search).get('tab');
+    var h=(location.hash||'').replace('#','');
+    var m={cli:'/cli.html',linux:'/linux.html',win:'/windows.html'};
+    if(m[p]) location.replace(m[p]);
+    else if(m[h]) location.replace(m[h]);
+  } catch(e) {}
+})();
+</script>
+</head>
+<body>
+
+<div class="file-protocol-overlay" id="file-protocol-overlay" role="alertdialog" aria-labelledby="file-protocol-title">
+  <div class="file-protocol-card">
+    <h2 id="file-protocol-title">Open the right way</h2>
+    <p>Don't open <strong>index.html</strong> directly — downloads and fonts won't work.</p>
+    <p>Close this tab, then double-click <strong>OPEN-WEBSITE.command</strong> in the unzipped folder.</p>
+    <p id="file-protocol-netlify-note" style="margin-top:14px; font-size:18px; color:var(--muted);">This zip runs locally — double-click OPEN-WEBSITE.command.</p>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-logo">rNitro</div>
+<!-- @sync:nav-right -->
+  <div class="nav-right">
+    <a class="nav-link nav-link-home" href="https://chopstickshq.com/">← Back to homepage</a>
+    <a class="nav-link" href="/archives">Archives</a>
+    <a class="nav-link" href="/faq.html">FAQ</a>
+    <a class="nav-link" href="/privacy.html">Privacy</a>
+    <a class="nav-link" href="/terms.html">Terms</a>
+    <div class="nav-badge">v1.3.28 · Apple Silicon</div>
+  </div>
+<!-- @end:nav-right -->
+  <label class="theme-select-wrap" title="Display mode" style="display:inline-flex;align-items:center;gap:6px;">
+    <span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Display mode</span>
+    <select class="theme-select" id="theme-select" aria-label="Display mode">
+      <option value="system">System</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+      <option value="oled">OLED</option>
+      <option value="ips">IPS</option>
+      <option value="lcd">LCD</option>
+      <option value="miniled">Mini LED</option>
+    </select>
+  </label>
+  <button type="button" class="theme-toggle" id="theme-toggle" title="Cycle display mode" aria-label="Cycle display mode">◐ Mode</button>
+  <button type="button" class="dev-deck-btn" id="dev-deck-open" title="Dev Deck (Ctrl+Shift+D)" aria-label="Open developer tools">⚒ Dev</button>
+</nav>
+
+<section class="hero">
+<!-- @sync:hero-copy -->
+  <p class="hero-eyebrow">Menu bar · Apple Silicon &amp; Intel · macOS 14+</p>
+  <h1 class="hero-title"><span>rNitro</span></h1>
+  <p class="hero-credit">Made by <strong>chopsticks</strong></p>
+  <p class="hero-sub">Real-time CPU, temperature, memory, battery, and more — right in your Mac menu bar. Current: <strong>v1.3.28</strong> · requires <strong>macOS 14+</strong> (Sonoma or later). Free · no account · no telemetry.</p>
+  <p style="margin:14px 0 0; text-align:center;">
+    <button type="button" class="btn btn-primary btn-recommended" style="font-size:16px; padding:12px 28px;" onclick="requestDownload('rNitro-v1.3.29-Experimental.zip')">⬇ Download for Mac · App ZIP</button>
+  </p>
+  <p style="margin:8px 0 0; font-size:13px; color:var(--muted); text-align:center;">Terms apply once per session · Apple Silicon</p>
+<!-- @end:hero-copy -->
+
+  
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <div class="terminal-title">zsh — bash</div>
+    </div>
+    <div class="terminal-body">
+      <div class="t-comment"># Paste in Terminal (Stable) — download + install</div>
+      <div>
+        <span class="t-prompt">~ %</span>
+        <span class="t-cmd" id="typed-run"></span><span class="t-cursor" id="cursor"></span>
+      </div>
+    </div>
+  </div>
+
+<!-- @sync:platform-tabs -->
+  <div role="navigation" aria-label="Download platform" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
+    <a id="tab-mac" href="/" aria-current="page"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
+      🍎 macOS
+    </a>
+    <a id="tab-cli" href="/cli.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
+      ⌨️ CLI
+    </a>
+    <a id="tab-linux" href="/linux.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none;">
+      🐧 Linux
+    </a>
+    <a id="tab-win" href="/windows.html"
+      style="padding:6px 18px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:var(--mono); font-size:16px; font-weight:500; text-decoration:none; opacity:0.8;">
+      🪟 Windows (legacy)
+    </a>
+  </div>
+<!-- @end:platform-tabs -->
+
+  
+  <div id="dl-mac" role="tabpanel" aria-labelledby="tab-mac" style="display:flex; flex-direction:column; gap:16px; align-items:center; width:100%; max-width:640px;">
+<!-- @sync:mac-arch-tabs -->
+  <div role="status" aria-live="polite" style="width:100%; max-width:640px; margin:0 auto 14px; padding:12px 16px; border-radius:10px; border:1px solid rgba(255,140,26,0.55); background:rgba(255,140,26,0.12); text-align:center; line-height:1.55;">
+    <div style="font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--orange); margin-bottom:4px;">NOTICE</div>
+    <div style="font-size:15px; color:var(--text); font-weight:600;">
+      Intel Mac will no longer be getting updates after <strong style="color:var(--orange);">v1.2.5-Beta</strong>.
+    </div>
+    <div style="font-size:13px; color:var(--muted); margin-top:6px;">
+      Apple Silicon continues to receive updates. Plan to move to an Apple Silicon Mac for ongoing support.
+    </div>
+  </div>
+  <div role="tablist" aria-label="Mac chip" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:8px; width:100%;">
+    <button type="button" id="mac-arch-silicon" role="tab" aria-selected="true" onclick="setMacArch('silicon')"
+      style="padding:8px 16px; border-radius:20px; border:1px solid var(--green); background:var(--green); color:#000; font-family:var(--mono); font-size:14px; font-weight:600; cursor:pointer;">
+      Apple Silicon
+    </button>
+    <button type="button" id="mac-arch-intel" role="tab" aria-selected="false" onclick="setMacArch('intel')"
+      style="padding:8px 16px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text); font-family:var(--mono); font-size:14px; font-weight:600; cursor:pointer;">
+      Intel Mac
+    </button>
+  </div>
+  <p style="font-size:13px; color:var(--muted); text-align:center; margin:0 0 12px; max-width:520px; line-height:1.5;">
+    M1 / M2 / M3 / M4 → <strong style="color:var(--green);">Apple Silicon</strong>.
+    Older Intel Macs → <strong style="color:var(--cyan);">Intel</strong> (compiles on your Mac · last updates through v1.2.5-Beta).
+  </p>
+<!-- @end:mac-arch-tabs -->
+<!-- @sync:trust-strip -->
+  <div id="trust-strip" style="width:100%; max-width:640px; margin:0 auto 16px; padding:12px 14px; border-radius:10px; border:1px solid rgba(0,217,255,0.35); background:rgba(0,217,255,0.07); text-align:left;">
+    <div style="font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.05em; color:var(--cyan); margin-bottom:6px;">First open on macOS</div>
+    <p style="margin:0; font-size:14px; color:var(--text); line-height:1.5;">
+      Builds are ad-hoc signed (not Apple-notarized yet). If macOS blocks the app: <strong>right-click rNitro.app → Open → Open</strong>. Prefer the <strong>App ZIP</strong> or <strong>Terminal install (no Xcode)</strong> from this site.
+    </p>
+    <p style="margin:8px 0 0; font-size:12px; color:var(--muted); line-height:1.45;">
+      <a href="privacy.html" style="color:var(--cyan);">Privacy</a>
+      · <a href="terms.html" style="color:var(--cyan);">Terms</a>
+      · <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a>
+    </p>
+  </div>
+<!-- @end:trust-strip -->
+
+<!-- @sync:mac-silicon-wrap-open -->
+    <div id="mac-silicon-panel" style="display:flex; width:100%; flex-direction:column; gap:16px;">
+<!-- @end:mac-silicon-wrap-open -->
+<!-- @sync:hero-stable -->
+
+<!-- @end:hero-stable -->
+<!-- @sync:hero-beta -->
+
+<!-- @end:hero-beta -->
+<!-- @sync:hero-experimental -->
+    <div style="width:100%; background:var(--card); border:1px solid var(--green); border-radius:12px; padding:20px; text-align:center;">
+      <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--green); margin-bottom:4px;">v1.3.29-Experimental</div>
+      <div style="font-size:16px; color:var(--muted); margin-bottom:0;">rNitro for macOS — menu bar monitor, Lab tools, AI chat, New style UI. Requires <strong style="color:var(--green);">macOS 14.0+</strong> (Sonoma / Sequoia / later) · universal when available.</div>
+      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.4);">
+        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.45); background:rgba(0,255,136,0.1);">No Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--green);">App ZIP</div>
+        <p class="dl-recommended-steps">Unzip → Applications → right-click <strong>Open</strong> if blocked.</p>
+        <button type="button" class="btn btn-primary btn-recommended" style="" onclick="requestDownload('rNitro-v1.3.29-Experimental.zip')">⬇ App ZIP · 4.9 MB</button>
+        <p class="dl-recommended-steps" style="margin:12px 0 6px;"><strong>Terminal</strong> (no Xcode):</p>
+        <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.3); border-radius:8px; padding:10px 12px; font-family:var(--mono); font-size:11px; color:var(--green); word-break:break-all; line-height:1.4; margin-bottom:8px;">printf "\n[######--------------] 1/3 Download\n" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.3.29-Experimental.zip -o /tmp/rnitro.zip && printf "\n[############--------] 2/3 Unzip\n" && rm -rf /tmp/rnitro-app && mkdir -p /tmp/rnitro-app && unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && printf "[####################] 3/3 Install\n" && mkdir -p ~/Applications && rm -rf ~/Applications/rNitro.app && ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && xattr -cr ~/Applications/rNitro.app && printf "✓ Done → ~/Applications/rNitro.app\n"</div>
+        <button type="button" class="btn btn-secondary" onclick="copyCurlCmd('experimental_zip')">⎘ Copy Terminal install</button>
+      </div>
+      <div class="dl-recommended" style="border-color:rgba(0,255,136,0.3); margin-top:10px;">
+        <div class="dl-recommended-badge" style="color:var(--green); border-color:rgba(0,255,136,0.35); background:rgba(0,255,136,0.06);">Optional · Xcode</div>
+        <div class="dl-recommended-title" style="color:var(--green);">Compile from source</div>
+        <p class="dl-recommended-steps">Needs <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode CLT</a>. Prefer App ZIP above.</p>
+        <div style="background:var(--card2); border:1px solid rgba(0,255,136,0.25); border-radius:8px; padding:10px 12px; font-family:var(--mono); font-size:11px; color:var(--green); word-break:break-all; line-height:1.4; margin-bottom:8px;">printf "\n[########------------] 1/2 Download installer\n" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.3.29-Experimental.sh -o /tmp/rnitro-install.sh && printf "\n[####################] 2/2 Compile & install (Xcode CLT)\n" && bash /tmp/rnitro-install.sh</div>
+        <button type="button" class="btn btn-secondary" style="" onclick="copyCurlCmd('experimental')">⎘ Copy compile install</button>
+      </div>
+      <div id="hero-exp-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('hero-exp-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.3.29-Experimental.pkg')">PKG installer · 4.9 MB</button>
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v1.3.29-Experimental.dmg')">DMG disk image · 7.1 MB</button>
+            <button type="button" class="btn btn-sh btn-sh-green" onclick="requestDownload('rNitro-v1.3.29-Experimental.sh')">Shell installer (.sh) · 797 KB</button>
+            <button class="btn btn-secondary" onclick="copyCurlCmd('experimental')">⎘ Copy curl install</button>
+          </div>
+          <div class="dl-other-note"><strong>PKG</strong> needs admin password. <strong>DMG</strong> — drag to Applications. <strong>.sh</strong> compiles from readable source (~30s). PKG may trigger a macOS security prompt — use System Settings → Privacy &amp; Security → Open.</div>
+        </div>
+      </div>
+    </div>
+    <div style="width:100%; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:left;">
+      <div style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--muted); margin-bottom:8px;">Older macOS — downloads &amp; limits</div>
+      <table style="width:100%; border-collapse:collapse; font-size:14px; line-height:1.55;">
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--green); font-weight:600; white-space:nowrap;">macOS 14+</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">Supported.</strong> Use the current App ZIP above.</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--orange); font-weight:600; white-space:nowrap;">macOS 11–13</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">No app build.</strong> Current rNitro uses SwiftUI APIs that need macOS 14+. Big Sur / Monterey / Ventura are not supported. See the info pack.</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--orange); font-weight:600; white-space:nowrap;">Mac OS X 10.x</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">Not supported.</strong> No binary — too old for modern SwiftUI.</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 8px 8px 0; vertical-align:top; color:var(--orange); font-weight:600; white-space:nowrap;">Mac OS 8 / 9</td>
+          <td style="padding:8px 0; color:var(--muted);"><strong style="color:var(--text);">Not possible.</strong> Classic Mac OS is a different platform. No rNitro app exists.</td>
+        </tr>
+      </table>
+      <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-Older-MacOS-Support-Info.zip')">⬇ Older macOS info pack (ZIP)</button>
+        <a class="btn btn-secondary" href="https://github.com/ilikemacos/rNitro" style="display:inline-flex; align-items:center; text-decoration:none;">GitHub source</a>
+      </div>
+      <p style="margin:10px 0 0; font-size:12px; color:var(--muted);">The info pack is documentation only — not an installer for Mac OS 8, OS X, or macOS 11–13.</p>
+    </div>
+<!-- @end:hero-experimental -->
+<!-- @sync:mac-silicon-wrap-close -->
+    </div>
+<!-- @end:mac-silicon-wrap-close -->
+<!-- @sync:hero-intel -->
+    <div id="mac-intel-panel" style="display:none; width:100%; flex-direction:column; gap:16px;">
+      <div role="status" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,140,26,0.55); background:rgba(255,140,26,0.12); text-align:center; line-height:1.5;">
+        <strong style="color:var(--orange);">Legacy Intel</strong>
+        <div style="font-size:13px; color:var(--muted); margin-top:4px;">Last Intel updates through v1.2.5-Beta. Prefer Apple Silicon for the current build.</div>
+      </div>
+      <div style="width:100%; background:var(--card); border:1px solid var(--cyan); border-radius:12px; padding:20px; text-align:center;">
+        <div style="font-family:var(--mono); font-size:16px; font-weight:700; color:var(--cyan); margin-bottom:4px;">v1.2.3-Intel</div>
+        <div style="font-size:15px; color:var(--muted); margin-bottom:10px;">Intel installer — compiles from source on your Intel Mac.</div>
+        <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4);">
+          <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Legacy · Intel</div>
+          <div class="dl-recommended-title" style="color:var(--cyan);">Terminal one-liner</div>
+          <p class="dl-recommended-steps">Requires <a href="https://developer.apple.com/xcode/resources/" style="color:var(--cyan);">Xcode Command Line Tools</a>. Compiles ~30–60s on Intel.</p>
+          <div style="background:var(--card2); border:1px solid rgba(0,217,255,0.3); border-radius:8px; padding:11px 14px; font-family:var(--mono); font-size:12px; color:var(--cyan); word-break:break-all; line-height:1.45; text-align:left; margin-bottom:10px;">
+            printf "\n[########------------] 1/2 Download installer\n" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.3-Intel.sh -o /tmp/rnitro-install.sh && printf "\n[####################] 2/2 Compile & install (Xcode CLT)\n" && bash /tmp/rnitro-install.sh
+          </div>
+          <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="copyCurlCmd('intel_beta')">⎘ Copy curl one-liner</button>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button type="button" class="btn btn-sh" style="border-color:var(--cyan); color:var(--cyan);" onclick="requestDownload('rNitro-v1.2.3-Intel.sh')">⬇ Download .sh installer</button>
+          <button type="button" class="btn btn-secondary" onclick="requestDownload('install-rNitro-intel.sh')">⬇ install-rNitro-intel.sh (source)</button>
+        </div>
+      </div>
+    </div>
+<!-- @end:hero-intel -->
+<!-- @sync:hero-curl-install -->
+
+<!-- @end:hero-curl-install -->
+<!-- @sync:hero-more -->
+
+<!-- @end:hero-more -->
+<!-- @sync:hero-dl-note -->
+    <p style="color:var(--muted); font-size:14px; font-family:var(--mono); text-align:center; max-width:640px; margin-top:8px; line-height:1.55;">
+      Download the current build for <strong style="color:var(--green);">Apple Silicon</strong> (or Intel installers below). Terms apply once per session. Also on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a>.
+    </p>
+<!-- @end:hero-dl-note -->
+  </div>
+
+  
+
+  
+
+  
+</section>
+
+<section class="section" style="padding-top:24px; padding-bottom:0;">
+  <div class="section-label">Product</div>
+<!-- @sync:screenshots -->
+  <div class="shots">
+    <p class="shots-kicker">macOS · Apple Silicon · Menu bar</p>
+    <h2 class="shots-title">See rNitro on your Mac</h2>
+    <p class="shots-sub">Menu bar monitor with Advisor, Chat, Chat Config, App cleaner, and Settings — built for macOS 14+ (Sonoma and later).</p>
+    <figure class="shot-hero">
+      <img src="screenshots/hero-monitor.png" alt="rNitro menu bar monitor showing CPU, temperature, memory, and battery" width="1200" height="800">
+      <figcaption>Menu bar + Monitor — live CPU, temps, memory, battery, and more</figcaption>
+    </figure>
+    <div class="shot-grid">
+      <figure class="shot-card">
+        <img src="screenshots/feature-advisor.png" alt="rNitro Advisor" loading="lazy" width="720" height="480">
+        <figcaption><strong>Advisor</strong> — System Advisor with live stats and thresholds</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-chat.png" alt="rNitro Chat" loading="lazy" width="720" height="480">
+        <figcaption><strong>Chat</strong> — Bring-your-own AI providers</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-chat-config.png" alt="rNitro Chat Config" loading="lazy" width="720" height="480">
+        <figcaption><strong>Chat Config</strong> — API keys and chat provider setup</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-app-cleaner.png" alt="rNitro App cleaner" loading="lazy" width="720" height="480">
+        <figcaption><strong>App cleaner</strong> — Find large files and free space</figcaption>
+      </figure>
+      <figure class="shot-card">
+        <img src="screenshots/feature-settings.png" alt="rNitro Settings" loading="lazy" width="720" height="480">
+        <figcaption><strong>Settings</strong> — Appearance, menubar, alerts, general</figcaption>
+      </figure>
+    </div>
+  </div>
+<!-- @end:screenshots -->
+</section>
+
+<section class="section" style="padding-top:24px; padding-bottom:8px;" id="next-releases-section">
+  <div class="section-label">Roadmap</div>
+  <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 12px; max-width:980px; margin-left:auto; margin-right:auto; padding:0 16px;">Next releases</h2>
+<!-- @sync:next-releases -->
+  <div id="next-releases" class="next-releases">
+    <p class="prev-versions-note">Single mainline for macOS. Older Final/Beta tags are archives only. · Updated 2026-07-23</p>
+    <div class="next-rel-tabs" role="tablist" aria-label="Next releases by channel">
+      <button type="button" role="tab" id="next-tab-experimental" aria-controls="next-panel-experimental" aria-selected="true" class="next-rel-tab is-active" data-next-tab="experimental" data-color="var(--green)" data-bg="rgba(0,255,136,0.12)" data-border="rgba(0,255,136,0.35)" onclick="setNextReleaseTab('experimental')" style="padding:7px 16px; border-radius:20px; border:1px solid rgba(0,255,136,0.35); background:rgba(0,255,136,0.12); color:var(--green); font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer;">macOS</button>
+      <button type="button" role="tab" id="next-tab-other" aria-controls="next-panel-other" aria-selected="false" class="next-rel-tab" data-next-tab="other" data-color="var(--cyan)" data-bg="rgba(0,217,255,0.1)" data-border="rgba(0,217,255,0.35)" onclick="setNextReleaseTab('other')" style="padding:7px 16px; border-radius:20px; border:1px solid rgba(0,217,255,0.35); background:transparent; color:var(--muted); font-family:var(--mono); font-size:13px; font-weight:600; cursor:pointer;">Other platforms</button>
+    </div>
+      <div id="next-panel-experimental" role="tabpanel" aria-labelledby="next-tab-experimental" class="next-rel-panel" data-next-panel="experimental" style="display:block;">
+        <p class="prev-versions-note">Current on this channel: <strong style="color:var(--green);">v1.3.29-Experimental</strong></p>
+        <div class="next-rel-grid">
+          <div class="next-rel-card" style="border-color:rgba(0,255,136,0.35);">
+            <div class="next-rel-card-head">
+              <strong style="color:var(--green);">v1.3.x / v1.4.0</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: Ongoing</p>
+            <ul>
+              <li>Battery hierarchy (one primary % + details)</li>
+              <li>Appearance: Look vs color mode split</li>
+              <li>Notarized builds when Developer ID is ready</li>
+              <li>Optional migrate prompt for old Stable/Beta installs</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="next-panel-other" role="tabpanel" aria-labelledby="next-tab-other" class="next-rel-panel" data-next-panel="other" style="display:none;">
+        <p class="prev-versions-note">Current on this channel: <strong style="color:var(--cyan);">Linux pre-release · Windows legacy</strong></p>
+        <div class="next-rel-grid">
+          <div class="next-rel-card" style="border-color:rgba(0,217,255,0.35);">
+            <div class="next-rel-card-head">
+              <strong style="color:var(--cyan);">Linux / Windows</strong>
+              <span class="next-rel-badge">planned</span>
+            </div>
+            <p class="next-rel-eta">ETA: As needed</p>
+            <ul>
+              <li>Linux pre-release remains available</li>
+              <li>Windows tray build is legacy download only</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+  </div>
+
+  <script>
+  function setNextReleaseTab(id) {
+    document.querySelectorAll('.next-rel-tab').forEach(function(btn) {
+      var on = btn.getAttribute('data-next-tab') === id;
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      btn.classList.toggle('is-active', on);
+      btn.style.background = on ? (btn.getAttribute('data-bg') || 'transparent') : 'transparent';
+      btn.style.color = on ? (btn.getAttribute('data-color') || 'var(--text)') : 'var(--muted)';
+    });
+    document.querySelectorAll('.next-rel-panel').forEach(function(p) {
+      p.style.display = p.getAttribute('data-next-panel') === id ? 'block' : 'none';
+    });
+  }
+  </script>
+<!-- @end:next-releases -->
+</section>
+
+<section class="section" style="padding-top:24px; padding-bottom:8px;">
+  <div class="section-label">Changelog</div>
+  <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 12px; max-width:980px; margin-left:auto; margin-right:auto; padding:0 16px;">What's new</h2>
+<!-- @sync:whats-new -->
+  <div id="whats-new-panel" class="whats-new-panel prev-versions-panel is-open">
+    <p class="prev-versions-note">Latest stable and beta highlights.</p>
+    <div class="whats-new-body prev-versions-body" style="display:block;">
+      <div class="whats-new-grid">
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);"></h3>
+          <ul>
+
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
+          <h3 style="color:var(--orange);">v1.2.14 Beta</h3>
+          <ul>
+            <li><strong>Battery matches menu bar</strong> — IOPS + pmset charge % and remaining (same path as Experimental); IOKit for amps/mAh/health only.</li>
+            <li><strong>OS strip + parity</strong> — menu % · remaining · source; Compare with macOS self-test with cached result.</li>
+            <li><strong>Low-battery automation</strong> — optional notify / dim / mute stress at 20%/10%.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.17 Experimental</h3>
+          <ul>
+            <li><strong>Parity memory</strong> — last Compare with macOS result is saved and shown after relaunch; battery section defaults expanded for OS strip.</li>
+            <li><strong>Lighter IOPS polling</strong> — IOPS every tick; pmset subprocess only ~every 30s or when %/remaining missing or level jumps.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.16 Experimental</h3>
+          <ul>
+            <li><strong>Lab speed test</strong> — Experimental Lab toy: ping / download / upload via Cloudflare public endpoints; recent results kept on-device.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.15 Experimental</h3>
+          <ul>
+            <li><strong>OS battery strip</strong> — always shows menu % · remaining · source (IOPS/pmset).</li>
+            <li><strong>Compare with macOS</strong> — one-shot IOPS + pmset + system_profiler parity check with copyable report.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.14 Experimental</h3>
+          <ul>
+            <li><strong>Battery = local OS sources</strong> — charge % and remaining time from IOPS + pmset (same APIs as menu bar / btop). IOKit only supplies amps, mAh, health. Live pack-draw ETA is secondary, not a replacement.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.13 Experimental</h3>
+          <ul>
+            <li><strong>Discharge time accuracy</strong> — remaining time now blends live pack amps/watts and observed %/hr drain; never prefers optimistic longer pmset/IOKit times under load.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.12 Experimental</h3>
+          <ul>
+            <li><strong>Dual SoC + compare</strong> — menu-bar % with chemical gauge; pmset/IOPS/IOKit compare rows; copy diagnostics.</li>
+            <li><strong>IOPS + drain graph</strong> — public power-sources API for %/ETA; 1h pack-power history.</li>
+            <li><strong>Top energy proxy + Fathom</strong> — top CPU apps as free energy proxy; Fathom link for attribution.</li>
+            <li><strong>Adaptive sample + low-battery auto</strong> — faster when discharging/low; notify/dim/mute stress at 20%/10%.</li>
+            <li><strong>Update SHA labels</strong> — installed binary vs published ZIP SHA in Settings.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.11 Experimental</h3>
+          <ul>
+            <li><strong>Battery matches menu bar</strong> — charge % is strict CurrentCapacity/pmset (no raw-mAh blend); chemical StateOfCharge never overrides UI.</li>
+            <li><strong>Health & power</strong> — Maximum Capacity from System Settings when available; signed 64-bit amps; PowerTelemetry pack watts.</li>
+            <li><strong>AC detection</strong> — ExternalChargeCapable no longer counts as plugged in.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.10 Experimental</h3>
+          <ul>
+            <li><strong>Battery accuracy</strong> — raw mAh SoC cross-check, signed InstantAmperage pack watts, discharge W, ETA from capacity when IOKit times are stale.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.9 Experimental</h3>
+          <ul>
+            <li><strong>Update ZIP integrity</strong> — verifies published SHA-256 from version.json before install.</li>
+            <li><strong>Hardened auto-update</strong> — only /Applications or ~/Applications; codesign verify pre/post replace.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.8 Experimental</h3>
+          <ul>
+            <li><strong>More sensors</strong> — full SMC temp key enumeration + expanded M-series keys; die-preferring blend.</li>
+            <li><strong>Smarter temps</strong> — load-aware upper-sensor fusion; faster track-up under load.</li>
+            <li><strong>SoC power</strong> — IOReport also picks DRAM/related energy; richer GPU util keys.</li>
+            <li><strong>Still light</strong> — one-time key discovery + short caches; idle sampling unchanged.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.7 Experimental</h3>
+          <ul>
+            <li><strong>T&C session remember</strong> — optional “Remember for this browser session” on download modal.</li>
+            <li><strong>What's new strip</strong> — General shows changelog blurb after updates / on Experimental.</li>
+            <li><strong>Menu presets</strong> — selected preset highlight + restore previous slots.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.6 Experimental</h3>
+          <ul>
+            <li><strong>Update UX</strong> — channel badge, last check time, Check for Updates strip; Later snoozes 24h; release notes from changelog.</li>
+            <li><strong>Menu bar presets</strong> — Laptop / Desktop / Minimal one-click layouts.</li>
+            <li><strong>Fathom link</strong> — battery section opens Fathom (or install page) for drain attribution.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
+          <h3 style="color:var(--orange);">v1.2.13 Beta</h3>
+          <ul>
+            <li><strong>Font picker UX</strong> — search, category chips, scrollable live previews, star favorites, OFL credit.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.4 Experimental</h3>
+          <ul>
+            <li><strong>Font picker UX</strong> — same improved Appearance font browser as Beta.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.2.9 Final</h3>
+          <ul>
+            <li><strong>Light & dark theme</strong> — Appearance → Theme: System / Dark / Light.</li>
+            <li><strong>UI fonts</strong> — searchable catalog + OFL fonts.</li>
+            <li><strong>Stable scope</strong> — OpenAI/OpenRouter only; no Lab.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,255,136,0.35);">
+          <h3 style="color:var(--green);">v1.3.3 Experimental</h3>
+          <ul>
+            <li><strong>Theme + Dev Deck</strong> — app theme picker; site light/dark + Dev Deck (Ctrl+Shift+D).</li>
+            <li><strong>All toys</strong> — experimental Lab playground.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(255,140,26,0.35);">
+          <h3 style="color:var(--orange);">v1.2.12 Beta</h3>
+          <ul>
+            <li><strong>Theme + Dev toolkit</strong> — light/dark mode; Dev Mode surprise tools (CDN ping, font map, accent shuffle).</li>
+            <li><strong>Lab</strong> — full beta Lab + process tools.</li>
+          </ul>
+        </div>
+        <div class="whats-new-card" style="border-color:rgba(0,217,255,0.35);">
+          <h3 style="color:var(--cyan);">Website & distribution</h3>
+          <ul>
+            <li><strong>Chopsticks HQ</strong> — chopstickshq.com hub; full product site at getrnitro.netlify.app.</li>
+            <li><strong>GitHub</strong> — releases on github.com/ilikemacos/MacBar with App ZIP, PKG, DMG, and .sh.</li>
+            <li><strong>Privacy</strong> — no accounts, no telemetry; see /privacy.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- @end:whats-new -->
+  <div style="max-width:980px; margin:20px auto 0; padding:0 16px;">
+    <h2 style="font-family:var(--mono); font-size:16px; font-weight:700; margin:0 0 12px; color:var(--muted);">Release notes</h2>
+<!-- @sync:changelog -->
+  <div class="features" style="grid-template-columns:1fr;">
+    <div class="feature">
+      <div class="feature-title">v1.3.3 Experimental / v1.2.12 Beta / v1.2.9 Final</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Light & dark mode</strong> on website + app. <strong>Dev toolkit</strong>: site Dev Deck (CDN ping, grid, party mode); app Dev Mode environment manifest, font map, CDN ping, accent shuffle.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.3.2 Experimental / v1.2.11 Beta / v1.2.8 Final</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Font picker UX</strong> — search fonts, filter Sans/Serif/Display/Script/Mono, star favorites, OFL credit. 50+ Google Fonts still offline.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.3.1 Experimental / v1.2.10 Beta / v1.2.7 Final</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Version bump</strong> — same UI font library (50+ Google Fonts OFL). Patch release for channel versioning and distribution.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.3.0 Experimental / v1.2.9 Beta / v1.2.6 Final</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">UI font library</strong> — 50+ Google Fonts (OFL) in Appearance, including EB Garamond, Audiowide, and Caveat. Experimental 1.3.0 keeps all Lab toys; Beta 1.2.9 ships fonts + process tools; Stable 1.2.6 Final gets fonts without Lab.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.7 Beta / Experimental</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Process tools + Dev Mode finish</strong> — Why hot?, kill/reveal (Dev), UI config JSON, Lab toys TOC collapsed. Gatekeeper guide on site.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.0 Final (Stable)</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--green);">Stable catch-up</strong> — customizable UI + ⌘Q from modern builds; OpenAI/OpenRouter only; no Lab. <a href="https://github.com/ilikemacos/MacBar/releases/tag/v1.2.0-Final" style="color:var(--cyan);">GitHub</a>.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.6 Experimental</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:#9b7bff;">New Lab toys</strong> — thermal forecast, heat haiku, throttle cosplay, overnight watch, core roulette, chaos blip. Beta keeps slim Lab.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.5 Beta / Experimental</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Customizable UI + Developer Mode</strong> — menubar builder, density, accents, thresholds for everyone; optional Dev tools for sampling/logs/dumps. <a href="https://github.com/ilikemacos/MacBar/releases/tag/v1.2.5" style="color:var(--cyan);">GitHub</a>.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.4 Beta / Experimental</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Patched a bug</strong> — ⌘Q now quits the menu bar app. Lab crash fix (scrub slider) + Experimental Features sidebar.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.2.3 Beta</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--orange);">Beta</strong> — Lab: AirDrop card, SOC budget, cooling confession, desktop widget, <code>rnitro lab status</code>.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">v1.1.0 Final Reloaded</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--green);">Stable channel</strong> — production-ready menu bar monitor for daily use. AI limited to OpenAI + OpenRouter.
+      </div>
+    </div>
+    <div class="feature">
+      <div class="feature-title">Platform notes</div>
+      <div class="feature-desc" style="margin-top:8px; line-height:1.7;">
+        <strong style="color:var(--cyan);">macOS</strong> — Apple Silicon, macOS 12+. <strong>Linux</strong> — v0.1 pre-release. <strong style="color:var(--orange);">Windows</strong> — deprecated.
+      </div>
+    </div>
+  </div>
+<!-- @end:changelog -->
+  </div>
+</section>
+
+<section class="mc-section" style="padding-top:40px;">
+  <div class="section-label">Community</div>
+  <div class="mc-card">
+    <h2>Join our Minecraft server!</h2>
+    <p>Nothing to do with rNitro — just a place to hang out and play. Add the server in Minecraft Java Edition and jump in.</p>
+    <div class="mc-ip-row">
+      <div class="mc-ip" id="mc-ip">macetech.minefort.com</div>
+      <button class="mc-copy-btn" onclick="copyMcIp()" type="button">Copy IP</button>
+    </div>
+    <div class="mc-hint">Click Copy IP, then Multiplayer → Add Server → paste</div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0;">
+  <div class="section-label">What it monitors</div>
+  <div class="features">
+    <div class="feature">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">CPU Usage</div>
+      <div class="feature-desc">Total load with a 60-second live history graph, color-coded by intensity.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🌡️</span>
+      <div class="feature-title">Temperature</div>
+      <div class="feature-desc">Real SMC sensor data in °C with a visual gauge that goes orange and red under load.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-title">Clock Speed</div>
+      <div class="feature-desc">Base and boost MHz tracked live, showing how hard your chip is actually running.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🔲</span>
+      <div class="feature-title">Per-Core Breakdown</div>
+      <div class="feature-desc">Individual usage bars and clock speeds for every logical core on your CPU.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🏁</span>
+      <div class="feature-title">Benchmark</div>
+      <div class="feature-desc">Cinebench-style single-core and multi-core scores from a fixed, repeatable render workload — built right into the popover.</div>
+    </div>
+<!-- @sync:feature-ai-chat -->
+    <div class="feature">
+      <span class="feature-icon">💬</span>
+      <div class="feature-title">AI Chat <span style="color:var(--orange); font-size:16px;">(v1.2.14 Beta)</span></div>
+      <div class="feature-desc">Available in v1.2.14 — Chat tab with Gemini, OpenAI, Anthropic, Grok, DeepSeek, OpenRouter, LM Studio, Ollama, and Hermes (Keychain for cloud keys; local providers need no key).</div>
+    </div>
+<!-- @end:feature-ai-chat -->
+  </div>
+</section>
+
+<section class="section" style="padding-top:0;">
+  <div class="section-label">How everything works</div>
+<!-- @sync:how-it-works -->
+  <div class="channel-compare" style="margin-bottom:14px;">
+    <h2 style="font-family:var(--mono); font-size:18px; font-weight:700; margin:0 0 8px;">Platforms at a glance</h2>
+    <p style="color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 14px;">One place to see what each build is, where it installs, and how updates work. New here? Download the <strong style="color:var(--green);">macOS App ZIP</strong> (v1.3.28).</p>
+    <div class="channel-compare-scroll">
+      <table class="channel-compare-table how-it-works-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Version</th>
+            <th>Status</th>
+            <th>Recommended download</th>
+            <th>Install location</th>
+            <th>Updates</th>
+            <th>What you get</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong style="color:var(--green);">macOS</strong></td><td>v1.3.29-Experimental</td><td><span class="status-pill status-pill--active">Current</span></td><td><code>rNitro-v1.3.29-Experimental.zip</code></td><td><code>~/Applications/rNitro.app</code></td><td>In-app updater on launch</td><td>Menu bar monitor, Lab tools, all AI providers, New style UI, display modes</td></tr>
+          <tr><td><strong style="color:#a78bfa;">CLI</strong> · Terminal</td><td>v0.2-cli</td><td><span class="status-pill status-pill--active">Active</span></td><td><code>rNitro-CLI.tar.gz</code></td><td><code>~/bin/rnitro</code> or <code>/usr/local/bin/rnitro</code></td><td>Manual — re-download tarball or curl one-liner</td><td>btop-style TUI: CPU, RAM, disk, network, battery, top processes; macOS + Linux; Python 3</td></tr>
+          <tr><td><strong style="color:#e8a838;">Linux</strong> · Pre-release</td><td>v0.1-Linux-Beta-Pre-release-x64</td><td><span class="status-pill status-pill--prerelease">Pre-release</span></td><td><code>rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz</code> or <code>install-rNitro-linux.sh</code></td><td><code>~/.local/share/rnitro</code></td><td>Checks <code>version.json</code> on launch</td><td>GTK4 app: Monitor, Advisor, Chat, Cleaner; x86_64; needs Python 3.10+, GTK 4, libadwaita</td></tr>
+          <tr><td><strong style="color:var(--cyan);">Windows</strong> · Legacy</td><td>v4.2.4-Windows-Final-x86</td><td><span class="status-pill status-pill--deprecated">Deprecated</span></td><td><code>rNitro-v4.2.4-Windows-Final-x86.exe</code></td><td><code>%LOCALAPPDATA%\rNitro</code></td><td>Manual — check website or GitHub</td><td>Tray monitor only (CPU, temp, RAM, BTC); no AI chat or Cleaner; .NET 8 runtime for EXE</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="how-it-works-subtitle">Download formats</div>
+    <div class="channel-compare-scroll">
+      <table class="channel-compare-table how-it-works-table">
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Platform</th>
+            <th>What it is</th>
+            <th>Gatekeeper / runtime</th>
+            <th>When to use</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>App ZIP</strong> <span style="color:var(--green);">(recommended)</span></td><td>macOS</td><td>Pre-built <code>rNitro.app</code> — unzip and drag to Applications</td><td>Right-click → Open once if Gatekeeper blocks it</td><td>Fastest path; no admin password</td></tr>
+          <tr><td><strong>PKG</strong></td><td>macOS</td><td>Installer package → Applications</td><td>System Settings → Privacy &amp; Security → Open if blocked</td><td>One double-click install; needs admin password</td></tr>
+          <tr><td><strong>DMG</strong></td><td>macOS</td><td>Disk image — drag app to Applications</td><td>Same as App ZIP on first open</td><td>Familiar Mac workflow</td></tr>
+          <tr><td><strong>.sh</strong> shell installer</td><td>macOS</td><td>Full Swift source compiled locally with <code>swiftc</code></td><td>No prebuilt binary downloaded — you read the script first</td><td>Maximum trust; ~30s compile on your Mac</td></tr>
+          <tr><td><strong>Tarball + .sh</strong></td><td>Linux</td><td>Python/GTK source tree + <code>install-rNitro-linux.sh</code></td><td>Installer checks deps and sets up a venv</td><td>Pre-release; also on <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub</a></td></tr>
+          <tr><td><strong>EXE / .ps1</strong></td><td>Windows</td><td>Pre-built tray app or PowerShell compile via <code>csc.exe</code></td><td>.NET 8 Desktop Runtime for EXE</td><td>Legacy only — macOS or Linux recommended for new installs</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="how-it-works-subtitle">End-to-end flow</div>
+    <div class="channel-compare-scroll">
+      <table class="channel-compare-table" style="min-width:520px;">
+        <thead>
+          <tr>
+            <th>Step</th>
+            <th>What happens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Pick your platform tab</td><td>macOS, Linux, or Windows — the site auto-detects your OS</td></tr>
+          <tr><td>Accept Terms &amp; Conditions</td><td>Agree continues download; Disagree returns home. Optional: remember for this browser session</td></tr>
+          <tr><td>Download recommended file</td><td>Green App ZIP card (current macOS build) — size shown on button</td></tr>
+          <tr><td>Install</td><td>Follow the <strong>How to install</strong> steps below for your tab</td></tr>
+          <tr><td>Updates</td><td>macOS: in-app prompt → download ZIP → replace app. Linux: checks same <code>version.json</code>. Windows: manual.</td></tr>
+          <tr><td>GitHub mirror</td><td>Current build also on <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<!-- @end:how-it-works -->
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="section-label">How to install</div>
+
+  <div id="steps-mac" class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+<!-- @sync:install-step-pkg -->
+        <h3>Download the PKG, DMG, or App ZIP</h3>
+        <p>Agree to the Terms &amp; Conditions on every download, then pick a format:</p>
+        <ul style="margin:10px 0 0 18px; line-height:1.7; color:var(--muted);">
+          <li><strong>App ZIP</strong> — unzip and drag <code>rNitro.app</code> to Applications (recommended).</li>
+          <li><strong>PKG</strong> — double-click; installs to Applications (admin password).</li>
+          <li><strong>DMG</strong> — open the disk image and drag <code>rNitro.app</code> to Applications.</li>
+        </ul>
+        <div style="margin-top:12px;">
+      <p style="font-size:16px; color:#ffcc66; background:rgba(255,180,40,0.1); border:1px solid rgba(255,180,40,0.45); border-radius:8px; padding:12px 14px; line-height:1.65; text-align:left;">
+        <strong>⚠ macOS security prompt:</strong> When you open the PKG, macOS may say it can't verify the file. That's normal for indie apps. <strong>Don't click Move to Trash.</strong> Click <strong>Done</strong>, then go to <strong>System Settings → Privacy &amp; Security</strong> and press <strong>Open</strong> at the bottom.
+      </p>
+        </div>
+<!-- @end:install-step-pkg -->
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+<!-- @sync:install-step-sh -->
+        <h3>Or install from Terminal with curl</h3>
+        <p>No browser download needed — paste a one-liner in Terminal. It fetches the <strong>.sh</strong> installer (readable source), saves it to <code>/tmp</code>, then runs it:</p>
+<!-- @end:install-step-sh -->
+<!-- @sync:install-sh-commands -->
+        <p style="margin-top:8px; color:var(--muted); line-height:1.6;">Paste in <strong>Terminal</strong> (Apple Silicon Mac, Xcode CLT required). The script is saved to disk first — <code>curl | bash</code> is blocked on purpose.</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:14px; color:var(--green); word-break:break-all; text-align:left;">
+          printf "\n[########------------] 1/2 Download installer\n" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.3.29-Experimental.sh -o /tmp/rnitro-install.sh && printf "\n[####################] 2/2 Compile & install (Xcode CLT)\n" && bash /tmp/rnitro-install.sh
+        </div>
+        <p style="margin-top:8px;">Installs to <code>~/Applications/rNitro.app</code> in ~30 seconds. Self-verifies its SHA-256 checksum before running.</p>
+<!-- @end:install-sh-commands -->
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>First launch</h3>
+        <p>If macOS blocks the app, right-click <code>rNitro.app</code> → <strong>Open</strong> once. No telemetry, no account — runs fully local.</p>
+      </div>
+    </div>
+  </div>
+
+<!-- @sync:steps-linux -->
+  <div id="steps-linux" class="steps" style="display:none;">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Install dependencies</h3>
+        <p>Ubuntu/Debian: <code>sudo apt install python3-gi python3-venv gir1.2-adw-1 gir1.2-gtk-4.0 lm-sensors</code>. Fedora: <code>sudo dnf install python3-gobject gtk4 libadwaita</code>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Download and install</h3>
+        <p>Switch to the <strong>Linux</strong> tab, download <code>rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz</code> or <code>install-rNitro-linux.sh</code>, extract if needed, and run <code>bash install-rNitro-linux.sh</code>. Also on <a href="https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64" style="color:var(--cyan);">GitHub Releases</a>. Installs to <code>~/.local/share/rnitro</code> with a desktop entry.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Use rNitro</h3>
+        <p>Launch from your app menu or the system tray. Monitor, Advisor, Chat, and Cleaner tabs mirror the macOS beta feature set (platform-specific metrics where applicable).</p>
+      </div>
+    </div>
+  </div>
+<!-- @end:steps-linux -->
+<!-- @sync:steps-win -->
+  <div id="steps-win" class="steps" style="display:none;">
+    <p style="font-size:15px; color:var(--orange); background:rgba(255,140,26,0.08); border:1px solid rgba(255,140,26,0.35); border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.55;">
+      <strong>Windows is no longer actively supported.</strong> The last build (v4.2.4-Windows-Final-x86) remains available for download below.
+    </p>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Download the EXE (easiest)</h3>
+        <p>Switch to the <strong>Windows</strong> tab and download <strong>rNitro-v4.2.4-Windows-Final-x86.exe</strong>. If Windows asks for a runtime, install the <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime (x64)</a> first, then run the EXE again.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Or compile from source</h3>
+        <p>Download <code>rNitro-v4.2.4-Windows-Final-x86.ps1</code>, open <strong>PowerShell</strong>, and run:</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:16px; color:var(--green);">
+          powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\Downloads\rNitro-v4.2.4-Windows-Final-x86.ps1
+        </div>
+        <p style="margin-top:8px;">Compiles with <code>csc.exe</code> (built into Windows 10/11) and installs to <code>%LOCALAPPDATA%\rNitro</code> — ~15 seconds. No SDK required.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Use rNitro</h3>
+        <p>rNitro runs in the <strong>system tray</strong> (bottom-right). Click the icon for live CPU%, temperature, RAM, BTC price, and 60-second history graphs. Right-click the tray icon to quit.</p>
+        <p style="margin-top:8px;">For new installs we recommend <strong>macOS</strong> or the <strong>Linux</strong> tab instead.</p>
+      </div>
+    </div>
+  </div>
+<!-- @end:steps-win -->
+<!-- @sync:steps-cli -->
+  <div id="steps-cli" class="steps" style="display:none;">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>Download or curl-install</h3>
+        <p>Switch to the <strong>CLI</strong> tab and download <code>rNitro-CLI.tar.gz</code>, or paste this one-liner in Terminal:</p>
+        <div style="margin-top:10px; background:var(--card2); border:1px solid rgba(167,139,250,0.35); border-radius:8px; padding:12px 16px; font-family:var(--mono); font-size:13px; color:#a78bfa; word-break:break-all; line-height:1.45;">curl -fsSL https://chopstickshq.com/rnitro/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>Install to your PATH</h3>
+        <p>From the extracted folder: <code>bash install-cli.sh</code> — links <code>rnitro</code> to <code>~/bin</code> (or use <code>sudo ./install-cli.sh --system</code> for <code>/usr/local/bin</code>).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>Run rNitro in the terminal</h3>
+        <p>Type <code>rnitro</code> for the live dashboard (like btop). Works over SSH. Same rNitro metrics — no menubar app required.</p>
+      </div>
+    </div>
+  </div>
+<!-- @end:steps-cli -->
+</section>
+
+<section class="section" style="padding-top:0; padding-bottom:40px">
+  <div id="cards-mac">
+
+<!-- @sync:stable-beta-compare -->
+
+<!-- @end:stable-beta-compare -->
+
+<!-- @sync:download-stable -->
+
+<!-- @end:download-stable -->
+<!-- @sync:download-beta -->
+
+<!-- @end:download-beta -->
+<!-- @sync:download-more -->
+
+<!-- @end:download-more -->
+<!-- @sync:download-previous -->
+  <div style="margin-top:16px; text-align:center;">
+    <p style="color:var(--muted); font-size:14px; font-family:var(--mono); line-height:1.6;">
+      Older builds are on
+      <a href="/archives" style="color:var(--cyan);">rNitro Archives</a>
+      and <a href="https://github.com/ilikemacos/rNitro/releases" style="color:var(--cyan);">GitHub Releases</a>.
+      Current: <strong style="color:var(--text);">v1.3.28</strong>.
+    </p>
+  </div>
+<!-- @end:download-previous -->
+
+  </div>
+
+<!-- @sync:download-windows -->
+  <div id="card-win" class="download-card" style="display:none;">
+      <div class="platform-banner platform-banner--deprecated">
+        Windows is no longer actively supported. Existing builds remain available for download.
+      </div>
+    <div class="download-meta">
+      <h2>rNitro v4.2.4-Windows-Final-x86</h2>
+      <p>Pre-built EXE · PowerShell source installer · system tray monitor for Windows 10/11 x64</p>
+      <div class="req">
+        <span class="req-tag">Windows 10/11</span>
+        <span class="req-tag">x86/x64</span>
+        <span class="req-tag">.NET 8 Runtime (EXE)</span>
+        <span class="req-tag">Free</span>
+      </div>
+    </div>
+    <div class="dl-recommended" style="border-color:rgba(0,217,255,0.4);">
+      <div class="dl-recommended-badge" style="color:var(--cyan); border-color:rgba(0,217,255,0.45); background:rgba(0,217,255,0.1);">Recommended Download</div>
+      <div class="dl-recommended-title" style="color:var(--cyan);">Windows EXE</div>
+      <p class="dl-recommended-steps">Double-click to run. Needs <a href="https://dotnet.microsoft.com/download/dotnet/8.0" style="color:var(--cyan);">.NET 8 Desktop Runtime x64</a> if prompted.</p>
+      <button type="button" class="btn btn-primary btn-recommended" style="background:var(--cyan); color:#000;" onclick="requestDownload('rNitro-v4.2.4-Windows-Final-x86.exe')">⬇ Download EXE · 495 KB</button>
+    </div>
+      <div id="dl-win-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+        <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-win-other')" aria-expanded="false">
+          <span>Other download options</span>
+          <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+        </button>
+        <div class="dl-other-body prev-versions-body">
+          <div class="dl-other-grid">
+            <button type="button" class="btn btn-secondary" onclick="requestDownload('rNitro-v4.2.4-Windows-Final-x86.ps1')">PowerShell installer (.ps1) · 45 KB</button>
+          </div>
+          <div class="dl-other-note">PS1 compiles locally — no SDK required.</div>
+        </div>
+      </div>
+  </div>
+<!-- @end:download-windows -->
+<!-- @sync:download-linux -->
+  <div id="card-linux" class="download-card" style="display:none;">
+    <div class="download-meta">
+      <h2>rNitro v0.1-Linux-Beta-Pre-release-x64</h2>
+      <p>GTK4 + libadwaita desktop app — Monitor, Advisor, AI Chat, and App Cleaner for Linux x86_64.</p>
+      <div class="req">
+        <span class="req-tag" style="border-color:#e8a838; color:#e8a838;">Pre-release</span>
+        <span class="req-tag">Ubuntu / Fedora / Debian</span>
+        <span class="req-tag">Python 3.10+</span>
+        <span class="req-tag">GTK 4</span>
+        <span class="req-tag">Free</span>
+      </div>
+    </div>
+    <div class="dl-recommended" style="border-color:rgba(232,168,56,0.4);">
+      <div class="dl-recommended-badge" style="color:#e8a838; border-color:rgba(232,168,56,0.45); background:rgba(232,168,56,0.1);">Recommended Download</div>
+      <div class="dl-recommended-title" style="color:#e8a838;">Linux tarball</div>
+      <p class="dl-recommended-steps">Extract and run <code>install-rNitro-linux.sh</code>, or download the installer script alone.</p>
+      <button type="button" class="btn btn-primary btn-recommended" style="background:#e8a838; color:#000;" onclick="requestDownload('rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz')">⬇ Download tarball · 18 KB</button>
+    </div>
+    <div id="dl-linux-other" class="dl-other-panel prev-versions-panel" style="margin-top:12px;">
+      <button type="button" class="prev-versions-toggle" onclick="toggleOtherDownloads('dl-linux-other')" aria-expanded="false">
+        <span>Other download options</span>
+        <span class="prev-versions-chevron" aria-hidden="true">▸</span>
+      </button>
+      <div class="dl-other-body prev-versions-body">
+        <div class="dl-other-grid">
+          <button type="button" class="btn btn-secondary" onclick="requestDownload('install-rNitro-linux.sh')">Shell installer (.sh) · 3 KB</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<!-- @end:download-linux -->
+</section>
+
+<section id="support" style="max-width:640px; margin:0 auto; padding:60px 24px 40px; text-align:center;">
+  <div class="section-label">Support</div>
+  <h2 style="margin:8px 0 12px;">Need help or found a bug?</h2>
+  <p style="color:#9999AA; margin-bottom:28px; line-height:1.6;">
+    Fill this in and you’ll be <strong style="color:var(--text);">redirected to GitHub Issues</strong> with your message ready to submit.
+    That way the team actually receives it (no broken mail apps).
+  </p>
+
+  <form id="support-form" style="text-align:left; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px;" onsubmit="return sendSupport(event)">
+    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Your email (optional — for follow-up)</label>
+    <input id="support-email" type="email" placeholder="you@example.com"
+      style="width:100%; padding:10px 12px; margin-bottom:16px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px;">
+
+    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Subject</label>
+    <input id="support-subject" type="text" placeholder="Bug report / question" required
+      style="width:100%; padding:10px 12px; margin-bottom:16px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px;">
+
+    <label style="display:block; font-family:var(--mono); font-size:16px; color:#9999AA; margin-bottom:6px;">Message</label>
+    <textarea id="support-message" rows="5" placeholder="What's going on? Include your macOS version and chip (M1/M2/M3/M4) if it's a bug." required
+      style="width:100%; padding:10px 12px; margin-bottom:20px; background:var(--bg2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:16px; resize:vertical;"></textarea>
+
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-bottom:10px;">Open GitHub Issue →</button>
+    <button type="button" class="btn btn-secondary" style="width:100%; justify-content:center;" onclick="return sendSupportMailto(event)">Or open email app →</button>
+    <p style="margin-top:14px; font-size:12px; color:var(--muted); line-height:1.5;">
+      Prefer a blank form?
+      <a href="https://github.com/ilikemacos/rNitro/issues/new" style="color:var(--cyan);">github.com/ilikemacos/rNitro/issues/new</a>
+    </p>
+  </form>
+</section>
+
+<footer>
+  Built with <span>SwiftUI</span> · No telemetry · No ads · Runs fully local
+</footer>
+
+<footer class="site-footer" style="max-width:980px; margin:48px auto 32px; padding:0 16px; text-align:center; font-family:var(--mono); font-size:13px; color:var(--muted); line-height:1.9;">
+  <a href="/" style="color:var(--cyan); margin:0 8px; text-decoration:none;">macOS</a>
+  <a href="/cli.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">CLI</a>
+  <a href="/linux.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Linux</a>
+  <a href="/windows.html" style="color:var(--muted); margin:0 8px; text-decoration:none;">Windows</a>
+  <a href="/faq.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">FAQ</a>
+  <a href="/privacy.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Privacy</a>
+  <a href="/terms.html" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Terms</a>
+  <a href="#support" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Support</a>
+  <a href="https://github.com/ilikemacos/rNitro" style="color:var(--cyan); margin:0 8px; text-decoration:none;">GitHub</a>
+  <a href="https://github.com/ilikemacos/rNitro/issues/new" style="color:var(--cyan); margin:0 8px; text-decoration:none;">Report issue</a>
+</footer>
+
+<div id="tc-overlay" class="tc-overlay" role="dialog" aria-modal="true" aria-labelledby="tc-title">
+  <div class="tc-modal">
+    <div class="tc-modal-header">
+      <h2 id="tc-title">Terms &amp; Conditions</h2>
+      <p id="tc-download-file" class="tc-download-label" hidden></p>
+    </div>
+    <p id="tc-platform-notice" class="tc-platform-notice" hidden></p>
+    <div class="tc-modal-body">
+      <p>By downloading, installing, compiling from the official source code, accessing, or using rNitro in any form, including Stable, Beta, Preview, Nightly, Windows, macOS, Linux, and any future releases, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree to these Terms, you must not download, install, or use rNitro.</p>
+
+      <h3>Acceptance of These Terms</h3>
+      <p>These Terms govern your use of rNitro and any associated downloads, updates, documentation, or online services provided by the developer. Your continued use of the software constitutes your acceptance of the most recent version of these Terms.</p>
+
+      <h3>Software Provided "AS IS"</h3>
+      <p>rNitro is provided free of charge on an <strong>"AS IS"</strong> and <strong>"AS AVAILABLE"</strong> basis without warranties, guarantees, or conditions of any kind, whether express, implied, or statutory. To the fullest extent permitted by applicable law, the developer disclaims all warranties, including but not limited to merchantability, fitness for a particular purpose, non-infringement, uninterrupted availability, compatibility, security, reliability, accuracy, or error-free operation.</p>
+      <p>The developer does not guarantee that rNitro will operate without interruptions, bugs, crashes, freezes, security vulnerabilities, data loss, hardware stress, increased resource consumption, overheating, reduced battery life, or other unexpected behavior.</p>
+      <p>You acknowledge and agree that your use of rNitro is entirely at your own risk.</p>
+
+      <h3>Beta and Experimental Features</h3>
+      <p>Beta releases, preview builds, nightly builds, experimental features, benchmarks, stress-testing tools, AI integrations, and third-party services may be incomplete, unstable, or subject to unexpected changes without notice.</p>
+      <p>Such features may experience instability, increased hardware usage, inaccurate results, temporary service interruptions, data corruption, or complete failure to function. You acknowledge these risks and voluntarily assume full responsibility for using any experimental or pre-release functionality.</p>
+
+      <h3>Limitation of Liability</h3>
+      <p>To the fullest extent permitted by applicable law, the developer, contributors, licensors, and any affiliated parties shall not be liable for any direct, indirect, incidental, consequential, special, exemplary, punitive, or other damages arising out of or relating to your installation, use of, inability to use, or reliance upon rNitro.</p>
+      <p>This limitation includes, without limitation, damages relating to data loss, file corruption, hardware or software failures, reduced system performance, overheating, battery drain, business interruption, lost profits, lost revenue, security incidents, service interruptions, or any other loss or damage arising from the use of the software.</p>
+      <p>Where applicable law does not permit certain limitations of liability, such limitations shall apply only to the maximum extent permitted by law.</p>
+
+      <h3>Third-Party Services</h3>
+      <p>rNitro may communicate with or integrate third-party software, application programming interfaces (APIs), artificial intelligence providers, cloud services, or other external platforms.</p>
+      <p>The developer has no control over these services and makes no representations regarding their availability, accuracy, security, reliability, or continued operation. Your use of third-party services is governed solely by the terms and privacy policies of the respective providers.</p>
+      <p>The developer accepts no responsibility for outages, changes, generated content, pricing, functionality, or any loss arising from third-party services.</p>
+
+      <h3>User Responsibilities</h3>
+      <p>You are solely responsible for maintaining backups of your files, protecting your data, ensuring that your device meets the necessary system requirements, and determining whether rNitro is suitable for your intended use.</p>
+      <p>rNitro is not designed, certified, or intended for use in environments where software failure could result in injury, loss of life, significant property damage, or other high-risk situations, including medical, emergency response, aviation, industrial control, financial trading, or similar critical applications.</p>
+
+      <h3>Intellectual Property</h3>
+      <p>Unless otherwise stated, all trademarks, branding, logos, graphical assets, documentation, original source code, and other intellectual property associated with rNitro remain the exclusive property of the developer or their respective owners.</p>
+      <p>Nothing contained within these Terms grants you ownership of any intellectual property rights except where expressly permitted by an applicable license.</p>
+      <p>Any third-party software, libraries, fonts, or components included with rNitro remain subject to their respective licenses.</p>
+
+      <h3>Software Updates</h3>
+      <p>The developer may release updates, modifications, security patches, new features, or revised versions of rNitro at any time.</p>
+      <p>The developer also reserves the right to modify, suspend, discontinue, or permanently remove any feature, service, download, or version of rNitro without prior notice.</p>
+
+      <h3>Availability</h3>
+      <p>The availability of downloads, online services, cloud features, AI functionality, updates, documentation, or websites associated with rNitro is not guaranteed.</p>
+      <p>The developer reserves the right to discontinue any part of the project at any time without liability.</p>
+
+      <h3>Acceptable Use</h3>
+      <p>You agree to use rNitro only in compliance with all applicable laws and regulations.</p>
+      <p>You agree not to misuse, interfere with, abuse, or intentionally disrupt any online services provided through rNitro, nor represent modified or unofficial versions as official releases.</p>
+
+      <h3>Changes to These Terms</h3>
+      <p>The developer reserves the right to revise these Terms and Conditions at any time.</p>
+      <p>Updated versions become effective upon publication unless otherwise stated. Your continued use of rNitro after revised Terms have been published constitutes your acceptance of those changes.</p>
+
+      <h3>Governing Law</h3>
+      <p>These Terms shall be governed and interpreted in accordance with the laws applicable in the jurisdiction in which the developer resides, except where mandatory consumer protection laws provide otherwise.</p>
+      <p>Nothing contained in these Terms is intended to limit or exclude any legal rights that cannot be limited or excluded under applicable law.</p>
+
+      <h3>Entire Agreement</h3>
+      <p>These Terms and Conditions constitute the entire agreement between you and the developer concerning rNitro and supersede any prior agreements, communications, understandings, or representations relating to the software.</p>
+
+      <hr>
+      <p>By downloading, installing, compiling from the official source code, accessing, or using rNitro, you confirm that you have read, understood, and agree to be bound by these Terms and Conditions.</p>
+    </div>
+    <label class="tc-checkbox-row" for="tc-agree">
+      <input type="checkbox" id="tc-agree" onchange="updateTcAgreeButton()">
+      <span>I have read and agree to the Terms and Conditions</span>
+    </label>
+    <label class="tc-checkbox-row" for="tc-remember" style="margin-top:4px; opacity:0.92;">
+      <input type="checkbox" id="tc-remember">
+      <span>Remember agreement for this browser session only (still requires Agree once first)</span>
+    </label>
+    <div class="tc-modal-actions">
+      <button type="button" class="btn btn-secondary" id="tc-disagree-btn" onclick="disagreeTcAndGoHome()">I Disagree</button>
+      <button type="button" id="tc-agree-btn" class="btn btn-primary" disabled onclick="confirmTcAndDownload()">I Agree &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="copy-toast" id="toast">✓ Copied to clipboard</div>
+
+<div id="chat-launcher" onclick="toggleChat()"
+  style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%;
+         background:var(--green); display:flex; align-items:center; justify-content:center;
+         cursor:pointer; box-shadow:0 4px 20px rgba(26,255,128,0.35); z-index:9999; transition:transform .2s;">
+  <span id="chat-launcher-icon" style="font-size:24px;">💬</span>
+</div>
+
+<div id="chat-window"
+  style="position:fixed; bottom:92px; right:24px; width:340px; max-width:calc(100vw - 32px); height:440px;
+         background:var(--card); border:1px solid var(--border); border-radius:14px;
+         box-shadow:0 12px 40px rgba(0,0,0,0.5); display:none; flex-direction:column;
+         overflow:hidden; z-index:9999; font-family:var(--mono);">
+
+  <div style="padding:14px 16px; background:var(--bg2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+    <div>
+      <div style="font-weight:500; font-size:16px; color:var(--text);">rNitro Support</div>
+      <div id="chat-status" style="font-size:16px; color:#66cc88; display:flex; align-items:center; gap:4px; margin-top:2px;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#1aff80; display:inline-block;"></span>
+        <span id="chat-status-text">Instant answers · AI when online</span>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button type="button" id="chat-key-btn" onclick="toggleChatKeyPanel()" title="API key for AI answers"
+        style="background:none; border:1px solid var(--border); border-radius:8px; color:var(--muted); cursor:pointer; padding:4px 8px; font-size:14px;">🔑</button>
+      <span onclick="toggleChat()" style="cursor:pointer; color:#9999AA; font-size:18px; line-height:1;">✕</span>
+    </div>
+  </div>
+
+  <div id="chat-key-panel" style="display:none; padding:10px 12px; background:var(--bg2); border-bottom:1px solid var(--border); font-size:14px;">
+    <div style="color:var(--muted); margin-bottom:8px; line-height:1.45;">Paste your API key for AI answers (saved in this browser only — never on our servers unless you add it in Netlify).</div>
+    <select id="chat-key-provider" style="width:100%; margin-bottom:6px; padding:7px; background:var(--card); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono);">
+      <option value="groq">Grok (recommended — gsk_…)</option>
+      <option value="openrouter">OpenRouter (sk-or-…)</option>
+      <option value="gemini">Google Gemini (AIza…)</option>
+    </select>
+    <input id="chat-key-input" type="password" placeholder="Paste API key here"
+      style="width:100%; padding:7px 10px; background:var(--card); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); box-sizing:border-box;">
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button type="button" onclick="saveChatApiKey()" style="flex:1; padding:7px; background:var(--green); border:none; border-radius:6px; color:#000; font-weight:600; cursor:pointer;">Save key</button>
+      <button type="button" onclick="clearChatApiKey()" style="padding:7px 10px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--muted); cursor:pointer;">Clear</button>
+    </div>
+  </div>
+
+  <div id="chat-messages" style="flex:1; overflow-y:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px;"></div>
+
+  <div style="padding:10px 12px; border-top:1px solid var(--border); display:flex; gap:8px;">
+    <input id="chat-input" type="text" placeholder="Ask about install, bugs, features…"
+      onkeydown="if(event.key==='Enter') sendChatMessage()"
+      style="flex:1; padding:9px 12px; background:var(--bg2); border:1px solid var(--border); border-radius:8px;
+             color:var(--text); font-family:var(--mono); font-size:16px;">
+    <button onclick="sendChatMessage()"
+      style="padding:9px 14px; background:var(--green); border:none; border-radius:8px; color:#000;
+             font-weight:500; cursor:pointer; font-size:16px;">→</button>
+  </div>
+</div>
+
+<script>
+
+  const RNITRO_VERSIONS =   {
+    "stable": {
+      "id": "v1.2.9-Final",
+      "label": "v1.2.9 Final",
+      "short": "v1.2.9",
+      "sh": "rNitro-v1.2.9-Final.sh",
+      "pkg": "rNitro-v1.2.9-Final.pkg",
+      "dmg": "rNitro-v1.2.9-Final.dmg",
+      "zip": "rNitro-v1.2.9-Final.zip",
+      "hash": "6bc8ec614c6d558ebd9e6a9a9096bfc2b229cdf2dcdd0f328d8c22b442367e44",
+      "curlInstall": "printf \"\\n[########------------] 1/2 Download installer\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.sh -o /tmp/rnitro-install.sh && printf \"\\n[####################] 2/2 Compile & install (Xcode CLT)\\n\" && bash /tmp/rnitro-install.sh",
+      "curlZipInstall": "printf \"\\n[######--------------] 1/3 Download\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.9-Final.zip -o /tmp/rnitro.zip && printf \"\\n[############--------] 2/3 Unzip\\n\" && rm -rf /tmp/rnitro-app && mkdir -p /tmp/rnitro-app && unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && printf \"[####################] 3/3 Install\\n\" && mkdir -p ~/Applications && rm -rf ~/Applications/rNitro.app && ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && xattr -cr ~/Applications/rNitro.app && printf \"\u2713 Done \u2192 ~/Applications/rNitro.app\\n\""
+    },
+    "beta": {
+      "id": "v1.2.14",
+      "label": "v1.2.14 Beta",
+      "short": "v1.2.14",
+      "sh": "rNitro-v1.2.14.sh",
+      "pkg": "rNitro-v1.2.14.pkg",
+      "dmg": "rNitro-v1.2.14.dmg",
+      "zip": "rNitro-v1.2.14.zip",
+      "hash": "16810e7d07d28c3c80dabbb491c47e651fbf2ab1723aca3bd207574837276410",
+      "curlInstall": "printf \"\\n[########------------] 1/2 Download installer\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.14.sh -o /tmp/rnitro-install.sh && printf \"\\n[####################] 2/2 Compile & install (Xcode CLT)\\n\" && bash /tmp/rnitro-install.sh",
+      "curlZipInstall": "printf \"\\n[######--------------] 1/3 Download\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.14.zip -o /tmp/rnitro.zip && printf \"\\n[############--------] 2/3 Unzip\\n\" && rm -rf /tmp/rnitro-app && mkdir -p /tmp/rnitro-app && unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && printf \"[####################] 3/3 Install\\n\" && mkdir -p ~/Applications && rm -rf ~/Applications/rNitro.app && ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && xattr -cr ~/Applications/rNitro.app && printf \"\u2713 Done \u2192 ~/Applications/rNitro.app\\n\""
+    },
+    "windows": {
+      "id": "v4.2.4-Windows-Final-x86",
+      "exe": "rNitro-v4.2.4-Windows-Final-x86.exe",
+      "ps1": "rNitro-v4.2.4-Windows-Final-x86.ps1"
+    },
+    "linux": {
+      "id": "v0.1-Linux-Beta-Pre-release-x64",
+      "label": "v0.1 Linux Beta Pre-release",
+      "short": "v0.1",
+      "tar": "rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz",
+      "sh": "install-rNitro-linux.sh",
+      "githubUrl": "https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64"
+    },
+    "macos_apps": {
+      "label": "macOS Apps ZIP",
+      "zip": "rNitro-macOS-Apps.zip"
+    },
+    "cli": {
+      "id": "v0.2-cli",
+      "label": "rNitro CLI",
+      "short": "CLI",
+      "version": "v0.2-cli",
+      "tar": "rNitro-CLI.tar.gz",
+      "curlInstall": "curl -fsSL https://chopstickshq.com/rnitro/rNitro-CLI.tar.gz -o /tmp/rnitro-cli.tar.gz && mkdir -p /tmp/rnitro-cli && tar xzf /tmp/rnitro-cli.tar.gz -C /tmp/rnitro-cli && bash /tmp/rnitro-cli/install-cli.sh"
+    },
+    "intel_stable": {
+      "id": "v1.1.0-Intel",
+      "label": "v1.1.0 Intel Stable",
+      "short": "v1.1.0",
+      "sh": "rNitro-v1.1.0-Intel.sh",
+      "hash": "",
+      "curlInstall": "printf \"\\n[########------------] 1/2 Download installer\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.1.0-Intel.sh -o /tmp/rnitro-install.sh && printf \"\\n[####################] 2/2 Compile & install (Xcode CLT)\\n\" && bash /tmp/rnitro-install.sh"
+    },
+    "intel_beta": {
+      "id": "v1.2.3-Intel",
+      "label": "v1.2.3 Intel Beta",
+      "short": "v1.2.3",
+      "sh": "rNitro-v1.2.3-Intel.sh",
+      "hash": "",
+      "curlInstall": "printf \"\\n[########------------] 1/2 Download installer\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.2.3-Intel.sh -o /tmp/rnitro-install.sh && printf \"\\n[####################] 2/2 Compile & install (Xcode CLT)\\n\" && bash /tmp/rnitro-install.sh"
+    },
+    "experimental": {
+      "id": "v1.3.29-Experimental",
+      "label": "v1.3.28",
+      "short": "v1.3.28",
+      "sh": "rNitro-v1.3.29-Experimental.sh",
+      "pkg": "rNitro-v1.3.29-Experimental.pkg",
+      "dmg": "rNitro-v1.3.29-Experimental.dmg",
+      "zip": "rNitro-v1.3.29-Experimental.zip",
+      "hash": "16a66e52181dc63142b54977bb7b5601214022f61835335648ecda89c757a5a6",
+      "curlInstall": "printf \"\\n[########------------] 1/2 Download installer\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.3.29-Experimental.sh -o /tmp/rnitro-install.sh && printf \"\\n[####################] 2/2 Compile & install (Xcode CLT)\\n\" && bash /tmp/rnitro-install.sh",
+      "curlZipInstall": "printf \"\\n[######--------------] 1/3 Download\\n\" && curl --progress-bar -fL https://chopstickshq.com/rnitro/rNitro-v1.3.29-Experimental.zip -o /tmp/rnitro.zip && printf \"\\n[############--------] 2/3 Unzip\\n\" && rm -rf /tmp/rnitro-app && mkdir -p /tmp/rnitro-app && unzip -qo /tmp/rnitro.zip -d /tmp/rnitro-app && printf \"[####################] 3/3 Install\\n\" && mkdir -p ~/Applications && rm -rf ~/Applications/rNitro.app && ditto /tmp/rnitro-app/rNitro.app ~/Applications/rNitro.app && xattr -cr ~/Applications/rNitro.app && printf \"\u2713 Done \u2192 ~/Applications/rNitro.app\\n\""
+    }
+  };
+
+  const RNITRO_FILES = window.RNITRO_FILES || null;
+
+  function togglePreviousVersions() {
+    const panel = document.getElementById('prev-versions-panel');
+    if (!panel) return;
+    const open = panel.classList.toggle('is-open');
+    const btn = panel.querySelector('.prev-versions-toggle');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function toggleWhatsNew() {
+    const panel = document.getElementById('whats-new-panel');
+    if (!panel) return;
+    const open = panel.classList.toggle('is-open');
+    const btn = panel.querySelector('.prev-versions-toggle');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function toggleOtherDownloads(panelId) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const open = panel.classList.toggle('is-open');
+    const btn = panel.querySelector('.prev-versions-toggle');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  let pendingDownloadUrl = null;
+  let pendingCopyCurl = null;
+  let pendingCopyText = null;
+  let pendingCopyToast = '✓ Copied';
+  let pendingActionKind = 'download';
+
+  function homeUrl() {
+    const base = (window.__RNITRO_BASE__ || '').replace(/\/$/, '');
+    if (base) return base + '/';
+
+    const path = window.location.pathname || '/';
+    if (path === '/rnitro' || path.startsWith('/rnitro/')) return '/rnitro/';
+    return '/';
+  }
+
+  function platformForDownload(url) {
+    const name = url.toLowerCase();
+    if (name.includes('linux') || name.endsWith('.tar.gz') || name.includes('install-rnitro-linux')) return 'linux';
+    if (name.includes('windows') || name.endsWith('.exe') || name.endsWith('.ps1')) return 'windows';
+    return 'macos';
+  }
+
+  function updateTcModalContext(url) {
+    const fileEl = document.getElementById('tc-download-file');
+    const noticeEl = document.getElementById('tc-platform-notice');
+    const platform = platformForDownload(url);
+    const fileName = String(url || '').split('/').pop() || String(url || '');
+    if (fileEl) {
+      if (pendingActionKind === 'copy') {
+        fileEl.innerHTML = `Copying command: <code>${fileName.replace(/</g, '')}</code>`;
+      } else {
+        fileEl.innerHTML = `Downloading: <code>${fileName.replace(/</g, '')}</code>`;
+      }
+      fileEl.hidden = false;
+    }
+    const agreeBtn = document.getElementById('tc-agree-btn');
+    if (agreeBtn) {
+      agreeBtn.textContent = pendingActionKind === 'copy' ? 'I Agree & Copy' : 'I Agree & Download';
+    }
+    if (noticeEl) {
+      const notices = {
+        linux: 'Linux v0.1 is a pre-release beta (GTK4 + Python). May be unstable — use at your own risk.',
+        windows: 'Windows is deprecated — this is the last supported build. No future updates are planned.',
+        macos: /beta/i.test(fileName)
+          ? 'This is a beta build — experimental features, crashes, and data loss are possible.'
+          : '',
+      };
+      const text = notices[platform] || '';
+      noticeEl.textContent = text;
+      noticeEl.hidden = !text;
+      noticeEl.className = 'tc-platform-notice' + (text ? ` tc-platform-notice--${platform}` : '');
+    }
+  }
+
+  function clearTcModalContext() {
+    const fileEl = document.getElementById('tc-download-file');
+    const noticeEl = document.getElementById('tc-platform-notice');
+    if (fileEl) { fileEl.textContent = ''; fileEl.hidden = true; }
+    if (noticeEl) { noticeEl.textContent = ''; noticeEl.hidden = true; }
+  }
+
+  function downloadBase() {
+    const path = window.location.pathname || '';
+    if (path.includes('/website/')) return '../';
+    if (path.endsWith('/')) return path;
+    if (path.includes('/')) return path.replace(/\/[^/]*$/, '/');
+    return '';
+  }
+
+  function assetUrl(file) {
+
+    if (/^https?:\/\
+    const base = downloadBase();
+    return base + encodeURI(file).replace(/%2F/g, '/');
+  }
+
+  
+  function githubReleaseDownloadUrl(filename) {
+    const name = String(filename || '').split('/').pop();
+    if (!name || typeof RNITRO_VERSIONS === "undefined") return null;
+    const keys = ['zip', 'pkg', 'dmg', 'sh', 'exe', 'ps1', 'tar'];
+    for (const rel of Object.values(RNITRO_VERSIONS || {})) {
+      if (!rel || typeof rel !== 'object') continue;
+      const id = rel.id || rel.version;
+      if (!id) continue;
+      for (const k of keys) {
+        if (rel[k] === name) {
+          return 'https://github.com/ilikemacos/rNitro/releases/download/' + encodeURIComponent(id) + '/' + encodeURIComponent(name);
+        }
+      }
+    }
+    return null;
+  }
+
+  function triggerFileDownload(url) {
+    if (location.protocol === 'file:') {
+      alert('Downloads only work after you double-click OPEN-WEBSITE.command in this folder (not index.html).');
+      return;
+    }
+    let fileRef = String(url || '').trim();
+    if (!fileRef) return;
+    const bare = fileRef.split('/').pop().split('?')[0];
+    const gh = githubReleaseDownloadUrl(bare);
+
+    if (!/^https?:\/\
+      if (window.__RNITRO_ASSET_ORIGIN__) {
+        fileRef = window.__RNITRO_ASSET_ORIGIN__.replace(/\/$/, '') + '/' + bare;
+      } else {
+        fileRef = assetUrl(bare);
+      }
+    }
+
+    if (RNITRO_FILES && bare && !RNITRO_FILES.has(bare) && !RNITRO_FILES.has(url) && !gh) {
+
+      window.open('https://github.com/ilikemacos/rNitro/releases', '_blank', 'noopener');
+      alert('That package is not on this mirror. Opening GitHub Releases — download the App ZIP there (no Xcode needed).');
+      return;
+    }
+
+    const a = document.createElement('a');
+    a.href = fileRef;
+    a.rel = 'noopener';
+
+    try {
+      const u = new URL(fileRef, location.href);
+      if (u.origin === location.origin) a.download = bare || 'download';
+      else a.target = '_blank';
+    } catch (e) {
+      a.target = '_blank';
+    }
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function tcSessionAccepted() {
+    try { return sessionStorage.getItem('rnitro_tc_accepted') === '1'; } catch (e) { return false; }
+  }
+
+  function openTcModal(forLabel) {
+    const agree = document.getElementById('tc-agree');
+    const overlay = document.getElementById('tc-overlay');
+    if (!agree || !overlay) return false;
+    if (forLabel) updateTcModalContext(forLabel);
+    agree.checked = false;
+    const remember = document.getElementById('tc-remember');
+    if (remember) remember.checked = false;
+    updateTcAgreeButton();
+    overlay.classList.add('open');
+    document.getElementById('tc-agree-btn')?.focus();
+    return true;
+  }
+
+  function requestDownload(url) {
+    if (!url) return;
+    pendingDownloadUrl = url;
+    pendingCopyCurl = null;
+    pendingCopyText = null;
+    pendingActionKind = 'download';
+
+    if (tcSessionAccepted()) {
+      triggerFileDownload(url);
+      return;
+    }
+    if (!openTcModal(url)) {
+      alert('Please accept the Terms and Conditions before downloading.');
+      return;
+    }
+  }
+
+  function updateTcAgreeButton() {
+    const agree = document.getElementById('tc-agree');
+    const btn = document.getElementById('tc-agree-btn');
+    if (agree && btn) btn.disabled = !agree.checked;
+  }
+
+  function closeTcModal() {
+    document.getElementById('tc-overlay')?.classList.remove('open');
+    clearTcModalContext();
+    pendingDownloadUrl = null;
+    pendingCopyCurl = null;
+    pendingCopyText = null;
+    pendingActionKind = 'download';
+  }
+
+  
+  function disagreeTcAndGoHome() {
+    try { sessionStorage.removeItem('rnitro_tc_accepted'); } catch (e) {}
+    closeTcModal();
+    window.location.href = homeUrl();
+  }
+
+  function confirmTcAndDownload() {
+    const agree = document.getElementById('tc-agree');
+    if (!agree?.checked) return;
+    const remember = document.getElementById('tc-remember');
+    try {
+      if (remember && remember.checked) sessionStorage.setItem('rnitro_tc_accepted', '1');
+      else sessionStorage.removeItem('rnitro_tc_accepted');
+    } catch (e) {}
+    document.getElementById('tc-overlay')?.classList.remove('open');
+    clearTcModalContext();
+    if (pendingCopyCurl) {
+      const which = pendingCopyCurl;
+      pendingCopyCurl = null;
+      pendingDownloadUrl = null;
+      pendingCopyText = null;
+      _copyCurlCmdUnlocked(which);
+      return;
+    }
+    if (pendingCopyText) {
+      const txt = pendingCopyText;
+      const msg = pendingCopyToast;
+      pendingCopyText = null;
+      pendingDownloadUrl = null;
+      pendingCopyCurl = null;
+      _copyTextUnlocked(txt, msg);
+      return;
+    }
+    if (!pendingDownloadUrl) return;
+    const url = pendingDownloadUrl;
+    pendingDownloadUrl = null;
+    triggerFileDownload(url);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('tc-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e) {
+
+        if (e.target === this) disagreeTcAndGoHome();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay?.classList.contains('open')) disagreeTcAndGoHome();
+    });
+    if (location.protocol === 'file:') {
+      document.documentElement.classList.add('file-protocol');
+    } else {
+      applyFileManifest();
+      hideMissingAssets();
+    }
+    startTerminalAnimation();
+    setTab(initialTab());
+  });
+
+  function hideUnavailableDownload(file) {
+    document.querySelectorAll('button[onclick*="requestDownload"]').forEach(btn => {
+      const m = btn.getAttribute('onclick')?.match(/requestDownload\('([^']+)'\)/);
+      if (m && m[1] === file) {
+        const cell = btn.closest('td');
+        if (cell) {
+          cell.innerHTML = '<span style="color:var(--muted)">—</span>';
+        } else {
+          btn.style.display = 'none';
+        }
+      }
+    });
+  }
+
+  function applyFileManifest() {
+    if (!RNITRO_FILES) return;
+    const fullZip = RNITRO_VERSIONS.full?.zip;
+    if (fullZip && !RNITRO_FILES.has(fullZip)) {
+      document.querySelectorAll('[data-dl-full-zip]').forEach(el => { el.style.display = 'none'; });
+    }
+    const missing = new Set();
+    document.querySelectorAll('button[onclick*="requestDownload"]').forEach(btn => {
+      const m = btn.getAttribute('onclick')?.match(/requestDownload\('([^']+)'\)/);
+      if (m && !RNITRO_FILES.has(m[1])) missing.add(m[1]);
+    });
+    missing.forEach(hideUnavailableDownload);
+  }
+
+  function hideMissingAssets() {
+    if (RNITRO_FILES) return;
+    const fullZip = RNITRO_VERSIONS.full?.zip;
+    if (!fullZip) return;
+    fetch(assetUrl(fullZip), { method: 'HEAD' }).then(r => {
+      if (r.ok) return;
+      document.querySelectorAll('[data-dl-full-zip]').forEach(el => {
+        el.style.display = 'none';
+      });
+    }).catch(() => {
+      document.querySelectorAll('[data-dl-full-zip]').forEach(el => {
+        el.style.display = 'none';
+      });
+    });
+  }
+
+  function typeText(elId, text, speed, done) {
+    const el = document.getElementById(elId);
+    if (!el) { if (done) done(); return; }
+    let i = 0;
+    function tick() {
+      if (i <= text.length) {
+        el.textContent = text.slice(0, i++);
+        setTimeout(tick, speed + Math.random() * 30);
+      } else if (done) done();
+    }
+    tick();
+  }
+
+  function startTerminalAnimation() {
+    const curlCmd = RNITRO_VERSIONS.stable?.curlInstall || '';
+    setTimeout(() => {
+      typeText('typed-run', curlCmd, 22);
+    }, 600);
+  }
+
+  function _copyCurlCmdUnlocked(which) {
+    const key = String(which || 'stable');
+    const wantZip = key.endsWith('_zip');
+    const channel = wantZip ? key.replace(/_zip$/, '') : key;
+    let rel = RNITRO_VERSIONS.stable;
+    if (channel === 'beta') rel = RNITRO_VERSIONS.beta;
+    else if (channel === 'experimental') rel = RNITRO_VERSIONS.experimental;
+    else if (channel === 'intel_beta') rel = RNITRO_VERSIONS.intel_beta;
+    else if (channel === 'intel_stable') rel = RNITRO_VERSIONS.intel_stable;
+
+    const cmd = (wantZip ? (rel?.curlZipInstall || rel?.curlInstall) : (rel?.curlInstall || rel?.curlZipInstall)) || '';
+    if (!cmd) {
+      alert('Install command not available for this channel.');
+      return;
+    }
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      if (!toast) return;
+      toast.textContent = wantZip ? '✓ Terminal install copied' : '✓ curl compile command copied';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }).catch(() => {
+      alert('Could not copy automatically. Command:\n\n' + cmd);
+    });
+  }
+
+  function copyCurlCmd(which) {
+    pendingCopyCurl = which;
+    pendingDownloadUrl = null;
+    pendingCopyText = null;
+    pendingActionKind = 'copy';
+    if (tcSessionAccepted()) {
+      _copyCurlCmdUnlocked(which);
+      return;
+    }
+    const label = String(which || '').endsWith('_zip')
+      ? 'Terminal install'
+      : ((which || 'curl') + ' install command');
+    if (!openTcModal(label)) {
+      alert('Please accept the Terms and Conditions before copying the install command.');
+      return;
+    }
+  }
+
+  function _copyTextUnlocked(cmd, okMsg) {
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      if (!toast) return;
+      toast.textContent = okMsg || '✓ Copied';
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+        toast.textContent = '✓ Copied to clipboard';
+      }, 2500);
+    }).catch(() => {
+      alert('Could not copy automatically. Command:\n\n' + cmd);
+    });
+  }
+
+  
+  function requireTcThenCopy(textToCopy, label, toastMsg) {
+    if (!textToCopy) return;
+    pendingDownloadUrl = null;
+    pendingCopyCurl = null;
+    pendingCopyText = textToCopy;
+    pendingCopyToast = toastMsg || '✓ Copied';
+    pendingActionKind = 'copy';
+    if (tcSessionAccepted()) {
+      _copyTextUnlocked(textToCopy, pendingCopyToast);
+      return;
+    }
+    if (!openTcModal(label || 'install command')) {
+      alert('Please accept the Terms and Conditions before copying the command.');
+    }
+  }
+
+  function copyHash(which) {
+    const hash = RNITRO_VERSIONS[which]?.hash || RNITRO_VERSIONS.stable?.hash || '';
+    requireTcThenCopy(hash, (which || 'package') + ' SHA-256', '✓ Hash copied to clipboard');
+  }
+
+  function detectPlatform() {
+    const ua = navigator.userAgent;
+    if (/Linux/i.test(ua) && !/Android/i.test(ua)) return 'linux';
+    if (/Win/i.test(ua)) return 'win';
+    return 'mac';
+  }
+
+  function initialTab() {
+    const params = new URLSearchParams(location.search);
+    const hash = location.hash.replace('#', '');
+    const fromQuery = params.get('tab');
+    const map = { cli: '/cli.html', linux: '/linux.html', win: '/windows.html' };
+    if (map[fromQuery]) { location.replace(map[fromQuery]); return 'mac'; }
+    if (map[hash]) { location.replace(map[hash]); return 'mac'; }
+    return 'mac';
+  }
+
+  function setMacArch(arch) {
+    const silicon = document.getElementById('mac-silicon-panel');
+    const intel = document.getElementById('mac-intel-panel');
+    const btnS = document.getElementById('mac-arch-silicon');
+    const btnI = document.getElementById('mac-arch-intel');
+    const isIntel = arch === 'intel';
+    if (silicon) silicon.style.display = isIntel ? 'none' : 'flex';
+    if (intel) intel.style.display = isIntel ? 'flex' : 'none';
+    if (btnS) {
+      btnS.setAttribute('aria-selected', isIntel ? 'false' : 'true');
+      btnS.style.background = isIntel ? 'transparent' : 'var(--green)';
+      btnS.style.color = isIntel ? 'var(--text)' : '#000';
+      btnS.style.borderColor = isIntel ? 'var(--border)' : 'var(--green)';
+    }
+    if (btnI) {
+      btnI.setAttribute('aria-selected', isIntel ? 'true' : 'false');
+      btnI.style.background = isIntel ? 'var(--cyan)' : 'transparent';
+      btnI.style.color = isIntel ? '#000' : 'var(--text)';
+      btnI.style.borderColor = isIntel ? 'var(--cyan)' : 'var(--border)';
+    }
+    try { sessionStorage.setItem('rnitro_mac_arch', isIntel ? 'intel' : 'silicon'); } catch (e) {}
+  }
+
+  function setTab(platform) {
+    if (platform === 'cli') { location.href = '/cli.html'; return; }
+    if (platform === 'linux') { location.href = '/linux.html'; return; }
+    if (platform === 'win') { location.href = '/windows.html'; return; }
+
+    const mac = document.getElementById('dl-mac');
+    if (mac) mac.style.display = 'flex';
+    try {
+      const saved = sessionStorage.getItem('rnitro_mac_arch');
+      if (saved === 'intel' || saved === 'silicon') setMacArch(saved);
+    } catch (e) {}
+    ['dl-cli','dl-win','dl-linux','steps-cli','steps-linux','steps-win','card-win','card-linux'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    const stepsMac = document.getElementById('steps-mac');
+    if (stepsMac) stepsMac.style.display = 'block';
+    const cardsMac = document.getElementById('cards-mac');
+    if (cardsMac) cardsMac.style.display = 'block';
+  }
+
+  function copyCliInstall() {
+    const cmd = RNITRO_VERSIONS.cli?.curlInstall || '';
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ CLI install command copied';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  function copyLinuxCmd() {
+    const sh = RNITRO_VERSIONS.linux?.sh || 'install-rNitro-linux.sh';
+    navigator.clipboard.writeText(`bash ~/Downloads/${sh}`).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  function copyWinCmd() {
+    navigator.clipboard.writeText(`powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\\Downloads\\${RNITRO_VERSIONS.windows.ps1}`).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  function copyCmd(which) {
+    const rel = which === 'beta' ? RNITRO_VERSIONS.beta : RNITRO_VERSIONS.stable;
+    const cmd = `bash ~/Downloads/${rel.sh}`;
+    navigator.clipboard.writeText(cmd).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    });
+  }
+
+  function copyMcIp() {
+    navigator.clipboard.writeText('macetech.minefort.com').then(() => {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ Server IP copied';
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+        toast.textContent = '✓ Copied to clipboard';
+      }, 2500);
+    });
+  }
+
+  const SUPPORT_GITHUB_NEW = 'https://github.com/ilikemacos/rNitro/issues/new';
+  const SUPPORT_EMAIL = 'mica@lam.ws';
+
+  function supportFormFields() {
+    const userEmail = (document.getElementById('support-email') || {}).value || '';
+    const subject = ((document.getElementById('support-subject') || {}).value || '').trim();
+    const message = ((document.getElementById('support-message') || {}).value || '').trim();
+    return { userEmail: userEmail.trim(), subject, message };
+  }
+
+  function supportIssueBody(userEmail, message) {
+    let body = message || '';
+    body += '\n\n---\n';
+    body += '**Environment** (please fill):\n';
+    body += '- macOS version:\n';
+    body += '- Chip (M1/M2/M3/M4 / Intel):\n';
+    body += '- rNitro channel (Stable / Beta / Experimental):\n';
+    body += '- Install method (App ZIP / PKG / DMG / .sh):\n';
+    if (userEmail) body += `\n**Contact email:** ${userEmail}\n`;
+    body += '\n_Submitted from getrnitro.netlify.app support form_\n';
+    return body;
+  }
+
+  
+  function sendSupport(e) {
+    if (e) e.preventDefault();
+    const { userEmail, subject, message } = supportFormFields();
+    if (!subject || !message) return false;
+
+    const title = subject.startsWith('[rNitro]') ? subject : `[rNitro] ${subject}`;
+    const body = supportIssueBody(userEmail, message);
+
+    const url = `${SUPPORT_GITHUB_NEW}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+    window.location.assign(url);
+    return false;
+  }
+
+  
+  function sendSupportMailto(e) {
+    if (e) e.preventDefault();
+    const { userEmail, subject, message } = supportFormFields();
+    if (!subject || !message) {
+      const form = document.getElementById('support-form');
+      if (form && typeof form.reportValidity === 'function') form.reportValidity();
+      return false;
+    }
+    let body = message;
+    if (userEmail) body += `\n\n— Reply to: ${userEmail}`;
+    const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('[rNitro] ' + subject)}&body=${encodeURIComponent(body)}`;
+
+    window.location.assign(mailto);
+    setTimeout(() => {
+      const toast = document.getElementById('copy-toast');
+      if (toast) {
+        toast.textContent = 'If Mail did not open, use “Open GitHub Issue” above.';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 4000);
+      }
+    }, 600);
+    return false;
+  }
+
+  let chatOpen = false;
+  let chatStarted = false;
+  let chatHistory = [];
+  let chatAiAvailable = null;
+  let chatByok = false;
+  const CHAT_API_URL = '/.netlify/functions/chat';
+  const CHAT_KEY_STORAGE = 'rnitro_chat_api_key';
+  const CHAT_PROVIDER_STORAGE = 'rnitro_chat_provider';
+
+  function getChatApiCreds() {
+    const apiKey = sessionStorage.getItem(CHAT_KEY_STORAGE) || '';
+    const provider = sessionStorage.getItem(CHAT_PROVIDER_STORAGE) || 'groq';
+    if (!apiKey) return null;
+    return { apiKey, provider };
+  }
+
+  function toggleChatKeyPanel() {
+    const panel = document.getElementById('chat-key-panel');
+    if (!panel) return;
+    const open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    if (!open) {
+      const creds = getChatApiCreds();
+      if (creds) {
+        document.getElementById('chat-key-input').value = creds.apiKey;
+        document.getElementById('chat-key-provider').value = creds.provider;
+      }
+    }
+  }
+
+  function saveChatApiKey() {
+    const apiKey = document.getElementById('chat-key-input').value.trim();
+    const provider = document.getElementById('chat-key-provider').value;
+    if (!apiKey) return;
+    sessionStorage.setItem(CHAT_KEY_STORAGE, apiKey);
+    sessionStorage.setItem(CHAT_PROVIDER_STORAGE, provider);
+    chatAiAvailable = true;
+    chatByok = true;
+    updateChatStatus();
+    toggleChatKeyPanel();
+    addChatMsg('bot', 'API key saved in this browser. Ask me anything about rNitro!');
+  }
+
+  function clearChatApiKey() {
+    sessionStorage.removeItem(CHAT_KEY_STORAGE);
+    sessionStorage.removeItem(CHAT_PROVIDER_STORAGE);
+    document.getElementById('chat-key-input').value = '';
+    chatByok = false;
+    probeChatAi();
+    addChatMsg('bot', 'API key cleared from this browser.');
+  }
+
+  function chatAiEnabled() {
+    return location.protocol !== 'file:' && !location.hostname.startsWith('127.0.0.1') && !location.hostname.startsWith('localhost');
+  }
+
+  function updateChatStatus() {
+    const el = document.getElementById('chat-status-text');
+    if (!el) return;
+    if (!chatAiEnabled()) {
+      el.textContent = 'Instant answers · offline mode';
+      return;
+    }
+    if (chatAiAvailable === true && chatByok) el.textContent = 'AI active (your key) · instant answers';
+    else if (chatAiAvailable === true) el.textContent = 'AI + instant answers · no signup';
+    else if (chatAiAvailable === false) el.textContent = 'Tap 🔑 to add API key · instant answers';
+    else el.textContent = 'Instant answers · AI when online';
+  }
+
+  async function probeChatAi() {
+    if (!chatAiEnabled()) {
+      chatAiAvailable = false;
+      updateChatStatus();
+      return;
+    }
+    try {
+      const res = await fetch(CHAT_API_URL, { method: 'GET' });
+      const data = await res.json().catch(() => ({}));
+      chatByok = !!data.byok;
+      chatAiAvailable = (res.ok && !!data.configured) || !!getChatApiCreds();
+      if (getChatApiCreds()) chatByok = true;
+    } catch {
+      chatAiAvailable = !!getChatApiCreds();
+      chatByok = !!getChatApiCreds();
+    }
+    updateChatStatus();
+  }
+
+  const CHAT_KB = [
+    { label: 'PKG blocked by macOS?', kws: ['gatekeeper', 'not opened', 'malware', 'move to trash', 'cant open', "can't open", 'verified', 'blocked', 'pkg', 'privacy', 'security'],
+      a: "macOS may say it can't verify the PKG — that's normal for indie apps.\n\nDon't click Move to Trash. Click Done, then go to System Settings → Privacy & Security and press Open at the bottom.\n\nOr use the .sh installer to compile from source on your Mac." },
+    { label: 'How do I install it?', kws: ['install', 'how do i download', 'getting started', 'setup', 'dmg', 'zip', 'terms'],
+      a: `macOS stable (green): Download Stable PKG for fastest install, or the highlighted Stable .sh if you don't trust pre-built PKGs — it compiles from readable source on your Mac.\n\nmacOS beta (orange): Download Beta PKG or Beta .sh for AI chat APIs.\n\nRun: bash ~/Downloads/${RNITRO_VERSIONS.stable.sh} (stable) or bash ~/Downloads/${RNITRO_VERSIONS.beta.sh} (beta).\n\nLinux: switch to the Linux tab for the ${RNITRO_VERSIONS.linux.short} pre-release tarball (also on GitHub).\n\nWindows: deprecated — last build remains on the Windows tab.` },
+    { label: 'How accurate is the temperature reading?', kws: ['temperature', 'temp', 'hot', 'overheat'],
+      a: "rNitro reads real sensor data straight from your Mac's SMC (the same controller iStat Menus, TG Pro, and Macs Fan Control read from). If the SMC can't be reached or your chip's sensor keys aren't recognized, it falls back to macOS's own thermal-state signal (Nominal/Fair/Serious/Critical), interpolated smoothly using live CPU usage, so the gauge never goes blank." },
+    { label: 'System Advisor in the app?', kws: ['advisor', 'specs', 'my mac', 'warnings', 'alert', 'threshold', 'custom warning'],
+      a: "In rNitro Beta, open the menubar popover → Advisor tab. It's a client-side assistant (no API key) that reads YOUR live CPU, temp, RAM, GPU, battery, and disk stats. Ask \"my specs\" or \"is my temp ok?\" Tap ⚙ to set custom warning thresholds — you'll get proactive alerts in the chat when temps or usage cross your limits." },
+
+    { label: 'How does everything work?', kws: ['how it works', 'how everything', 'which download', 'what should i download', 'platforms', 'channels', 'overview', 'table'],
+      a: "Scroll to **How everything works** on [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/) for macOS (v1.3.28), Linux (v0.1), and deprecated Windows. Recommended: green App ZIP. Terms: Agree or Disagree on every download." },
+    { label: 'Does it work on Windows?', kws: ['windows', 'win10', 'win11', 'pc'],
+      a: `Windows is no longer actively supported. The last build (${RNITRO_VERSIONS.windows.id}) remains on the Windows page — download the .exe (needs .NET 8 Desktop Runtime) or the .ps1 installer. For new installs we recommend macOS or Linux.` },
+    { label: 'Linux install?', kws: ['linux', 'ubuntu', 'fedora', 'debian', 'gtk', 'tarball'],
+      a: `Linux pre-release (${RNITRO_VERSIONS.linux.id}): switch to the Linux page, download the tarball or install-rNitro-linux.sh, then run bash install-rNitro-linux.sh. Requires Python 3.10+, GTK 4, and libadwaita. Also on GitHub: https://github.com/ilikemacos/rNitro/releases/tag/v0.1-Linux-Beta-Pre-release-x64` },
+    { label: 'How do updates work?', kws: ['update', 'new version', 'upgrade'],
+      a: "macOS: rNitro checks for updates on launch and can download the latest ZIP in-app. Linux checks version.json. Windows: manual download." },
+
+    { label: 'How does the Bitcoin price work?', kws: ['bitcoin', 'btc', 'crypto', 'price'],
+      a: "rNitro shows the live BTC/USD price in the menu bar, refreshed every 30 seconds from CoinGecko's public API — no API key required." },
+    { label: 'Does it work on Intel Macs?', kws: ['intel', 'not compatible', 'wont open', "won't open", 'unsupported'],
+      a: "rNitro requires Apple Silicon (M1/M2/M3) on macOS 12+. It is not compatible with Intel Macs, since the CPU/thermal APIs it uses are Apple Silicon–specific." },
+    { label: 'Is it safe to run?', kws: ['safe', 'malware', 'virus', 'trust', 'security'],
+      a: "rNitro compiles from source directly on your machine — nothing prebuilt is ever downloaded. The installer verifies its own SHA-256 checksum before running, and you can read every line before executing it. No telemetry, no third-party dependencies." },
+    { label: "It's crashing / not working", kws: ['crash', 'not working', 'broken', 'bug', 'error', 'issue'],
+      a: "Sorry about that! Scroll to Support (or open https://github.com/ilikemacos/rNitro/issues/new) — the form redirects you to a prefilled GitHub issue so we actually get it." },
+    { label: 'How do I uninstall it?', kws: ['uninstall', 'remove', 'delete'],
+      a: "macOS: quit rNitro, then delete it from /Applications (or wherever you installed it).\nLinux: quit rNitro, then run rm -rf ~/.local/share/rnitro ~/.local/bin/rnitro ~/.local/share/applications/rnitro.desktop\nWindows: right-click the tray icon → Exit, then delete the app from %LOCALAPPDATA%\\rNitro. If you enabled startup, also remove the entry via Task Manager → Startup." },
+    { label: 'What is the game overlay / FPS HUD?', kws: ['overlay', 'game', 'fps', 'hud'],
+      a: "The in-game overlay (⌥⇧O) shows CPU%, GPU%, temp, and RAM on top of fullscreen games. For real FPS numbers, use \"Launch App with FPS HUD\" from the right-click menu — it enables Apple's native Metal performance HUD for that game." },
+    { label: 'Is it free?', kws: ['free', 'price', 'cost', 'pay', 'subscription'],
+      a: "rNitro is completely free, with no ads, no telemetry, and no subscription." },
+
+    { label: 'Is the source code visible?', kws: ['source', 'open source', 'code'],
+      a: "The full install script (including the app's source) is right there in the downloaded .sh / .ps1 file — nothing is hidden or obfuscated. You're compiling it yourself." },
+
+    { label: "What's the current version?", kws: ["whats new", "what's new", "v1.3.28", "experimental", "changelog", "version"],
+      a: "Current macOS build: v1.3.28 (v1.3.29-Experimental). Download the App ZIP from the site or GitHub Releases." },
+
+    { label: 'App ZIP won\'t open?', kws: ['wont run', "won't run", 'damaged', 'quarantine', 'xattr', '3.6', 'small', 'zip'],
+      a: "If Gatekeeper blocks the App ZIP: right-click rNitro.app → Open → Open (once). Or run in Terminal:\nxattr -cr ~/Applications/rNitro.app\n\nThe .app is ~3.5–3.7 MB (native Swift, not Electron). Download the fresh build from getrnitro.netlify.app — older zips may have been stale." },
+  ];
+
+  function pickPrompts(n) {
+    const shuffled = [...CHAT_KB].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, n);
+  }
+
+  function findAnswer(text) {
+    const t = text.toLowerCase();
+    for (const entry of CHAT_KB) {
+      if (entry.kws.some(k => t.includes(k))) return entry.a;
+    }
+    return null;
+  }
+
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    document.getElementById('chat-window').style.display = chatOpen ? 'flex' : 'none';
+    document.getElementById('chat-launcher-icon').textContent = chatOpen ? '✕' : '💬';
+    if (chatOpen && !chatStarted) {
+      chatStarted = true;
+      addChatMsg('bot', "Hey! I'm the rNitro support bot. Tap a quick question, or type your own.\n\nFor AI answers: tap 🔑 and paste your Grok, OpenRouter, or Gemini key (stays in your browser only).");
+      showPrompts(pickPrompts(6));
+      probeChatAi();
+    }
+    if (chatOpen) document.getElementById('chat-input').focus();
+  }
+
+  function addChatMsg(who, text, id) {
+    const container = document.getElementById('chat-messages');
+    const bubble = document.createElement('div');
+    const isBot = who === 'bot';
+    if (id) bubble.id = id;
+    bubble.style.cssText = `
+      max-width:85%; padding:9px 12px; border-radius:10px; font-size:16px; line-height:1.5;
+      white-space:pre-wrap; align-self:${isBot ? 'flex-start' : 'flex-end'};
+      background:${isBot ? 'var(--bg2)' : 'var(--green)'};
+      color:${isBot ? 'var(--text)' : '#000'};
+      border:${isBot ? '1px solid var(--border)' : 'none'};
+    `;
+    bubble.textContent = text;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+    return bubble;
+  }
+
+  async function askChatAi(text) {
+    const creds = getChatApiCreds();
+    const res = await fetch(CHAT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        history: chatHistory,
+        versions: RNITRO_VERSIONS,
+        ...(creds ? { apiKey: creds.apiKey, provider: creds.provider } : {}),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const reply = data.reply || data.error || 'No response from AI.';
+    const needsKey = data.error === 'no_api_key' && !!data.byok;
+    if (res.ok && data.ai) {
+      chatAiAvailable = true;
+      chatByok = !!getChatApiCreds();
+      updateChatStatus();
+    }
+    return { ok: res.ok, reply, ai: !!data.ai, needsKey };
+  }
+
+  function showPrompts(entries) {
+    const container = document.getElementById('chat-messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-prompts';
+    wrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; align-self:flex-start; max-width:100%;';
+
+    entries.forEach(entry => {
+      const chip = document.createElement('button');
+      chip.textContent = entry.label;
+      chip.style.cssText = `
+        padding:7px 10px; border-radius:14px; border:1px solid var(--border);
+        background:var(--card); color:var(--text); font-family:var(--mono);
+        font-size:16px; cursor:pointer; transition:border-color .15s, color .15s;
+      `;
+      chip.onmouseenter = () => { chip.style.borderColor = 'var(--green)'; chip.style.color = 'var(--green)'; };
+      chip.onmouseleave = () => { chip.style.borderColor = 'var(--border)'; chip.style.color = 'var(--text)'; };
+      chip.onclick = () => {
+        wrap.remove();
+        addChatMsg('user', entry.label);
+        chatHistory.push({ role: 'user', content: entry.label });
+        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+        setTimeout(() => {
+          addChatMsg('bot', entry.a);
+          chatHistory.push({ role: 'assistant', content: entry.a });
+          showPrompts(pickPrompts(3));
+        }, 300);
+      };
+      wrap.appendChild(chip);
+    });
+
+    container.appendChild(wrap);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    addChatMsg('user', text);
+    input.value = '';
+    chatHistory.push({ role: 'user', content: text });
+    if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+
+    const kbAnswer = findAnswer(text);
+    if (kbAnswer) {
+      addChatMsg('bot', kbAnswer);
+      chatHistory.push({ role: 'assistant', content: kbAnswer });
+      showPrompts(pickPrompts(3));
+      return;
+    }
+
+    if (!chatAiEnabled()) {
+      const offline = "I'm in offline mode (local preview) — try a quick-pick question, or use the Support form below.";
+      addChatMsg('bot', offline);
+      chatHistory.push({ role: 'assistant', content: offline });
+      showPrompts(pickPrompts(3));
+      return;
+    }
+
+    const thinkingId = 'chat-thinking-' + Date.now();
+    addChatMsg('bot', 'Thinking…', thinkingId);
+
+    try {
+      const { ok, reply, ai, needsKey } = await askChatAi(text);
+      const bubble = document.getElementById(thinkingId);
+      if (bubble) bubble.textContent = reply;
+      else addChatMsg('bot', reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+      if (!ok && !ai) chatAiAvailable = !!getChatApiCreds();
+      if (needsKey && !getChatApiCreds()) {
+        const panel = document.getElementById('chat-key-panel');
+        if (panel) panel.style.display = 'block';
+      }
+      updateChatStatus();
+    } catch {
+      const err = "Couldn't reach the AI backend — try a suggested question below, or use the Support form.";
+      const bubble = document.getElementById(thinkingId);
+      if (bubble) bubble.textContent = err;
+      else addChatMsg('bot', err);
+      chatHistory.push({ role: 'assistant', content: err });
+    }
+    showPrompts(pickPrompts(3));
+  }
+</script>
+
+<div id="dev-deck" role="dialog" aria-label="rNitro Dev Deck">
+  <h3><span>⚒ rNitro Dev Deck</span><button type="button" id="dev-deck-close" style="border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;">×</button></h3>
+  <p class="hint">Surprise tools for the site. Shortcut: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> · Konami for party mode.</p>
+  <div class="row">
+    <button type="button" data-dev="ping">Ping CDN</button>
+    <button type="button" data-dev="diag">Copy diagnostics</button>
+    <button type="button" data-dev="grid">Toggle grid</button>
+    <button type="button" data-dev="party">Party mode</button>
+    <button type="button" data-dev="theme-cycle">Cycle theme</button>
+    <button type="button" data-dev="clear">Clear site storage</button>
+  </div>
+  <pre id="dev-deck-out">Ready.</pre>
+</div>
+
+<script>
+
+(function () {
+  var KEY = 'rnitro.siteTheme';
+  var root = document.documentElement;
+  var MODES = ['light', 'dark', 'oled', 'ips', 'lcd', 'miniled'];
+  var LABELS = {
+    system: 'System',
+    light: 'Light',
+    dark: 'Dark',
+    oled: 'OLED',
+    ips: 'IPS',
+    lcd: 'LCD',
+    miniled: 'Mini LED'
+  };
+
+  function systemTheme() {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  function normalizeMode(t) {
+    if (!t || t === 'system') return 'system';
+    t = String(t).toLowerCase();
+    if (t === 'mini-led' || t === 'mini_led') t = 'miniled';
+    if (MODES.indexOf(t) >= 0) return t;
+    return 'dark';
+  }
+  function resolvedTheme(t) {
+    t = normalizeMode(t);
+    return t === 'system' ? systemTheme() : t;
+  }
+  function applyTheme(t) {
+    var saved = normalizeMode(t);
+    var effective = resolvedTheme(saved);
+    root.setAttribute('data-theme', effective);
+    root.setAttribute('data-theme-pref', saved);
+    var btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = '◐ ' + (LABELS[effective] || effective);
+    var sel = document.getElementById('theme-select');
+    if (sel) sel.value = saved === 'system' ? 'system' : effective;
+  }
+  function loadTheme() {
+    var saved = localStorage.getItem(KEY) || 'system';
+    applyTheme(saved);
+  }
+  function setTheme(t) {
+    t = normalizeMode(t);
+    localStorage.setItem(KEY, t);
+    applyTheme(t);
+    return t === 'system' ? 'system → ' + resolvedTheme('system') : t;
+  }
+  function cycleTheme() {
+    var cur = root.getAttribute('data-theme') || 'dark';
+    var idx = MODES.indexOf(cur);
+    var next = MODES[(idx + 1) % MODES.length];
+    return setTheme(next);
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    loadTheme();
+    var toggle = document.getElementById('theme-toggle');
+    if (toggle) toggle.addEventListener('click', function () {
+      var next = cycleTheme();
+      toast('Display mode: ' + next);
+    });
+    var sel = document.getElementById('theme-select');
+    if (sel) sel.addEventListener('change', function () {
+      toast('Display mode: ' + setTheme(sel.value));
+    });
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
+        if ((localStorage.getItem(KEY) || 'system') === 'system') applyTheme('system');
+      });
+    }
+    wireDevDeck();
+  });
+
+  function toast(msg) {
+    var out = document.getElementById('dev-deck-out');
+    if (out) out.textContent = msg;
+  }
+
+  function wireDevDeck() {
+    var deck = document.getElementById('dev-deck');
+    var openBtn = document.getElementById('dev-deck-open');
+    var closeBtn = document.getElementById('dev-deck-close');
+    if (!deck) return;
+    function open() { deck.classList.add('open'); }
+    function close() { deck.classList.remove('open'); }
+    if (openBtn) openBtn.addEventListener('click', open);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        deck.classList.toggle('open');
+      }
+      if (e.key === 'Escape') close();
+    });
+
+    var seq = [];
+    var konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    document.addEventListener('keydown', function (e) {
+      seq.push(e.key);
+      if (seq.length > konami.length) seq.shift();
+      if (seq.join() === konami.join()) {
+        root.classList.toggle('party');
+        open();
+        toast('🎉 Party mode ' + (root.classList.contains('party') ? 'ON' : 'OFF') + ' — you found the Konami code.');
+      }
+    });
+
+    var origin = (window.__RNITRO_ASSET_ORIGIN__ || location.origin).replace(/\/$/, '');
+    deck.querySelectorAll('[data-dev]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var act = btn.getAttribute('data-dev');
+        if (act === 'theme-cycle') {
+          toast('Theme → ' + cycleTheme());
+        } else if (act === 'grid') {
+          root.classList.toggle('dev-grid');
+          toast('Layout grid ' + (root.classList.contains('dev-grid') ? 'ON' : 'OFF'));
+        } else if (act === 'party') {
+          root.classList.toggle('party');
+          toast('Party mode ' + (root.classList.contains('party') ? 'ON (Konami approved)' : 'OFF'));
+        } else if (act === 'clear') {
+          localStorage.clear();
+          sessionStorage.clear();
+          toast('Site storage cleared. Reload recommended.');
+        } else if (act === 'ping') {
+          toast('Pinging ' + origin + '/version.json …');
+          var t0 = performance.now();
+          try {
+            var r = await fetch(origin + '/version.json?_=' + Date.now(), { cache: 'no-store' });
+            var ms = Math.round(performance.now() - t0);
+            var j = await r.json();
+            toast('CDN OK ' + r.status + ' in ' + ms + 'ms\nstable=' + j.latest + '\nbeta=' + j.beta + '\nexp=' + (j.experimental || '—'));
+          } catch (err) {
+            toast('CDN ping failed: ' + err);
+          }
+        } else if (act === 'diag') {
+          var nav = performance.getEntriesByType('navigation')[0];
+          var lines = [
+            'rNitro site diagnostics',
+            'url: ' + location.href,
+            'theme: ' + (root.getAttribute('data-theme') || '—'),
+            'assetOrigin: ' + origin,
+            'ua: ' + navigator.userAgent,
+            'viewport: ' + window.innerWidth + 'x' + window.innerHeight,
+            'dpr: ' + (window.devicePixelRatio || 1),
+            'navType: ' + (nav && nav.type),
+            'domContentLoaded: ' + (nav ? Math.round(nav.domContentLoadedEventEnd) + 'ms' : '—'),
+            'loadEvent: ' + (nav ? Math.round(nav.loadEventEnd) + 'ms' : '—'),
+            'localStorage keys: ' + Object.keys(localStorage).join(', ')
+          ];
+          var text = lines.join('\n');
+          try {
+            await navigator.clipboard.writeText(text);
+            toast('Diagnostics copied to clipboard.\n\n' + text);
+          } catch (e) {
+            toast(text);
+          }
+        }
+      });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

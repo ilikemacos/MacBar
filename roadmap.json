@@ -1,0 +1,42 @@
+{
+  "updated": "2026-07-23",
+  "note": "Single mainline for macOS. Older Final/Beta tags are archives only.",
+  "channels": [
+    {
+      "id": "experimental",
+      "label": "macOS",
+      "accent": "green",
+      "current": "v1.3.26",
+      "next": [
+        {
+          "version": "v1.3.x / v1.4.0",
+          "eta": "Ongoing",
+          "status": "planned",
+          "items": [
+            "Battery hierarchy (one primary % + details)",
+            "Appearance: Look vs color mode split",
+            "Notarized builds when Developer ID is ready",
+            "Optional migrate prompt for old Stable/Beta installs"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "label": "Other platforms",
+      "accent": "cyan",
+      "current": "Linux pre-release · Windows legacy",
+      "next": [
+        {
+          "version": "Linux / Windows",
+          "eta": "As needed",
+          "status": "planned",
+          "items": [
+            "Linux pre-release remains available",
+            "Windows tray build is legacy download only"
+          ]
+        }
+      ]
+    }
+  ]
+}

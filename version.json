@@ -1,0 +1,109 @@
+{
+  "latest": "v1.2.9-Final",
+  "beta": "v1.2.14",
+  "linux": "v0.1-Linux-Beta-Pre-release-x64",
+  "windows": "v4.2.4-Windows-Final-x86",
+  "cli": "v0.2-cli",
+  "releases": {
+    "stable": {
+      "label": "v1.2.9 Final",
+      "short": "v1.2.9",
+      "sh": "rNitro-v1.2.9-Final.sh",
+      "pkg": "rNitro-v1.2.9-Final.pkg",
+      "dmg": "rNitro-v1.2.9-Final.dmg",
+      "zip": "rNitro-v1.2.9-Final.zip"
+    },
+    "beta": {
+      "label": "v1.2.14 Beta",
+      "short": "v1.2.14",
+      "sh": "rNitro-v1.2.14.sh",
+      "source_sh": "install-rNitro.sh",
+      "pkg": "rNitro-v1.2.14.pkg",
+      "dmg": "rNitro-v1.2.14.dmg",
+      "zip": "rNitro-v1.2.14.zip"
+    },
+    "linux": {
+      "label": "v0.1 Linux Beta Pre-release",
+      "short": "v0.1",
+      "tar": "rNitro-v0.1-Linux-Beta-Pre-release-x64.tar.gz",
+      "sh": "install-rNitro-linux.sh"
+    },
+    "windows": {
+      "exe": "rNitro-v4.2.4-Windows-Final-x86.exe",
+      "ps1": "rNitro-v4.2.4-Windows-Final-x86.ps1"
+    },
+    "macos_apps": {
+      "label": "macOS Apps ZIP",
+      "zip": "rNitro-macOS-Apps.zip"
+    },
+    "cli": {
+      "label": "rNitro CLI",
+      "short": "CLI",
+      "version": "v0.2-cli",
+      "tar": "rNitro-CLI.tar.gz"
+    },
+    "intel_beta": {
+      "label": "v1.2.3 Intel Beta",
+      "short": "v1.2.3",
+      "sh": "rNitro-v1.2.3-Intel.sh",
+      "source_sh": "install-rNitro-intel.sh"
+    },
+    "intel_stable": {
+      "label": "v1.1.0 Intel Stable",
+      "short": "v1.1.0",
+      "sh": "rNitro-v1.1.0-Intel.sh"
+    },
+    "experimental": {
+      "label": "v1.3.29",
+      "short": "v1.3.29",
+      "sh": "rNitro-v1.3.29-Experimental.sh",
+      "source_sh": "install-rNitro-experimental.sh",
+      "pkg": "rNitro-v1.3.29-Experimental.pkg",
+      "dmg": "rNitro-v1.3.29-Experimental.dmg",
+      "zip": "rNitro-v1.3.29-Experimental.zip",
+      "id": "v1.3.29-Experimental"
+    }
+  },
+  "hashes": {
+    "stable_sh": "6bc8ec614c6d558ebd9e6a9a9096bfc2b229cdf2dcdd0f328d8c22b442367e44",
+    "beta_sh": "16810e7d07d28c3c80dabbb491c47e651fbf2ab1723aca3bd207574837276410",
+    "intel_beta_sh": "",
+    "intel_stable_sh": "",
+    "stable_zip": "1e05f5d3cee6c94105c291c0fe1bad339277636becf439d2fab89bbbacd4d803",
+    "beta_zip": "cc22f0a56429f3af9a3b6fed86518ce00654e240a4017224eea66752b8694bec",
+    "experimental_zip": "79f613e881279fcaa0e92c474938e851ee8942646a1f0d9cff5e2c41db08c19d",
+    "experimental_sh": "9a06f762fad4248ee50c47f1764a8a3ae037cab7e7be349339d9213677515683"
+  },
+  "archive": [
+    {
+      "id": "v1.2.8-Final",
+      "channel": "stable",
+      "sh": "rNitro-v1.2.8-Final.sh",
+      "pkg": "rNitro-v1.2.8-Final.pkg",
+      "dmg": "rNitro-v1.2.8-Final.dmg",
+      "zip": "rNitro-v1.2.8-Final.zip",
+      "sh_hash": "861e31a6cfe0d0a0d32e43449783e51610b49fde006907d3130d58135f6717e5"
+    },
+    {
+      "id": "v1.2.12",
+      "channel": "beta",
+      "sh": "rNitro-v1.2.12.sh",
+      "pkg": "rNitro-v1.2.12.pkg",
+      "dmg": "rNitro-v1.2.12.dmg",
+      "zip": "rNitro-v1.2.12.zip",
+      "sh_hash": "742791cab8dbe87ddb3efc481c79cfb63e055148498704274d7518429b370ed6"
+    },
+    {
+      "id": "v1.3.3-Experimental",
+      "channel": "experimental",
+      "sh": "rNitro-v1.3.3-Experimental.sh",
+      "pkg": "rNitro-v1.3.3-Experimental.pkg",
+      "dmg": "rNitro-v1.3.3-Experimental.dmg",
+      "zip": "rNitro-v1.3.3-Experimental.zip",
+      "sh_hash": "eaa4a3ba076591c91181d1a2831be85814b9ea0f5d508e71bee23beb0a2bb691"
+    }
+  ],
+  "intel_beta": "v1.2.3-Intel",
+  "intel_stable": "v1.1.0-Intel",
+  "experimental": "v1.3.29-Experimental"
+}
