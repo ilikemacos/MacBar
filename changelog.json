@@ -1,6 +1,15 @@
 {
   "whats_new": [
     {
+      "version": "v1.3.30-Experimental",
+      "channel": "experimental",
+      "date": "2026-07-28",
+      "highlights": [
+        "Personal easter egg: Option-click menu bar icon, or tap version five times",
+        "Enable Logging remains in Settings \u2192 General"
+      ]
+    },
+    {
       "version": "v1.3.26-Experimental",
       "channel": "experimental",
       "highlights": [
@@ -374,6 +383,15 @@
     }
   ],
   "releases": [
+    {
+      "version": "v1.3.30-Experimental",
+      "channel": "experimental",
+      "date": "2026-07-28",
+      "highlights": [
+        "Personal easter egg: Option-click menu bar icon, or tap version five times",
+        "Enable Logging remains in Settings \u2192 General"
+      ]
+    },
     {
       "version": "v1.3.29-Experimental",
       "channel": "experimental",
