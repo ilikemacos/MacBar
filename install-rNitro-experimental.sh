@@ -31,7 +31,7 @@ if [[ -z "${HOME:-}" || ! -d "$HOME" ]]; then
   echo "❌ \$HOME is not set to a valid directory. Aborting."
   exit 1
 fi
-EXPECTED_HASH="9a06f762fad4248ee50c47f1764a8a3ae037cab7e7be349339d9213677515683"
+EXPECTED_HASH="5f17fef48e393db4991c3191d266e43b6d5f486e2b66f974b1416b3274c6a835"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -145,7 +145,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
     }
 }
 
-let CURRENT_VERSION = "v1.3.29-Experimental"
+let CURRENT_VERSION = "v1.3.30-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -4871,6 +4871,60 @@ enum MenubarClickBehavior: String, CaseIterable, Identifiable {
     }
 }
 
+/// Personal easter egg — five taps on version, or ⌥-click the menu bar icon.
+enum RNitroEasterEgg {
+    private static var taps = 0
+    private static var lastTap = Date.distantPast
+    private static let lines = [
+        "Local sensors. No account. No product telemetry.",
+        "Built for Macs that run warm and stay honest.",
+        "imik2261_ · chopsticks · CatboiGens owner energy.",
+        "If you can read this, you click too much. Respect.",
+    ]
+
+    static func noteVersionTap() {
+        let now = Date()
+        if now.timeIntervalSince(lastTap) > 1.4 { taps = 0 }
+        lastTap = now
+        taps += 1
+        if taps >= 5 {
+            taps = 0
+            reveal()
+        }
+    }
+
+    static func reveal() {
+        DeveloperModeStore.shared.log("easter egg revealed", category: "lifecycle")
+        let pick = lines.randomElement() ?? lines[0]
+        let body = """
+        rNitro \(CURRENT_VERSION)
+        Channel: \(RNITRO_BUILD_CHANNEL)
+
+        \(pick)
+
+        chopstickshq.com/rnitro
+        """
+        let alert = NSAlert()
+        alert.messageText = "You found it ✦"
+        alert.informativeText = body
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Nice")
+        alert.addButton(withTitle: "Open site")
+        alert.addButton(withTitle: "Copy")
+        let response = alert.runModal()
+        if response == .alertSecondButtonReturn {
+            NSWorkspace.shared.open(UPDATE_PAGE_URL)
+        } else if response == .alertThirdButtonReturn {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(body, forType: .string)
+        }
+        // Quiet little flash for people who also run Developer Mode
+        if DeveloperModeStore.shared.isEnabled {
+            DeveloperModeStore.shared.shuffleAccentTemporarily()
+        }
+    }
+}
+
 final class DeveloperModeStore: ObservableObject {
     static let shared = DeveloperModeStore()
     private static let logQueue = DispatchQueue(label: "com.rnitro.logging")
@@ -8034,6 +8088,9 @@ struct SettingsGeneralSection: View {
                     .toggleStyle(.switch)
                 }
                 MonitorRow(label: display.tr("general.version"), value: UpdateChecker.displayLabel(CURRENT_VERSION))
+                    .contentShape(Rectangle())
+                    .onTapGesture { RNitroEasterEgg.noteVersionTap() }
+                    .help("Tap version five times…")
                 MonitorRow(label: display.tr("general.installLocation"), value: UpdateChecker.installPathLabel())
                 MinimalButton(title: display.tr("general.launchCLI"), action: { CLIIntegration.copyLaunchCommand() })
             }
@@ -13722,6 +13779,8 @@ struct MonitorModernHeaderView: View {
             Text(CURRENT_VERSION)
                 .font(rNitroFont(.micro, metrics: metrics))
                 .foregroundColor(.secondary.opacity(0.7))
+                .help("Tap five times…")
+                .onTapGesture { RNitroEasterEgg.noteVersionTap() }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, metrics.hPad).padding(.top, 10).padding(.bottom, 6)
@@ -14589,9 +14648,12 @@ struct MonitorTabContent: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("rNitro").font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+                            .onTapGesture { RNitroEasterEgg.noteVersionTap() }
                         Text(m.cpuName).font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
                             .lineLimit(1).truncationMode(.tail)
                         Text(CURRENT_VERSION).font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary.opacity(0.75))
+                            .help("Tap five times…")
+                            .onTapGesture { RNitroEasterEgg.noteVersionTap() }
                     }
                     Spacer()
                     HStack(spacing: 6) {
@@ -17594,6 +17656,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     @objc private func togglePopover() {
         guard let event = NSApp.currentEvent, let button = statusItem?.button else { return }
+        // Personal easter egg: Option-click the menu bar icon
+        if event.type == .leftMouseUp, event.modifierFlags.contains(.option) {
+            RNitroEasterEgg.reveal()
+            return
+        }
         if event.type == .rightMouseUp {
             let menu = NSMenu()
             let overlayTitle = OverlayWindowController.shared.isVisible ? "Hide Game Overlay (⌥⇧O)" : "Show Game Overlay (⌥⇧O)"
@@ -17860,8 +17927,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.29-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.29-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.30-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.30-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
