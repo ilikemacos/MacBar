@@ -1,4 +1,0 @@
-UI fonts under fonts/ui/ are sourced from Google Fonts (via fontsource CDN)
-and are licensed under the SIL Open Font License 1.1.
-See https://scripts.sil.org/OFL and each family's Google Fonts page for details.
-Bundled for offline use in rNitro Appearance settings only.
