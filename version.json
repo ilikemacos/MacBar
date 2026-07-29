@@ -54,14 +54,14 @@
       "sh": "rNitro-v1.1.0-Intel.sh"
     },
     "experimental": {
-      "id": "v1.3.31-Experimental",
-      "label": "v1.3.31",
-      "short": "v1.3.31",
-      "sh": "rNitro-v1.3.31-Experimental.sh",
+      "id": "v1.3.32-Experimental",
+      "label": "v1.3.32",
+      "short": "v1.3.32",
+      "sh": "rNitro-v1.3.32-Experimental.sh",
       "source_sh": "install-rNitro-experimental.sh",
-      "pkg": "rNitro-v1.3.31-Experimental.pkg",
-      "dmg": "rNitro-v1.3.31-Experimental.dmg",
-      "zip": "rNitro-v1.3.31-Experimental.zip"
+      "pkg": "rNitro-v1.3.32-Experimental.pkg",
+      "dmg": "rNitro-v1.3.32-Experimental.dmg",
+      "zip": "rNitro-v1.3.32-Experimental.zip"
     }
   },
   "hashes": {
@@ -72,7 +72,7 @@
     "stable_zip": "1e05f5d3cee6c94105c291c0fe1bad339277636becf439d2fab89bbbacd4d803",
     "beta_zip": "cc22f0a56429f3af9a3b6fed86518ce00654e240a4017224eea66752b8694bec",
     "experimental_zip": "b7e65826457f8419177c9f6aa8eae83d41b9bf554bf5ad8d5f0026d034a3041f",
-    "experimental_sh": "67123668beaa9f979df8b4c64cafab97715c998462c2cb897673922200ba78c6"
+    "experimental_sh": "93a6265769e2f1d59c0c41d670869c8110bdd09b1ee70702cb907f8ee3356e4d"
   },
   "archive": [
     {
@@ -105,5 +105,5 @@
   ],
   "intel_beta": "v1.2.3-Intel",
   "intel_stable": "v1.1.0-Intel",
-  "experimental": "v1.3.31-Experimental"
+  "experimental": "v1.3.32-Experimental"
 }
