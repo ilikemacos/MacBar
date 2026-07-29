@@ -71,8 +71,10 @@
     "intel_stable_sh": "",
     "stable_zip": "1e05f5d3cee6c94105c291c0fe1bad339277636becf439d2fab89bbbacd4d803",
     "beta_zip": "cc22f0a56429f3af9a3b6fed86518ce00654e240a4017224eea66752b8694bec",
-    "experimental_zip": "b7e65826457f8419177c9f6aa8eae83d41b9bf554bf5ad8d5f0026d034a3041f",
-    "experimental_sh": "93a6265769e2f1d59c0c41d670869c8110bdd09b1ee70702cb907f8ee3356e4d"
+    "experimental_zip": "c79045d12e0aeef3ad3b5c152a93d945e4ac3e3349acc0b9a407e495f56a3f22",
+    "experimental_sh": "93a6265769e2f1d59c0c41d670869c8110bdd09b1ee70702cb907f8ee3356e4d",
+    "experimental_pkg": "e3ba7a8a985340a609d9471eff11af755b4ad2ad97584cd8daaccdc8c2790faf",
+    "experimental_dmg": "faa26e765f0eddfb13a69d2ba9b70b210d98552a496014c263139e5fffbbed06"
   },
   "archive": [
     {
