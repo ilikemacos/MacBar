@@ -31,7 +31,7 @@ if [[ -z "${HOME:-}" || ! -d "$HOME" ]]; then
   echo "❌ \$HOME is not set to a valid directory. Aborting."
   exit 1
 fi
-EXPECTED_HASH="67123668beaa9f979df8b4c64cafab97715c998462c2cb897673922200ba78c6"
+EXPECTED_HASH="93a6265769e2f1d59c0c41d670869c8110bdd09b1ee70702cb907f8ee3356e4d"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -145,7 +145,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
     }
 }
 
-let CURRENT_VERSION = "v1.3.31-Experimental"
+let CURRENT_VERSION = "v1.3.32-Experimental"
 let RNITRO_BUILD_CHANNEL = "experimental"
 
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -4871,10 +4871,12 @@ enum MenubarClickBehavior: String, CaseIterable, Identifiable {
     }
 }
 
-/// Personal easter egg — five taps on version, or ⌥-click the menu bar icon.
+/// Personal easter egg — five taps on version, or 3× left-click the menu bar icon.
 enum RNitroEasterEgg {
     private static var taps = 0
     private static var lastTap = Date.distantPast
+    private static var menubarClicks = 0
+    private static var lastMenubarClick = Date.distantPast
     private static let lines = [
         "Local sensors. No account. No product telemetry.",
         "Built for Macs that run warm and stay honest.",
@@ -4891,6 +4893,21 @@ enum RNitroEasterEgg {
             taps = 0
             reveal()
         }
+    }
+
+    /// Left-click counter for the menu bar icon. Returns `true` when the easter egg fired (caller should not open popover).
+    @discardableResult
+    static func noteMenubarClick() -> Bool {
+        let now = Date()
+        if now.timeIntervalSince(lastMenubarClick) > 1.4 { menubarClicks = 0 }
+        lastMenubarClick = now
+        menubarClicks += 1
+        if menubarClicks >= 3 {
+            menubarClicks = 0
+            reveal()
+            return true
+        }
+        return false
     }
 
     static func reveal() {
@@ -11740,11 +11757,19 @@ enum FathomLink {
     static let bundleId = "com.chopstickshq.fathom"
     static let siteURL = URL(string: "https://chopstickshq.com/fathom/")!
 
+    private static var candidatePaths: [String] {
+        [
+            "\(NSHomeDirectory())/Applications/Fathom.app",
+            "/Applications/Fathom.app",
+        ]
+    }
+
     static var isInstalled: Bool {
-        if #available(macOS 12.0, *) {
-            return NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) != nil
+        if #available(macOS 12.0, *),
+           NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) != nil {
+            return true
         }
-        return false
+        return candidatePaths.contains { FileManager.default.fileExists(atPath: $0) }
     }
 
     static func openOrInstall() {
@@ -11752,6 +11777,10 @@ enum FathomLink {
            let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) {
             let cfg = NSWorkspace.OpenConfiguration()
             NSWorkspace.shared.openApplication(at: appURL, configuration: cfg, completionHandler: nil)
+            return
+        }
+        for p in candidatePaths where FileManager.default.fileExists(atPath: p) {
+            NSWorkspace.shared.open(URL(fileURLWithPath: p))
             return
         }
         NSWorkspace.shared.open(siteURL)
@@ -17683,10 +17712,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
     @objc private func togglePopover() {
         guard let event = NSApp.currentEvent, let button = statusItem?.button else { return }
-        // Personal easter egg: Option-click the menu bar icon
-        if event.type == .leftMouseUp, event.modifierFlags.contains(.option) {
-            RNitroEasterEgg.reveal()
-            return
+        // Personal easter egg: left-click the menu bar icon 3 times quickly
+        if event.type == .leftMouseUp || event.type == .leftMouseDown {
+            // status item usually delivers leftMouseUp via sendAction
+            if RNitroEasterEgg.noteMenubarClick() {
+                return
+            }
         }
         if event.type == .rightMouseUp {
             let menu = NSMenu()
@@ -17954,8 +17985,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>rNitro</string>
     <key>CFBundleDisplayName</key><string>rNitro</string>
-    <key>CFBundleVersion</key><string>v1.3.31-Experimental</string>
-    <key>CFBundleShortVersionString</key><string>v1.3.31-Experimental</string>
+    <key>CFBundleVersion</key><string>v1.3.32-Experimental</string>
+    <key>CFBundleShortVersionString</key><string>v1.3.32-Experimental</string>
     <key>ATSApplicationFontsPath</key><string>Fonts</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

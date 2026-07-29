@@ -1,6 +1,15 @@
 {
   "whats_new": [
     {
+      "version": "v1.3.32-Experimental",
+      "channel": "experimental",
+      "date": "2026-07-29",
+      "highlights": [
+        "Easter egg: triple left-click the menu bar icon (was Option-click)",
+        "Fathom open: also finds ~/Applications/Fathom.app when bundle lookup fails"
+      ]
+    },
+    {
       "version": "v1.3.30-Experimental",
       "channel": "experimental",
       "date": "2026-07-28",
