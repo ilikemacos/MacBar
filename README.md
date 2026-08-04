@@ -6,7 +6,7 @@ No account · no telemetry · no subscription.
 **Canonical site:** [https://chopstickshq.com/rnitro/](https://chopstickshq.com/rnitro/)  
 **Hub:** [https://chopstickshq.com/](https://chopstickshq.com/) · **Releases:** [GitHub Releases](https://github.com/ilikemacos/rNitro/releases)
 
-[![Download](https://img.shields.io/badge/download-v1.3.31-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.31-Experimental)
+[![Download](https://img.shields.io/badge/download-v1.3.32-00ff80)](https://github.com/ilikemacos/rNitro/releases/tag/v1.3.32-Experimental)
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111111)](https://chopstickshq.com/rnitro/)
 [![License](https://img.shields.io/badge/license-see%20repo-6b6b8a)](https://github.com/ilikemacos/rNitro)
 
@@ -23,7 +23,7 @@ No account · no telemetry · no subscription.
 Also: **Terminal install (no Xcode)** on the website, or **PKG** / **DMG** / **`.sh`** (compile needs Xcode CLT).
 
 **Latest ZIP:**  
-[rNitro-v1.3.31-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.31-Experimental/rNitro-v1.3.31-Experimental.zip)
+[rNitro-v1.3.32-Experimental.zip](https://github.com/ilikemacos/rNitro/releases/download/v1.3.32-Experimental/rNitro-v1.3.32-Experimental.zip)
 
 > Builds are ad-hoc signed (not Apple-notarized yet). Prefer App ZIP from [chopstickshq.com/rnitro](https://chopstickshq.com/rnitro/).
 
