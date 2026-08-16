@@ -2,7 +2,7 @@
   "latest": "v1.2.9-Final",
   "beta": "v1.2.14",
   "linux": "v0.1-Linux-Beta-Pre-release-x64",
-  "windows": "v4.2.4-Windows-Final-x86",
+  "windows": "v6.0.2-Windows-x64",
   "cli": "v0.2-cli",
   "releases": {
     "stable": {
@@ -29,7 +29,9 @@
       "sh": "install-rNitro-linux.sh"
     },
     "windows": {
-      "exe": "rNitro-v4.2.4-Windows-Final-x86.exe",
+      "label": "v6.0.2 Windows x64",
+      "short": "v6.0.2",
+      "zip": "rNitro-v6.0.2-Windows-x64.zip",
       "ps1": "rNitro-v4.2.4-Windows-Final-x86.ps1"
     },
     "macos_apps": {
@@ -54,14 +56,14 @@
       "sh": "rNitro-v1.1.0-Intel.sh"
     },
     "experimental": {
-      "id": "v1.3.32-Experimental",
-      "label": "v1.3.32",
-      "short": "v1.3.32",
-      "sh": "rNitro-v1.3.32-Experimental.sh",
+      "id": "v1.5.0",
+      "label": "v1.5.0",
+      "short": "v1.5.0",
+      "sh": "rNitro-v1.5.0.sh",
       "source_sh": "install-rNitro-experimental.sh",
-      "pkg": "rNitro-v1.3.32-Experimental.pkg",
-      "dmg": "rNitro-v1.3.32-Experimental.dmg",
-      "zip": "rNitro-v1.3.32-Experimental.zip"
+      "pkg": "rNitro-v1.5.0.pkg",
+      "dmg": "rNitro-v1.5.0.dmg",
+      "zip": "rNitro-v1.5.0.zip"
     }
   },
   "hashes": {
@@ -71,10 +73,11 @@
     "intel_stable_sh": "",
     "stable_zip": "1e05f5d3cee6c94105c291c0fe1bad339277636becf439d2fab89bbbacd4d803",
     "beta_zip": "cc22f0a56429f3af9a3b6fed86518ce00654e240a4017224eea66752b8694bec",
-    "experimental_zip": "c79045d12e0aeef3ad3b5c152a93d945e4ac3e3349acc0b9a407e495f56a3f22",
-    "experimental_sh": "93a6265769e2f1d59c0c41d670869c8110bdd09b1ee70702cb907f8ee3356e4d",
-    "experimental_pkg": "e3ba7a8a985340a609d9471eff11af755b4ad2ad97584cd8daaccdc8c2790faf",
-    "experimental_dmg": "faa26e765f0eddfb13a69d2ba9b70b210d98552a496014c263139e5fffbbed06"
+    "experimental_zip": "18eda11e109de3739c0f9defdea6cb9b843f23aa0ad5d59fc21fac7068c6eeac",
+    "experimental_sh": "1d284a5446527bb6d93f7eee9082d1915c0027d7fda646faad51ddd3b167b3c9",
+    "experimental_pkg": "00ba9991354cf3a8c28580e043a2614ed99d152672bfa2e758e75d7c46d09e9e",
+    "experimental_dmg": "e37d1a291c523a56287b239c9493aa0e874dc8955f3d4888d646b88cd340300f",
+    "windows_zip": "a9ff832f67b248c1dd6f071d917846be02e895812c659969407b641558fd60a1"
   },
   "archive": [
     {
@@ -107,5 +110,5 @@
   ],
   "intel_beta": "v1.2.3-Intel",
   "intel_stable": "v1.1.0-Intel",
-  "experimental": "v1.3.32-Experimental"
+  "experimental": "v1.5.0"
 }
