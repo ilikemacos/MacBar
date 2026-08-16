@@ -31,7 +31,7 @@ if [[ -z "${HOME:-}" || ! -d "$HOME" ]]; then
   echo "❌ \$HOME is not set to a valid directory. Aborting."
   exit 1
 fi
-EXPECTED_HASH="4ddddfeb9274672e21591abdec220b8be4ab3f9302db7dd88ee4876bca2bc223"
+EXPECTED_HASH="5c062d630b363d9c45eb4cb0a227555c1867d8ab875b62a2461d72cac21c60b0"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -6565,6 +6565,7 @@ enum ChopsticksAI {
 enum AIProvider: String, CaseIterable, Identifiable {
     case chopsticks = "cs.AI"
     case chopsticksSuper = "cs.AI Super"
+    case chopsticksCode = "cs.AI ChopCode"
     case gemini = "Gemini"
     case openai = "OpenAI"
     case anthropic = "Anthropic"
@@ -6578,7 +6579,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
 
     var requiresApiKey: Bool {
         switch self {
-        case .chopsticks, .chopsticksSuper, .lmStudio, .ollama, .hermes: return false
+        case .chopsticks, .chopsticksSuper, .chopsticksCode, .lmStudio, .ollama, .hermes: return false
         default: return true
         }
     }
@@ -6587,6 +6588,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         switch self {
         case .chopsticks: return "Ultra · 48K context"
         case .chopsticksSuper: return "Super · 24K context"
+        case .chopsticksCode: return "ChopCode · live 2026"
         case .gemini: return "gemini-2.0-flash"
         case .openai: return "gpt-4o-mini"
         case .anthropic: return "claude-3-5-haiku-20241022"
@@ -6601,7 +6603,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
 
     var keyURL: String {
         switch self {
-        case .chopsticks, .chopsticksSuper: return "https://chopstickshq.com/chopsticks-ai/"
+        case .chopsticks, .chopsticksSuper, .chopsticksCode: return "https://chopstickshq.com/chopsticks-ai/"
         case .gemini: return "https://aistudio.google.com/apikey"
         case .openai: return "https://platform.openai.com/api-keys"
         case .anthropic: return "https://console.anthropic.com/settings/keys"
@@ -6616,7 +6618,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
 
     var keyHint: String {
         switch self {
-        case .chopsticks, .chopsticksSuper: return "built in - no key"
+        case .chopsticks, .chopsticksSuper, .chopsticksCode: return "built in - no key"
         case .gemini: return "Google AI Studio"
         case .openai: return "OpenAI Platform"
         case .anthropic: return "Anthropic Console"
@@ -6631,8 +6633,8 @@ enum AIProvider: String, CaseIterable, Identifiable {
 
     var setupHint: String {
         switch self {
-        case .chopsticks, .chopsticksSuper:
-            return "cs.AI is built in. Live answers from chopstickshq.com (research as of today). If the network is down, it falls back to an on-device knowledge base. No API key from you."
+        case .chopsticks, .chopsticksSuper, .chopsticksCode:
+            return "cs.AI is built in. Live answers from chopstickshq.com (research as of 2026). ChopCode is the coding plate. If the network is down, it falls back to an on-device knowledge base. No API key from you."
         case .lmStudio:
             return "Start LM Studio locally and load a model. API key is optional — leave blank and tap Enable if your server has no auth (default: localhost:1234)."
         case .ollama:
@@ -7023,7 +7025,7 @@ final class AIChatModel: ObservableObject {
     }
 
     func hasSavedKey(for provider: AIProvider) -> Bool {
-        if provider == .chopsticks || provider == .chopsticksSuper { return true }
+        if provider == .chopsticks || provider == .chopsticksSuper || provider == .chopsticksCode { return true }
         if provider.requiresApiKey {
             return resolvedKey(for: provider) != nil
         }
@@ -7102,7 +7104,7 @@ final class AIChatModel: ObservableObject {
         // credential server-side - no key is stored in or extractable from this
         // app. If the proxy is unreachable it falls back to the on-device
         // knowledge base, so the assistant still answers offline.
-        if provider == .chopsticks || provider == .chopsticksSuper {
+        if provider == .chopsticks || provider == .chopsticksSuper || provider == .chopsticksCode {
             inputText = ""
             messages.append(ChatMessage(role: "user", text: text))
             let replyId = UUID()
@@ -7110,7 +7112,11 @@ final class AIChatModel: ObservableObject {
             let history = messages
             isLoading = true
             Task {
-                let reply = await Self.requestChopsticks(messages: history, tier: provider == .chopsticksSuper ? "super" : "ultra")
+                let plate: String
+                if provider == .chopsticksCode { plate = "chopcode" }
+                else if provider == .chopsticksSuper { plate = "super" }
+                else { plate = "ultra" }
+                let reply = await Self.requestChopsticks(messages: history, tier: plate)
                 replaceMessage(id: replyId, text: reply)
                 markProviderConnected(provider)
                 isLoading = false
@@ -7198,13 +7204,22 @@ final class AIChatModel: ObservableObject {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.timeoutInterval = 60
         req.setValue("MacBar/1.5.0", forHTTPHeaderField: "User-Agent")
-        let plate = (tier == "super") ? "tamago" : "hibachi"
-        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+        let plate: String
+        if tier == "chopcode" { plate = "chopcode" }
+        else if tier == "super" { plate = "tamago" }
+        else { plate = "hibachi" }
+        var body: [String: Any] = [
             "messages": turns,
             "tier": plate,
             "webSearch": true,
+            "onlineMode": true,
+            "mode": "agent",
             "client": "macbar"
-        ])
+        ]
+        if plate == "chopcode" {
+            body["enableTools"] = true
+        }
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
         do {
             let (data, response) = try await URLSession.shared.data(for: req)
@@ -7228,7 +7243,7 @@ final class AIChatModel: ObservableObject {
     nonisolated private static func probe(provider: AIProvider, apiKey: String) async -> Result<Void, Error> {
         do {
             switch provider {
-            case .chopsticks, .chopsticksSuper:
+            case .chopsticks, .chopsticksSuper, .chopsticksCode:
                 // Nothing to reach - the endpoint needs no credential from the app.
                 return .success(())
             case .gemini:
@@ -7339,7 +7354,7 @@ final class AIChatModel: ObservableObject {
 
     nonisolated private static func request(provider: AIProvider, apiKey: String, messages: [ChatMessage]) async throws -> String {
         switch provider {
-        case .chopsticks, .chopsticksSuper:
+        case .chopsticks, .chopsticksSuper, .chopsticksCode:
             // Unreachable in practice - sendMessage answers chopsticksAI before
             // it gets here - but keeps the switch exhaustive and network-free.
             return ChopsticksAI.ask(messages.last?.text ?? "").answer
