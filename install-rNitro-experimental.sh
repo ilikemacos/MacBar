@@ -31,13 +31,13 @@ if [[ -z "${HOME:-}" || ! -d "$HOME" ]]; then
   echo "❌ \$HOME is not set to a valid directory. Aborting."
   exit 1
 fi
-EXPECTED_HASH="fe48390862f3938c43152366fd42baea110edd6d358d36fc3645b1159baeb7e1"
+EXPECTED_HASH="4c0a67caf2ebe6da7a45b9c517f3cdd48764c8639c5df99e7e22edf9a1517891"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
   echo "   Expected: $EXPECTED_HASH"
   echo "   Got:      $ACTUAL_HASH"
-  echo "   Download a fresh copy from https://chopstickshq.com/rnitro/"
+  echo "   Download a fresh copy from https://chopstickshq.com/macbar/"
   exit 1
 fi
 echo "✅ Integrity check passed."
@@ -152,10 +152,10 @@ let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHA
 let RNITRO_FEATURE_EXPERIMENTAL_UI = (RNITRO_BUILD_CHANNEL == "experimental")
 private let RNITRO_UI_FONT_DEFAULT = "Varela Round"
 
-let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/rnitro/version.json")!
+let UPDATE_CHECK_URL = URL(string: "https://chopstickshq.com/macbar/version.json")!
 private let UPDATE_CHECK_URL_FALLBACK = URL(string: "https://getrnitro.netlify.app/version.json")!
-let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/rnitro/")!
-private let UPDATE_CDN_ORIGIN = "https://chopstickshq.com/rnitro"
+let UPDATE_PAGE_URL  = URL(string: "https://chopstickshq.com/macbar/")!
+private let UPDATE_CDN_ORIGIN = "https://chopstickshq.com/macbar"
 private let UPDATE_CDN_ORIGIN_LEGACY = "https://getrnitro.netlify.app"
 
 struct VersionInfo: Decodable {
@@ -6577,6 +6577,13 @@ enum AIProvider: String, CaseIterable, Identifiable {
     case hermes = "Hermes"
     var id: String { rawValue }
 
+    var displayName: String {
+        switch self {
+        case .groq: return "Groq"
+        default: return rawValue
+        }
+    }
+
     var requiresApiKey: Bool {
         switch self {
         case .chopsticks, .chopsticksSuper, .chopsticksCode, .lmStudio, .ollama, .hermes: return false
@@ -6622,7 +6629,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .gemini: return "Google AI Studio"
         case .openai: return "OpenAI Platform"
         case .anthropic: return "Anthropic Console"
-        case .groq: return "Grok Console"
+        case .groq: return "Groq Console"
         case .deepseek: return "DeepSeek Platform"
         case .openRouter: return "OpenRouter"
         case .lmStudio: return "lmstudio.ai"
@@ -6642,7 +6649,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .hermes:
             return "Install Ollama and pull Hermes: ollama pull hermes3. No API key needed — tap Enable when Ollama is running on localhost:11434."
         default:
-            return "Paste your \(rawValue) API key. AES-256 encrypted in Keychain — only sent to \(rawValue) when you chat."
+            return "Paste your \(displayName) API key. AES-256 encrypted in Keychain — only sent to \(displayName) when you chat."
         }
     }
 
@@ -6653,6 +6660,33 @@ enum AIProvider: String, CaseIterable, Identifiable {
         default: return nil
         }
     }
+}
+
+enum GroqChatModels {
+    static let presets = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "compound",
+        "compound-mini",
+    ]
+    static let defaultID = "llama-3.3-70b-versatile"
+}
+
+enum OpenRouterChatModels {
+    static let presets = [
+        "openrouter/auto",
+        "openai/gpt-4o-mini",
+        "openai/gpt-4o",
+        "anthropic/claude-3.5-sonnet",
+        "google/gemini-2.0-flash-001",
+        "meta-llama/llama-3.3-70b-instruct",
+        "qwen/qwen3-coder:free",
+        "nvidia/llama-3.3-nemotron-super-49b-v1:free",
+        "mistralai/mistral-small-3.1-24b-instruct:free",
+    ]
+    static let defaultID = "openrouter/auto"
 }
 
 enum AIConnectionState: String, Equatable {
@@ -6895,6 +6929,9 @@ final class AIChatModel: ObservableObject {
 
     @Published var selectedProvider: AIProvider = .chopsticks
     @Published var apiKeyDraft = ""
+    @Published var groqModel: String = UserDefaults.standard.string(forKey: "rnitro.ai.groqModel") ?? GroqChatModels.defaultID
+    @Published var openRouterModel: String = UserDefaults.standard.string(forKey: "rnitro.ai.openRouterModel") ?? OpenRouterChatModels.defaultID
+    @Published var copiedMessageID: UUID?
     @Published var messages: [ChatMessage] = [] {
         didSet { guard !suppressPersist else { return }; AIChatStore.save(messages, provider: selectedProvider) }
     }
@@ -7066,6 +7103,38 @@ final class AIChatModel: ObservableObject {
         Task { await refreshStatus(for: selectedProvider) }
     }
 
+    var currentModelLabel: String {
+        switch selectedProvider {
+        case .groq: return groqModel
+        case .openRouter: return openRouterModel
+        default: return selectedProvider.modelLabel
+        }
+    }
+
+    func setGroqModel(_ id: String) {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        groqModel = trimmed
+        UserDefaults.standard.set(trimmed, forKey: "rnitro.ai.groqModel")
+    }
+
+    func setOpenRouterModel(_ id: String) {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        openRouterModel = trimmed
+        UserDefaults.standard.set(trimmed, forKey: "rnitro.ai.openRouterModel")
+    }
+
+    func copyMessage(_ msg: ChatMessage) {
+        guard !msg.text.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(msg.text, forType: .string)
+        copiedMessageID = msg.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+            if self?.copiedMessageID == msg.id { self?.copiedMessageID = nil }
+        }
+    }
+
     func removeApiKey() {
         AIKeychain.delete(provider: selectedProvider)
         keys[selectedProvider] = nil
@@ -7150,8 +7219,11 @@ final class AIChatModel: ObservableObject {
             do {
                 let reply: String
                 if Self.supportsStreaming(provider) {
+                    let groqID = groqModel
+                    let orID = openRouterModel
                     reply = try await Self.requestStreaming(
                         provider: provider, apiKey: apiKey, messages: history,
+                        groqModel: groqID, openRouterModel: orID,
                         onDelta: { [weak self] delta in
                             Task { @MainActor in self?.appendToMessage(id: replyId, delta: delta) }
                         }
@@ -7160,7 +7232,7 @@ final class AIChatModel: ObservableObject {
                         replaceMessage(id: replyId, text: reply)
                     }
                 } else {
-                    reply = try await Self.request(provider: provider, apiKey: apiKey, messages: history)
+                    reply = try await Self.request(provider: provider, apiKey: apiKey, messages: history, groqModel: groqModel, openRouterModel: openRouterModel)
                     replaceMessage(id: replyId, text: reply)
                 }
                 markProviderConnected(provider)
@@ -7352,18 +7424,16 @@ final class AIChatModel: ObservableObject {
         }
     }
 
-    nonisolated private static func request(provider: AIProvider, apiKey: String, messages: [ChatMessage]) async throws -> String {
+    nonisolated private static func request(provider: AIProvider, apiKey: String, messages: [ChatMessage], groqModel: String = GroqChatModels.defaultID, openRouterModel: String = OpenRouterChatModels.defaultID) async throws -> String {
         switch provider {
         case .chopsticks, .chopsticksSuper, .chopsticksCode:
-            // Unreachable in practice - sendMessage answers chopsticksAI before
-            // it gets here - but keeps the switch exhaustive and network-free.
             return ChopsticksAI.ask(messages.last?.text ?? "").answer
         case .gemini: return try await requestGemini(apiKey: apiKey, messages: messages)
         case .openai: return try await requestOpenAI(apiKey: apiKey, messages: messages)
         case .anthropic: return try await requestAnthropic(apiKey: apiKey, messages: messages)
-        case .groq: return try await requestGroq(apiKey: apiKey, messages: messages)
+        case .groq: return try await requestGroq(apiKey: apiKey, messages: messages, model: groqModel)
         case .deepseek: return try await requestDeepSeek(apiKey: apiKey, messages: messages)
-        case .openRouter: return try await requestOpenRouter(apiKey: apiKey, messages: messages)
+        case .openRouter: return try await requestOpenRouter(apiKey: apiKey, messages: messages, model: openRouterModel)
         case .lmStudio: return try await requestLMStudio(apiKey: apiKey, messages: messages)
         case .ollama: return try await requestOllama(apiKey: apiKey, messages: messages, model: "llama3.2")
         case .hermes: return try await requestOllama(apiKey: apiKey, messages: messages, model: "hermes3")
@@ -7372,6 +7442,7 @@ final class AIChatModel: ObservableObject {
 
     nonisolated private static func requestStreaming(
         provider: AIProvider, apiKey: String, messages: [ChatMessage],
+        groqModel: String, openRouterModel: String,
         onDelta: @escaping (String) -> Void
     ) async throws -> String {
         switch provider {
@@ -7383,8 +7454,8 @@ final class AIChatModel: ObservableObject {
             )
         case .groq:
             return try await streamOpenAICompatible(
-                url: "https://api.groq.com/openai/v1/chat/completions", apiKey: apiKey, model: "llama-3.3-70b-versatile",
-                messages: messages, domain: "Grok", requireAuth: true, onDelta: onDelta,
+                url: "https://api.groq.com/openai/v1/chat/completions", apiKey: apiKey, model: groqModel,
+                messages: messages, domain: "Groq", requireAuth: true, onDelta: onDelta,
                 extraHeaders: [:]
             )
         case .deepseek:
@@ -7395,9 +7466,9 @@ final class AIChatModel: ObservableObject {
             )
         case .openRouter:
             return try await streamOpenAICompatible(
-                url: "https://openrouter.ai/api/v1/chat/completions", apiKey: apiKey, model: "openrouter/auto",
+                url: "https://openrouter.ai/api/v1/chat/completions", apiKey: apiKey, model: openRouterModel,
                 messages: messages, domain: "OpenRouter", requireAuth: true, onDelta: onDelta,
-                extraHeaders: ["HTTP-Referer": "https://getrnitro.netlify.app", "X-Title": "MacBar"]
+                extraHeaders: ["HTTP-Referer": "https://chopstickshq.com/macbar/", "X-Title": "MacBar"]
             )
         case .lmStudio:
             return try await streamOpenAICompatible(
@@ -7406,7 +7477,7 @@ final class AIChatModel: ObservableObject {
                 extraHeaders: [:]
             )
         default:
-            return try await request(provider: provider, apiKey: apiKey, messages: messages)
+            return try await request(provider: provider, apiKey: apiKey, messages: messages, groqModel: groqModel, openRouterModel: openRouterModel)
         }
     }
 
@@ -7580,11 +7651,11 @@ final class AIChatModel: ObservableObject {
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    nonisolated private static func requestGroq(apiKey: String, messages: [ChatMessage]) async throws -> String {
+    nonisolated private static func requestGroq(apiKey: String, messages: [ChatMessage], model: String) async throws -> String {
         let key = AIKeyUtil.sanitize(apiKey)
         guard AIKeyUtil.isUsableCloudKey(key) else {
-            throw NSError(domain: "Grok", code: 401,
-                          userInfo: [NSLocalizedDescriptionKey: "Missing API key — paste your Grok key in Change key."])
+            throw NSError(domain: "Groq", code: 401,
+                          userInfo: [NSLocalizedDescriptionKey: "Missing API key — paste your Groq key (starts with gsk_)."])
         }
         var req = URLRequest(url: URL(string: "https://api.groq.com/openai/v1/chat/completions")!)
         req.httpMethod = "POST"
@@ -7594,16 +7665,17 @@ final class AIChatModel: ObservableObject {
         let msgs: [[String: String]] = chatHistory(messages).map {
             ["role": $0.role == "user" ? "user" : "assistant", "content": $0.text]
         }
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["model": "llama-3.3-70b-versatile", "messages": msgs])
+        let modelID = model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? GroqChatModels.defaultID : model
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["model": modelID, "messages": msgs])
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        if http.statusCode != 200 { try parseAPIError(data: data, status: http.statusCode, domain: "Grok") }
+        if http.statusCode != 200 { try parseAPIError(data: data, status: http.statusCode, domain: "Groq") }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = json["choices"] as? [[String: Any]],
               let first = choices.first,
               let message = first["message"] as? [String: Any],
               let text = message["content"] as? String else {
-            throw NSError(domain: "Grok", code: 0, userInfo: [NSLocalizedDescriptionKey: "Empty response from Grok"])
+            throw NSError(domain: "Groq", code: 0, userInfo: [NSLocalizedDescriptionKey: "Empty response from Groq"])
         }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -7656,7 +7728,7 @@ final class AIChatModel: ObservableObject {
         )
     }
 
-    nonisolated private static func requestOpenRouter(apiKey: String, messages: [ChatMessage]) async throws -> String {
+    nonisolated private static func requestOpenRouter(apiKey: String, messages: [ChatMessage], model: String) async throws -> String {
         let key = AIKeyUtil.sanitize(apiKey)
         guard AIKeyUtil.isUsableCloudKey(key) else {
             throw NSError(domain: "OpenRouter", code: 401,
@@ -7666,14 +7738,15 @@ final class AIChatModel: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        req.setValue("https://getrnitro.netlify.app", forHTTPHeaderField: "HTTP-Referer")
+        req.setValue("https://chopstickshq.com/macbar/", forHTTPHeaderField: "HTTP-Referer")
         req.setValue("MacBar", forHTTPHeaderField: "X-Title")
         req.timeoutInterval = 120
         let msgs: [[String: String]] = chatHistory(messages).map {
             ["role": $0.role == "user" ? "user" : "assistant", "content": $0.text]
         }
+        let modelID = model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? OpenRouterChatModels.defaultID : model
         req.httpBody = try JSONSerialization.data(withJSONObject: [
-            "model": "openrouter/auto",
+            "model": modelID,
             "messages": msgs
         ])
         let (data, resp) = try await URLSession.shared.data(for: req)
@@ -7765,7 +7838,7 @@ struct AIProviderPicker: View {
                 ForEach(AIProvider.allCases) { p in
                     Button(action: { chat.selectProvider(p) }) {
                         HStack(spacing: 5) {
-                            Text(p.rawValue)
+                            Text(p.displayName)
                             ProviderStatusIndicator(status: chat.status(for: p))
                         }
                         .font(rNitroFont(.caption, metrics: metrics, weight: chat.selectedProvider == p ? .semibold : .regular))
@@ -7992,7 +8065,63 @@ struct ChatAPISection: View {
                     }
                     Text(chat.selectedProvider.setupHint)
                         .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
-                    if chat.selectedProvider.requiresApiKey {
+                    if chat.selectedProvider == .groq {
+                        Text("Groq API key")
+                            .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                        Text("From console.groq.com/keys — keys start with gsk_. Encrypted in Keychain.")
+                            .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary)
+                        SecureField("gsk_…", text: $chat.apiKeyDraft)
+                            .textFieldStyle(.plain)
+                            .font(rNitroFont(.body, metrics: metrics))
+                            .padding(10)
+                            .background(Color.card)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.6), lineWidth: 1))
+                        Text("Groq model")
+                            .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                        Picker("Groq model", selection: Binding(
+                            get: { chat.groqModel },
+                            set: { chat.setGroqModel($0) }
+                        )) {
+                            ForEach(GroqChatModels.presets, id: \.self) { id in
+                                Text(id).tag(id)
+                            }
+                        }
+                        .labelsHidden()
+                        TextField("Custom Groq model id", text: $chat.groqModel)
+                            .textFieldStyle(.plain)
+                            .font(rNitroFont(.caption, metrics: metrics))
+                            .padding(8)
+                            .background(Color.card)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.5), lineWidth: 1))
+                            .onSubmit { chat.setGroqModel(chat.groqModel) }
+                    } else if chat.selectedProvider == .openRouter {
+                        Text("OpenRouter API key")
+                            .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                        SecureField("sk-or-…", text: $chat.apiKeyDraft)
+                            .textFieldStyle(.plain)
+                            .font(rNitroFont(.body, metrics: metrics))
+                            .padding(10)
+                            .background(Color.card)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.6), lineWidth: 1))
+                        Text("OpenRouter model")
+                            .font(rNitroFont(.label, metrics: metrics, weight: .semibold))
+                        Picker("OpenRouter model", selection: Binding(
+                            get: { chat.openRouterModel },
+                            set: { chat.setOpenRouterModel($0) }
+                        )) {
+                            ForEach(OpenRouterChatModels.presets, id: \.self) { id in
+                                Text(id).tag(id)
+                            }
+                        }
+                        .labelsHidden()
+                        TextField("Custom model id (provider/model)", text: $chat.openRouterModel)
+                            .textFieldStyle(.plain)
+                            .font(rNitroFont(.caption, metrics: metrics))
+                            .padding(8)
+                            .background(Color.card)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.5), lineWidth: 1))
+                            .onSubmit { chat.setOpenRouterModel(chat.openRouterModel) }
+                    } else if chat.selectedProvider.requiresApiKey {
                         SecureField("API key", text: $chat.apiKeyDraft)
                             .textFieldStyle(.plain)
                             .font(rNitroFont(.body, metrics: metrics))
@@ -8943,7 +9072,7 @@ struct AIChatView: View {
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(MacBarCursor.text)
             }
-            Text("Set up \(chat.selectedProvider.rawValue)")
+            Text("Set up \(chat.selectedProvider.displayName)")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(MacBarCursor.text)
             Text("Pick a plate, then save a key if it needs one.")
@@ -9012,12 +9141,12 @@ struct AIChatView: View {
             Text("Agent")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(MacBarCursor.text)
-            Text(chat.selectedProvider.rawValue)
+            Text(chat.selectedProvider.displayName)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(MacBarCursor.muted)
             Text("·")
                 .foregroundStyle(MacBarCursor.muted)
-            Text(chat.selectedProvider.modelLabel)
+            Text(chat.currentModelLabel)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(MacBarCursor.muted)
                 .lineLimit(1)
@@ -9156,9 +9285,9 @@ struct AIChatView: View {
                                 chat.selectProvider(p)
                             } label: {
                                 if p == chat.selectedProvider {
-                                    Label(p.rawValue, systemImage: "checkmark")
+                                    Label(p.displayName, systemImage: "checkmark")
                                 } else {
-                                    Text(p.rawValue)
+                                    Text(p.displayName)
                                 }
                             }
                         }
@@ -9166,7 +9295,7 @@ struct AIChatView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "cpu")
                                 .font(.system(size: 10, weight: .medium))
-                            Text(chat.selectedProvider.rawValue)
+                            Text(chat.selectedProvider.displayName)
                                 .font(.system(size: 11.5, weight: .medium))
                                 .lineLimit(1)
                             Image(systemName: "chevron.up.chevron.down")
@@ -9180,6 +9309,70 @@ struct AIChatView: View {
                     }
                     .menuStyle(.borderlessButton)
                     .fixedSize()
+
+                    if chat.selectedProvider == .groq {
+                        Menu {
+                            ForEach(GroqChatModels.presets, id: \.self) { id in
+                                Button {
+                                    chat.setGroqModel(id)
+                                } label: {
+                                    if id == chat.groqModel {
+                                        Label(id, systemImage: "checkmark")
+                                    } else {
+                                        Text(id)
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(chat.groqModel)
+                                    .font(.system(size: 11.5, weight: .medium))
+                                    .lineLimit(1)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 8, weight: .semibold))
+                            }
+                            .foregroundStyle(MacBarCursor.soft)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(MacBarCursor.hover))
+                            .overlay(Capsule().strokeBorder(MacBarCursor.border))
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize()
+                        .help("Groq model")
+                    }
+
+                    if chat.selectedProvider == .openRouter {
+                        Menu {
+                            ForEach(OpenRouterChatModels.presets, id: \.self) { id in
+                                Button {
+                                    chat.setOpenRouterModel(id)
+                                } label: {
+                                    if id == chat.openRouterModel {
+                                        Label(id, systemImage: "checkmark")
+                                    } else {
+                                        Text(id)
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(chat.openRouterModel)
+                                    .font(.system(size: 11.5, weight: .medium))
+                                    .lineLimit(1)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 8, weight: .semibold))
+                            }
+                            .foregroundStyle(MacBarCursor.soft)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(MacBarCursor.hover))
+                            .overlay(Capsule().strokeBorder(MacBarCursor.border))
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize()
+                        .help("OpenRouter model")
+                    }
 
                     HStack(spacing: 4) {
                         Image(systemName: "globe")
@@ -9245,9 +9438,29 @@ struct AIChatView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text(isUser ? "You" : "cs.AI")
-                    .font(.system(size: 11.5, weight: .semibold))
-                    .foregroundStyle(MacBarCursor.muted)
+                HStack(spacing: 8) {
+                    Text(isUser ? "You" : chat.selectedProvider.displayName)
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(MacBarCursor.muted)
+                    if !isUser, !msg.text.isEmpty, !msg.isError {
+                        Button {
+                            chat.copyMessage(msg)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: chat.copiedMessageID == msg.id ? "checkmark" : "doc.on.doc")
+                                    .font(.system(size: 10, weight: .semibold))
+                                Text(chat.copiedMessageID == msg.id ? "Copied" : "Copy")
+                                    .font(.system(size: 10.5, weight: .medium))
+                            }
+                            .foregroundStyle(MacBarCursor.soft)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(MacBarCursor.hover))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Copy response")
+                    }
+                }
                 Text(display)
                     .font(.system(size: compact ? 13 : 13.5))
                     .foregroundStyle(msg.isError ? Color(red: 0.95, green: 0.45, blue: 0.4) : MacBarCursor.text)
