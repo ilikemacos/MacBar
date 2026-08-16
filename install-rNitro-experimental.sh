@@ -31,7 +31,7 @@ if [[ -z "${HOME:-}" || ! -d "$HOME" ]]; then
   echo "❌ \$HOME is not set to a valid directory. Aborting."
   exit 1
 fi
-EXPECTED_HASH="5c062d630b363d9c45eb4cb0a227555c1867d8ab875b62a2461d72cac21c60b0"
+EXPECTED_HASH="fe48390862f3938c43152366fd42baea110edd6d358d36fc3645b1159baeb7e1"
 ACTUAL_HASH="$(sed 's/^EXPECTED_HASH=.*/EXPECTED_HASH="MASKED"/' "$0" | shasum -a 256 | awk '{print $1}')"
 if [[ "$ACTUAL_HASH" != "$EXPECTED_HASH" ]]; then
   echo "❌ Integrity check failed. This file may have been tampered with."
@@ -145,7 +145,7 @@ class PinnedSession: NSObject, URLSessionDelegate {
     }
 }
 
-let CURRENT_VERSION = "v1.5.0"
+let CURRENT_VERSION = "v1.5.1"
 let RNITRO_BUILD_CHANNEL = "experimental"
 
 let RNITRO_FEATURE_BETA_UI = (RNITRO_BUILD_CHANNEL == "beta" || RNITRO_BUILD_CHANNEL == "experimental")
@@ -6392,7 +6392,7 @@ enum ChopsticksAIKB {
             product: "rnitro",
             label: "What version is current?",
             priority: 55,
-            answer: "The current macOS build is MacBar v1.5.0 (formerly rNitro).\n\nOther platforms:\n• CLI — v0.2-cli\n• Linux — v0.1 Beta pre-release\n• Windows — v6.0.2 (deprecated)\n\nThe live numbers always come from chopstickshq.com/rnitro/version.json.",
+            answer: "The current macOS build is MacBar v1.5.1 (formerly rNitro).\n\nOther platforms:\n• CLI — v0.2-cli\n• Linux — v0.1 Beta pre-release\n• Windows — v6.0.2 (deprecated)\n\nThe live numbers always come from chopstickshq.com/rnitro/version.json.",
             terms: [("biuld", 2), ("buidl", 2), ("build", 2), ("builds", 3), ("bulid", 2), ("cahngelog", 7), ("chagnelog", 7), ("chaneglog", 7), ("changelog", 7), ("changelogs", 7), ("changleog", 7), ("chnagelog", 7), ("current release", 8), ("erlease", 3), ("evrsion", 3), ("guild", 2), ("hcangelog", 7), ("latest version", 8), ("latestversion", 8), ("reelase", 3), ("relaese", 3), ("releaes", 3), ("release", 3), ("releases", 3), ("relesae", 3), ("rleease", 3), ("ubild", 2), ("verison", 3), ("versino", 3), ("version", 3), ("versions", 3), ("versoin", 3), ("vesrion", 3), ("vresion", 3), ("vuild", 2), ("what version", 8), ("whats new", 7), ("whatsnew", 7), ("whatversion", 7)]
         ),
         ChopsticksAIIntent(
@@ -7203,7 +7203,7 @@ final class AIChatModel: ObservableObject {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.timeoutInterval = 60
-        req.setValue("MacBar/1.5.0", forHTTPHeaderField: "User-Agent")
+        req.setValue("MacBar/1.5.1", forHTTPHeaderField: "User-Agent")
         let plate: String
         if tier == "chopcode" { plate = "chopcode" }
         else if tier == "super" { plate = "tamago" }
@@ -7844,56 +7844,16 @@ struct ChatTabView: View {
     @State private var section: ChatSection = .chat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(display.tr("chat.title"))
-                    .font(rNitroFont(.title, metrics: metrics, weight: .semibold))
-                Text(display.tr("chat.subtitle"))
-                    .font(rNitroFont(.caption, metrics: metrics))
-                    .foregroundColor(.secondary)
+        Group {
+            switch section {
+            case .chat:
+                AIChatView(compact: false, onOpenAPISetup: { section = .api })
+            case .api:
+                ChatAPISection(onBackToChat: { section = .chat })
             }
-            .padding(.horizontal, metrics.hPad)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(ChatSection.allCases) { s in
-                        Button(action: { section = s }) {
-                            HStack(spacing: 5) {
-                                Image(systemName: s.icon)
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text(s.label)
-                                    .font(rNitroFont(.caption, metrics: metrics, weight: section == s ? .semibold : .regular))
-                            }
-                            .foregroundColor(section == s ? .accent : .secondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(section == s ? Color.accent.opacity(0.14) : Color.card.opacity(0.35))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(section == s ? Color.accent.opacity(0.45) : Color.border.opacity(0.35), lineWidth: 0.5))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, metrics.hPad)
-            }
-            .padding(.bottom, 8)
-
-            MinimalDivider().padding(.horizontal, metrics.hPad)
-
-            Group {
-                switch section {
-                case .chat:
-                    AIChatView(compact: false, onOpenAPISetup: { section = .api })
-                case .api:
-                    ChatAPISection()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(Color.bg)
+        .background(MacBarCursor.bg)
         .onReceive(NotificationCenter.default.publisher(for: .rNitroOpenMainWindow)) { note in
             if let raw = note.userInfo?["chatSection"] as? String,
                let s = ChatSection(rawValue: raw) {
@@ -7987,9 +7947,28 @@ struct SettingsView: View {
 struct ChatAPISection: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var chat = AIChatModel.shared
+    var onBackToChat: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                if let onBackToChat {
+                    Button(action: onBackToChat) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("Agent")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(MacBarCursor.text)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .overlay(alignment: .bottom) { Rectangle().fill(MacBarCursor.hairline).frame(height: 1) }
             AIProviderPicker(chat: chat).padding(.horizontal, metrics.hPad).padding(.top, 10).padding(.bottom, 8)
             MinimalDivider().padding(.horizontal, metrics.hPad)
             ScrollView {
@@ -8905,44 +8884,87 @@ struct SettingsDeveloperSection: View {
     }
 }
 
+enum MacBarCursor {
+    static let bg = Color(red: 0.086, green: 0.086, blue: 0.086)
+    static let panel = Color(red: 0.110, green: 0.110, blue: 0.110)
+    static let composer = Color(red: 0.129, green: 0.129, blue: 0.129)
+    static let hover = Color(red: 0.165, green: 0.165, blue: 0.165)
+    static let hairline = Color.white.opacity(0.07)
+    static let border = Color.white.opacity(0.11)
+    static let muted = Color.white.opacity(0.42)
+    static let soft = Color.white.opacity(0.68)
+    static let text = Color.white.opacity(0.92)
+    static let userBubble = Color(red: 0.165, green: 0.165, blue: 0.165)
+    static let accent = Color.white
+    static let accentFg = Color.black
+    static let green = Color(red: 0.35, green: 0.72, blue: 0.48)
+    static let chromium = Color(red: 0.102, green: 0.451, blue: 0.910)
+}
+
 struct AIChatView: View {
     @Environment(\.uiMetrics) private var metrics
     @ObservedObject private var chat = AIChatModel.shared
     var compact: Bool = false
     var onOpenAPISetup: (() -> Void)? = nil
+    @FocusState private var focused: Bool
+
+    private let starters = [
+        "What can MacBar monitor?",
+        "Write a Swift helper for CPU %",
+        "Explain thermal throttling",
+        "How do I install MacBar?",
+        "Plan a small CLI in Python",
+        "Debug a SwiftUI layout",
+    ]
+
+    private var showEmpty: Bool { chat.messages.isEmpty && !chat.isLoading }
 
     var body: some View {
         Group {
             if !chat.currentHasKey {
                 needsSetupPanel
             } else {
-                chatPanel
+                agentPanel
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.bg)
-        .onAppear { chat.startStatusMonitoring() }
+        .background(MacBarCursor.bg)
+        .onAppear {
+            chat.startStatusMonitoring()
+            focused = true
+        }
     }
 
     private var needsSetupPanel: some View {
-        VStack(spacing: 14) {
-            Text("AI Chat").font(rNitroFont(.title, metrics: metrics, weight: .semibold))
+        VStack(spacing: 16) {
+            ZStack {
+                Circle().fill(MacBarCursor.hover).frame(width: 52, height: 52)
+                Image(systemName: "sparkle")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(MacBarCursor.text)
+            }
+            Text("Set up \(chat.selectedProvider.rawValue)")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(MacBarCursor.text)
+            Text("Pick a plate, then save a key if it needs one.")
+                .font(.system(size: 13))
+                .foregroundStyle(MacBarCursor.muted)
             AIProviderPicker(chat: chat)
-            Text("Set up \(chat.selectedProvider.rawValue) before chatting.")
-                .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
             if compact {
                 popoverMiniKeySetup
             } else if let onOpenAPISetup {
-                Text("Open the API sub-tab to save keys and test connections.")
-                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
-                MinimalButton(title: "Open API Setup", action: onOpenAPISetup)
-            } else {
-                Text("Open Chat → API to save keys and test connections.")
-                    .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).multilineTextAlignment(.center)
-                MinimalButton(title: "Open API Setup", action: openAPISetupInMainWindow)
+                Button(action: onOpenAPISetup) {
+                    Text("Open API Setup")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(MacBarCursor.accentFg)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(MacBarCursor.accent))
+                }
+                .buttonStyle(.plain)
             }
         }
-        .padding(compact ? 12 : 20)
+        .padding(compact ? 12 : 24)
     }
 
     private var popoverMiniKeySetup: some View {
@@ -8950,17 +8972,19 @@ struct AIChatView: View {
             if chat.selectedProvider.requiresApiKey {
                 SecureField("API key", text: $chat.apiKeyDraft)
                     .textFieldStyle(.plain)
-                    .font(rNitroFont(.body, metrics: metrics))
+                    .font(.system(size: 13))
+                    .foregroundStyle(MacBarCursor.text)
                     .padding(8)
-                    .background(Color.card)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.6), lineWidth: 1))
+                    .background(RoundedRectangle(cornerRadius: 8).fill(MacBarCursor.panel))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(MacBarCursor.border))
             }
-            MinimalButton(
-                title: chat.selectedProvider.requiresApiKey ? "Save Key" : "Enable",
-                action: { chat.saveApiKey() }
-            )
+            Button(chat.selectedProvider.requiresApiKey ? "Save Key" : "Enable") { chat.saveApiKey() }
+                .buttonStyle(.plain)
+                .foregroundStyle(MacBarCursor.accent)
             Button("Open main window → API") { openAPISetupInMainWindow() }
-                .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.accent).buttonStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundStyle(MacBarCursor.chromium)
+                .buttonStyle(.plain)
         }
     }
 
@@ -8968,84 +8992,279 @@ struct AIChatView: View {
         NotificationCenter.default.post(name: .rNitroOpenMainWindow, object: nil, userInfo: ["tab": AppTab.chat.rawValue, "chatSection": ChatSection.api.rawValue])
     }
 
-    private var chatPanel: some View {
+    private var agentPanel: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Text(chat.selectedProvider.rawValue).font(rNitroFont(metrics.compact ? .label : .body, metrics: metrics, weight: .semibold))
-                ProviderStatusIndicator(status: chat.status(for: chat.selectedProvider))
-                if !compact {
-                    Text(chat.status(for: chat.selectedProvider).state.rawValue)
-                        .font(rNitroFont(.micro, metrics: metrics))
-                        .foregroundColor(chat.status(for: chat.selectedProvider).state.color)
-                }
-                Spacer()
-                if !chat.messages.isEmpty {
-                    Button("Clear") { chat.clearHistory() }
-                        .font(rNitroFont(.caption, metrics: metrics)).foregroundColor(.secondary).buttonStyle(.plain)
-                }
+            header
+            ZStack(alignment: .bottom) {
+                messageList
+                if showEmpty { emptyState }
             }
-            .padding(.horizontal, compact ? 10 : 14).padding(.vertical, compact ? 6 : 8)
-            if !compact {
-                Text("History is saved on this Mac. Messages go to \(chat.selectedProvider.rawValue) — manage keys in the API sub-tab.")
-                    .font(rNitroFont(.micro, metrics: metrics)).foregroundColor(.secondary)
-                    .padding(.horizontal, 14).padding(.bottom, 6)
-            }
-            AIProviderPicker(chat: chat).padding(.horizontal, compact ? 10 : 14).padding(.bottom, compact ? 6 : 8)
-            MinimalDivider().padding(.horizontal, compact ? 10 : 14)
+            composer
+        }
+        .background(MacBarCursor.bg)
+    }
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
-                        if chat.messages.isEmpty {
-                            Text("Ask anything — powered by \(chat.selectedProvider.modelLabel).")
-                                .font(rNitroFont(.label, metrics: metrics)).foregroundColor(.secondary)
-                                .padding(.top, 8)
-                        }
-                        ForEach(chat.messages) { msg in
-                            chatBubble(msg).id(msg.id)
-                        }
-                    }
-                    .padding(compact ? 10 : 14)
+    private var header: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "sparkle")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(MacBarCursor.soft)
+            Text("Agent")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(MacBarCursor.text)
+            Text(chat.selectedProvider.rawValue)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(MacBarCursor.muted)
+            Text("·")
+                .foregroundStyle(MacBarCursor.muted)
+            Text(chat.selectedProvider.modelLabel)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(MacBarCursor.muted)
+                .lineLimit(1)
+            Text(chat.status(for: chat.selectedProvider).state == .connected ? "Online" : chat.status(for: chat.selectedProvider).state.rawValue)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(chat.status(for: chat.selectedProvider).state == .connected ? MacBarCursor.green : MacBarCursor.muted)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(MacBarCursor.hover))
+            Spacer()
+            if let onOpenAPISetup, !compact {
+                Button(action: onOpenAPISetup) {
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(MacBarCursor.muted)
+                        .frame(width: 28, height: 28)
                 }
-                .onReceive(chat.$messages) { messages in
-                    if let last = messages.last {
-                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-                    }
-                }
+                .buttonStyle(.plain)
+                .help("API keys")
             }
-
-            MinimalDivider().padding(.horizontal, 14)
-
-            HStack(spacing: 8) {
-                TextField("Message…", text: $chat.inputText)
-                    .textFieldStyle(.plain)
-                    .font(rNitroFont(.body, metrics: metrics))
-                    .padding(8)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.card)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.border.opacity(0.5), lineWidth: 1))
-                    .onSubmit { chat.sendMessage() }
-                MinimalButton(title: "Send", disabled: chat.isLoading || chat.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, action: { chat.sendMessage() })
-                    .fixedSize()
+            Button {
+                chat.clearHistory()
+                focused = true
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(MacBarCursor.muted)
+                    .frame(width: 28, height: 28)
             }
-            .padding(compact ? 8 : 12)
+            .buttonStyle(.plain)
+            .help("New Agent")
+        }
+        .padding(.horizontal, compact ? 12 : 16)
+        .padding(.vertical, compact ? 8 : 11)
+        .background(MacBarCursor.bg)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(MacBarCursor.hairline).frame(height: 1)
         }
     }
 
-    private func chatBubble(_ msg: ChatMessage) -> some View {
-        let display = msg.text.isEmpty && chat.isLoading && msg.role != "user"
-            ? "…"
-            : msg.text
-        return HStack {
-            if msg.role == "user" { Spacer(minLength: metrics.bubbleSpacer) }
-            Text(display)
-                .font(rNitroFont(.label, metrics: metrics))
-                .foregroundColor(msg.isError ? .nRed : (msg.role == "user" ? .primary : .secondary))
-                .padding(10)
-                .background(msg.role == "user" ? Color.accent.opacity(0.15) : Color.card)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.border.opacity(0.35), lineWidth: 0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            if msg.role != "user" { Spacer(minLength: metrics.bubbleSpacer) }
+    private var emptyState: some View {
+        VStack(spacing: 22) {
+            Spacer(minLength: compact ? 20 : 48)
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle().fill(MacBarCursor.hover).frame(width: 52, height: 52)
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(MacBarCursor.text)
+                }
+                Text("MacBar Agent")
+                    .font(.system(size: compact ? 22 : 26, weight: .semibold))
+                    .foregroundStyle(MacBarCursor.text)
+                Text("Plan, search, build anything")
+                    .font(.system(size: 13.5))
+                    .foregroundStyle(MacBarCursor.muted)
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(starters, id: \.self) { s in
+                    Button {
+                        chat.inputText = s
+                        chat.sendMessage()
+                    } label: {
+                        Text(s)
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(MacBarCursor.soft)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 11)
+                            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(MacBarCursor.panel))
+                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(MacBarCursor.border))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(chat.isLoading)
+                }
+            }
+            .frame(maxWidth: 460)
+            Spacer()
+        }
+        .padding(.horizontal, compact ? 16 : 28)
+        .padding(.bottom, compact ? 100 : 140)
+        .allowsHitTesting(true)
+    }
+
+    private var messageList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: compact ? 16 : 22) {
+                    ForEach(chat.messages) { msg in
+                        macBarMessageRow(msg).id(msg.id)
+                    }
+                    if chat.isLoading {
+                        HStack(spacing: 10) {
+                            ProgressView().controlSize(.small).tint(MacBarCursor.soft)
+                            Text("Thinking…")
+                                .font(.system(size: 12.5))
+                                .foregroundStyle(MacBarCursor.muted)
+                        }
+                        .padding(.leading, 36)
+                    }
+                    Color.clear.frame(height: 12).id("bottom")
+                }
+                .padding(.horizontal, compact ? 14 : 32)
+                .padding(.vertical, compact ? 12 : 24)
+                .frame(maxWidth: 760)
+                .frame(maxWidth: .infinity)
+            }
+            .onReceive(chat.$messages) { _ in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) }
+            }
+            .onChange(of: chat.isLoading) { _, _ in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) }
+            }
+        }
+    }
+
+    private var composer: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                TextField("Plan, search, build, or ask anything…", text: $chat.inputText, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13.5))
+                    .foregroundStyle(MacBarCursor.text)
+                    .lineLimit(1...8)
+                    .focused($focused)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 14)
+                    .padding(.bottom, 10)
+                    .onSubmit { chat.sendMessage() }
+
+                HStack(spacing: 6) {
+                    Menu {
+                        ForEach(AIProvider.allCases) { p in
+                            Button {
+                                chat.selectProvider(p)
+                            } label: {
+                                if p == chat.selectedProvider {
+                                    Label(p.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(p.rawValue)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "cpu")
+                                .font(.system(size: 10, weight: .medium))
+                            Text(chat.selectedProvider.rawValue)
+                                .font(.system(size: 11.5, weight: .medium))
+                                .lineLimit(1)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 8, weight: .semibold))
+                        }
+                        .foregroundStyle(MacBarCursor.soft)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(MacBarCursor.hover))
+                        .overlay(Capsule().strokeBorder(MacBarCursor.border))
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 10, weight: .medium))
+                        Text("Search")
+                            .font(.system(size: 11.5, weight: .medium))
+                    }
+                    .foregroundStyle(MacBarCursor.chromium)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(MacBarCursor.chromium.opacity(0.14)))
+                    .overlay(Capsule().strokeBorder(MacBarCursor.chromium.opacity(0.35)))
+
+                    Spacer(minLength: 8)
+
+                    Button {
+                        chat.sendMessage()
+                    } label: {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(sendEnabled ? MacBarCursor.accentFg : MacBarCursor.muted)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(sendEnabled ? MacBarCursor.accent : MacBarCursor.hover))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!sendEnabled)
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+            }
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(MacBarCursor.composer))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(MacBarCursor.border))
+            .shadow(color: .black.opacity(0.35), radius: 18, y: 6)
+            .padding(.horizontal, compact ? 12 : 22)
+            .padding(.bottom, compact ? 10 : 14)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.top, 6)
+        .background(MacBarCursor.bg)
+    }
+
+    private var sendEnabled: Bool {
+        !chat.isLoading && !chat.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func macBarMessageRow(_ msg: ChatMessage) -> some View {
+        let isUser = msg.role == "user"
+        let display = msg.text.isEmpty && chat.isLoading && !isUser ? "Thinking…" : msg.text
+        return HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(isUser ? MacBarCursor.hover : Color.white.opacity(0.12))
+                    .frame(width: 24, height: 24)
+                if isUser {
+                    Text("Y")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(MacBarCursor.soft)
+                } else {
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(MacBarCursor.text)
+                }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(isUser ? "You" : "cs.AI")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(MacBarCursor.muted)
+                Text(display)
+                    .font(.system(size: compact ? 13 : 13.5))
+                    .foregroundStyle(msg.isError ? Color(red: 0.95, green: 0.45, blue: 0.4) : MacBarCursor.text)
+                    .lineSpacing(4)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, isUser ? 12 : 0)
+                    .padding(.vertical, isUser ? 9 : 0)
+                    .background(
+                        Group {
+                            if isUser {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(MacBarCursor.userBubble)
+                            }
+                        }
+                    )
+            }
+            Spacer(minLength: 0)
         }
     }
 }
@@ -18660,8 +18879,8 @@ cat > "$APP_DEST/Contents/Info.plist" << 'PLIST'
     <key>CFBundleIdentifier</key><string>com.rnitro.cpumonitor</string>
     <key>CFBundleName</key><string>MacBar</string>
     <key>CFBundleDisplayName</key><string>MacBar</string>
-    <key>CFBundleVersion</key><string>1.5.0</string>
-    <key>CFBundleShortVersionString</key><string>1.5.0</string>
+    <key>CFBundleVersion</key><string>1.5.1</string>
+    <key>CFBundleShortVersionString</key><string>1.5.1</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHighResolutionCapable</key><true/>

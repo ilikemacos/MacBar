@@ -68,6 +68,7 @@ Also: **Terminal install (no Xcode)** on the website, or **PKG** / **DMG** / **`
 | Product | URL |
 |---------|-----|
 | **HQ hub** | https://chopstickshq.com/ |
+| **cs.AI** | https://chopstickshq.com/chopsticks-ai/ |
 | **rNitro** | https://chopstickshq.com/rnitro/ |
 | **Fathom** | https://chopstickshq.com/fathom/ |
 | **Doomlike-FPS™** | https://chopstickshq.com/doomlike-fps/ |
