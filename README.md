@@ -1,4 +1,4 @@
-# rNitro
+# MacBar
 
 **Free open-source macOS menu bar system monitor** — CPU, temperature, battery, GPU, RAM, network.  
 No account · no telemetry · no subscription.
@@ -17,7 +17,7 @@ No account · no telemetry · no subscription.
 ## Install (macOS 14+)
 
 1. Download the **App ZIP** from [Releases](https://github.com/ilikemacos/rNitro/releases) or the [website](https://chopstickshq.com/rnitro/) (accept Terms on the site).
-2. Unzip → drag **rNitro.app** to **Applications**.
+2. Unzip → drag **MacBar.app** to **Applications**.
 3. First launch: if macOS blocks it, **right-click rNitro.app → Open → Open**.
 
 Also: **Terminal install (no Xcode)** on the website, or **PKG** / **DMG** / **`.sh`** (compile needs Xcode CLT).
