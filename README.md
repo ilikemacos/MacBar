@@ -91,3 +91,6 @@ Builds are ad-hoc signed (not Apple-notarized yet). Prefer Terminal install or t
 ## License
 
 MIT — see [LICENSE](LICENSE). UI fonts: Google Fonts under the SIL Open Font License where bundled.
+
+
+<!-- contributors cache bump 2026-09-18T03:54:31.786981Z -->
