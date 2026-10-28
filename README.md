@@ -3,7 +3,7 @@
 **Free open-source macOS menu bar system monitor** — CPU, temperature, battery, GPU, RAM, network.  
 No account · no telemetry · no subscription.
 
-Formerly **rNitro**. Installs as **MacBar.app**.
+. Installs as **MacBar.app**.
 
 **Canonical site:** [https://chopstickshq.com/macbar/](https://chopstickshq.com/macbar/)  
 **Hub:** [https://chopstickshq.com/](https://chopstickshq.com/) · **Releases:** [GitHub Releases](https://github.com/ilikemacos/MacBar/releases)
